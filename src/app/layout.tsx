@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
+import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -34,12 +35,16 @@ export default function RootLayout({
             <Link href="/" className="font-semibold">
               Pantry
             </Link>
+            <Link href="/recipes" className="text-muted-foreground hover:text-foreground">
+              Recipes
+            </Link>
             <Link href="/settings" className="text-muted-foreground hover:text-foreground">
               Settings
             </Link>
           </nav>
         </header>
         <main className="flex flex-1 flex-col">{children}</main>
+        <Toaster />
       </body>
     </html>
   );

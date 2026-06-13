@@ -68,3 +68,19 @@ export function getUnit(id: string | null | undefined): UnitDef | undefined {
 }
 
 export const UNIT_IDS = Object.keys(UNITS);
+
+// Ordered options for unit <select> dropdowns in the recipe editor.
+export const UNIT_OPTIONS: { value: string; label: string }[] = [
+  { value: "each", label: "each / count" },
+  { value: "tsp", label: "tsp" },
+  { value: "tbsp", label: "tbsp" },
+  { value: "fl_oz", label: "fl oz" },
+  { value: "cup", label: "cup" },
+  { value: "ml", label: "ml" },
+  { value: "l", label: "L" },
+  { value: "oz", label: "oz" },
+  { value: "lb", label: "lb" },
+  { value: "g", label: "g" },
+  { value: "kg", label: "kg" },
+  { value: "pinch", label: "pinch" },
+];

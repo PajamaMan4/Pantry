@@ -31,16 +31,28 @@ export default function Home() {
         <Stat label="Price entries" value={stats.prices} />
       </section>
 
-      <section className="mt-8 grid gap-4 sm:grid-cols-2">
+      <section className="mt-8 grid gap-4 sm:grid-cols-3">
         <Card>
           <CardHeader>
-            <CardTitle>Phase 0 complete</CardTitle>
-            <CardDescription>Project &amp; data layer are in place.</CardDescription>
+            <CardTitle>Recipes</CardTitle>
+            <CardDescription>Browse, search &amp; filter.</CardDescription>
           </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            SQLite (WAL) + Drizzle schema, migrations, seed, and backups are wired up. The
-            domain layer (units, scaling, cost, recommendations) and feature screens arrive in
-            later phases.
+          <CardContent className="text-sm">
+            <Link href="/recipes" className="font-medium text-primary underline-offset-4 hover:underline">
+              View recipes →
+            </Link>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Add a recipe</CardTitle>
+            <CardDescription>Ingredients, steps, tags.</CardDescription>
+          </CardHeader>
+          <CardContent className="text-sm">
+            <Link href="/recipes/new" className="font-medium text-primary underline-offset-4 hover:underline">
+              New recipe →
+            </Link>
           </CardContent>
         </Card>
 

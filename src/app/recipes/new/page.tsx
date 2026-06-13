@@ -1,0 +1,26 @@
+import type { Metadata } from "next";
+import { listIngredients } from "@/lib/db/ingredients";
+import { listTags } from "@/lib/db/tags";
+import { RecipeForm } from "../recipe-form";
+
+export const dynamic = "force-dynamic";
+export const metadata: Metadata = { title: "New recipe · Pantry" };
+
+export default function NewRecipePage() {
+  const ingredients = listIngredients();
+  const tags = listTags();
+
+  return (
+    <div className="mx-auto w-full max-w-2xl px-4 py-8">
+      <h1 className="mb-6 text-2xl font-semibold tracking-tight">New recipe</h1>
+      <RecipeForm
+        ingredientOptions={ingredients.map((i) => ({
+          id: i.id,
+          name: i.name,
+          defaultUnit: i.defaultUnit,
+        }))}
+        tagSuggestions={tags.map((t) => t.name)}
+      />
+    </div>
+  );
+}
