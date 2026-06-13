@@ -12,9 +12,19 @@ const idOrNull = z.preprocess(
   z.coerce.number().int().positive().nullable(),
 );
 
+const stepQuantitySchema = z.object({
+  ingredientId: z.number().int().positive().nullable(),
+  amount: z.number().finite(),
+  amountMax: z.number().finite().nullable().optional(),
+  unit: z.string().nullable(),
+});
+
 const stepSchema = z.object({
   id: z.string().min(1),
   text: z.string().trim().min(1, "Step text can't be empty"),
+  // {qN} placeholders linked to structured quantities (§2.4.b). Optional so
+  // plain-text steps still validate.
+  quantities: z.record(z.string(), stepQuantitySchema).optional(),
 });
 
 const ingredientRowSchema = z

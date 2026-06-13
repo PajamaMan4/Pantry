@@ -2,7 +2,6 @@ import { notFound } from "next/navigation";
 import { listIngredients } from "@/lib/db/ingredients";
 import { listTags } from "@/lib/db/tags";
 import { getRecipeDetail } from "@/lib/db/recipes";
-import { renderStepText } from "@/lib/domain/format";
 import { RecipeForm, type RecipeFormInitial } from "../../recipe-form";
 
 export const dynamic = "force-dynamic";
@@ -36,9 +35,16 @@ export default async function EditRecipePage({ params }: { params: Promise<{ id:
       prep: ri.prep,
       optional: ri.optional,
     })),
-    // Phase 1 steps are plain text; flatten any {qN} placeholders to their
-    // stored amounts so the editor shows readable prose (re-linking is Phase 2).
-    steps: recipe.steps.map((s) => ({ id: s.id, text: renderStepText(s) })),
+    steps: recipe.steps.map((s) => ({
+      id: s.id,
+      text: s.text,
+      quantities: Object.fromEntries(
+        Object.entries(s.quantities ?? {}).map(([k, q]) => [
+          k,
+          { ingredientId: q.ingredientId, amount: q.amount, amountMax: q.amountMax ?? null, unit: q.unit },
+        ]),
+      ),
+    })),
   };
 
   const ingredients = listIngredients();

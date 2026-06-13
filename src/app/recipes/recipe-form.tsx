@@ -16,6 +16,7 @@ import {
   type IngredientOption,
 } from "@/components/ingredient-combobox";
 import { TagInput } from "@/components/tag-input";
+import { StepEditor, type EditorStep } from "@/components/step-editor";
 import { UNIT_OPTIONS } from "@/lib/domain/units";
 import {
   createRecipeAction,
@@ -36,7 +37,7 @@ type IngredientRow = {
   optional: boolean;
 };
 
-type StepRow = { id: string; text: string };
+type StepRow = EditorStep;
 
 export type RecipeFormInitial = {
   id: number;
@@ -114,8 +115,23 @@ export function RecipeForm({ ingredientOptions, tagSuggestions, initial }: Props
   );
 
   const [steps, setSteps] = React.useState<StepRow[]>(
-    initial && initial.steps.length > 0 ? initial.steps : [{ id: nanoid(), text: "" }],
+    initial && initial.steps.length > 0
+      ? initial.steps
+      : [{ id: nanoid(), text: "", quantities: {} }],
   );
+
+  // Ingredients (with a resolved master id) the step linker can attach to.
+  const ingredientChoices = React.useMemo(() => {
+    const seen = new Set<number>();
+    const out: { id: number; name: string }[] = [];
+    for (const r of rows) {
+      if (r.ingredientId != null && !seen.has(r.ingredientId)) {
+        seen.add(r.ingredientId);
+        out.push({ id: r.ingredientId, name: r.ingredientName });
+      }
+    }
+    return out;
+  }, [rows]);
 
   const [error, setError] = React.useState<string | null>(null);
   const [pending, startTransition] = React.useTransition();
@@ -152,8 +168,8 @@ export function RecipeForm({ ingredientOptions, tagSuggestions, initial }: Props
   }
 
   // ---- step helpers ----
-  function patchStep(id: string, text: string) {
-    setSteps((ss) => ss.map((s) => (s.id === id ? { ...s, text } : s)));
+  function patchStep(next: StepRow) {
+    setSteps((ss) => ss.map((s) => (s.id === next.id ? next : s)));
   }
   function moveStep(index: number, dir: -1 | 1) {
     setSteps((ss) => {
@@ -171,7 +187,7 @@ export function RecipeForm({ ingredientOptions, tagSuggestions, initial }: Props
       (r) => r.ingredientId != null || r.ingredientName.trim() !== "",
     );
     const cleanedSteps = steps
-      .map((s) => ({ id: s.id, text: s.text.trim() }))
+      .map((s) => ({ id: s.id, text: s.text.trim(), quantities: s.quantities }))
       .filter((s) => s.text !== "");
 
     const input = {
@@ -355,7 +371,7 @@ export function RecipeForm({ ingredientOptions, tagSuggestions, initial }: Props
 
       <Separator />
 
-      {/* Steps (plain text in Phase 1; quantity-linking arrives in Phase 2) */}
+      {/* Steps — plain prose, with one-click quantity linking for scaling (§3.2) */}
       <section className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-medium">Steps</h2>
@@ -363,23 +379,17 @@ export function RecipeForm({ ingredientOptions, tagSuggestions, initial }: Props
             type="button"
             variant="outline"
             size="sm"
-            onClick={() => setSteps((ss) => [...ss, { id: nanoid(), text: "" }])}
+            onClick={() => setSteps((ss) => [...ss, { id: nanoid(), text: "", quantities: {} }])}
           >
             <PlusIcon className="size-4" /> Add step
           </Button>
         </div>
 
-        <ol className="space-y-2">
+        <ol className="space-y-3">
           {steps.map((step, i) => (
             <li key={step.id} className="flex items-start gap-2">
               <span className="mt-2 w-5 text-right text-sm text-muted-foreground">{i + 1}.</span>
-              <Textarea
-                value={step.text}
-                onChange={(e) => patchStep(step.id, e.target.value)}
-                placeholder="Describe this step"
-                rows={2}
-                className="flex-1"
-              />
+              <StepEditor value={step} ingredientChoices={ingredientChoices} onChange={patchStep} />
               <div className="flex flex-col">
                 <Button type="button" variant="ghost" size="icon" aria-label="Move up" onClick={() => moveStep(i, -1)}>
                   <ArrowUpIcon className="size-4" />

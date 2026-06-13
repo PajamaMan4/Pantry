@@ -67,7 +67,93 @@ export function getUnit(id: string | null | undefined): UnitDef | undefined {
   return id ? UNITS[id] : undefined;
 }
 
+export function categoryOf(unit: string | null | undefined): UnitCategory | undefined {
+  return unit ? UNITS[unit]?.category : undefined;
+}
+
 export const UNIT_IDS = Object.keys(UNITS);
+
+// ---- Conversion (§5.2) ------------------------------------------------------
+export class UnconvertibleError extends Error {
+  constructor(
+    public from: string | null,
+    public to: string | null,
+  ) {
+    super(`Cannot convert ${from} → ${to} (different categories and no density).`);
+    this.name = "UnconvertibleError";
+  }
+}
+
+/**
+ * Convert `value` from one unit to another. Same-category conversions are exact
+ * and density-free (cup↔ml, oz↔g, lb↔kg). Cross-category (volume↔mass) requires
+ * the ingredient density in g/ml; without it, throws UnconvertibleError.
+ * NOTE: mass `oz` and volume `fl_oz` are distinct units and never conflated.
+ */
+export function convert(value: number, from: string, to: string, densityGperMl?: number): number {
+  const f = UNITS[from];
+  const t = UNITS[to];
+  if (!f || !t) throw new UnconvertibleError(from, to);
+  if (f.category === t.category) {
+    return (value * f.toBase) / t.toBase; // same category → exact
+  }
+  if (densityGperMl) {
+    if (f.category === "volume" && t.category === "mass")
+      return (value * f.toBase * densityGperMl) / t.toBase; // ml → g → target mass
+    if (f.category === "mass" && t.category === "volume")
+      return (value * f.toBase) / densityGperMl / t.toBase; // g → ml → target volume
+  }
+  throw new UnconvertibleError(from, to);
+}
+
+export interface ConvertedQuantity {
+  amount: number;
+  amountMax: number | null;
+  unit: string | null;
+}
+
+/**
+ * Pick a sensible unit in `system` for an amount expressed in base units
+ * (ml for volume, g for mass): metric splits at 1000 (ml/L, g/kg); imperial
+ * volume picks tsp/tbsp/cup and imperial mass picks oz/lb by magnitude.
+ */
+function pickTargetUnit(category: UnitCategory, system: UnitSystem, baseAmount: number): string {
+  const a = Math.abs(baseAmount);
+  if (category === "volume") {
+    if (system === "metric") return a >= 1000 ? "l" : "ml";
+    if (a < UNITS.tbsp.toBase) return "tsp"; // < ~14.8 ml
+    if (a < UNITS.cup.toBase / 4) return "tbsp"; // < ~59 ml (quarter cup)
+    return "cup";
+  }
+  if (category === "mass") {
+    if (system === "metric") return a >= 1000 ? "kg" : "g";
+    return a < UNITS.lb.toBase ? "oz" : "lb"; // < ~454 g
+  }
+  return "each";
+}
+
+/**
+ * Convert a quantity into the requested unit system, choosing a sensible target
+ * unit. Counts, approximate units (pinch), unit-less amounts, and amounts that
+ * are already in the target system are returned unchanged. Conversions here stay
+ * within a category (volume→volume, mass→mass), so no density is needed.
+ */
+export function toSystem(
+  q: { amount: number; amountMax?: number | null; unit: string | null },
+  system: UnitSystem,
+  density?: number,
+): ConvertedQuantity {
+  const def = q.unit ? UNITS[q.unit] : undefined;
+  if (!def || def.category === "count" || def.approximate || def.system === system) {
+    return { amount: q.amount, amountMax: q.amountMax ?? null, unit: q.unit };
+  }
+  const target = pickTargetUnit(def.category, system, q.amount * def.toBase);
+  return {
+    amount: convert(q.amount, q.unit!, target, density),
+    amountMax: q.amountMax != null ? convert(q.amountMax, q.unit!, target, density) : null,
+    unit: target,
+  };
+}
 
 // Ordered options for unit <select> dropdowns in the recipe editor.
 export const UNIT_OPTIONS: { value: string; label: string }[] = [
