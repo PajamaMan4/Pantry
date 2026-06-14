@@ -7,22 +7,38 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ExpiryBadge } from "@/components/expiry-badge";
 import { PriceSummaryInline } from "@/components/price-summary-inline";
 import { DeleteItemButton } from "./delete-item-button";
+import { UnitSystemToggle } from "@/components/unit-system-toggle";
 import { listInventory, type InventoryRow } from "@/lib/db/inventory";
 import { listPriceEntriesFor } from "@/lib/db/prices";
 import { getSettings } from "@/lib/db/settings";
 import { priceSummary, type PriceSummary } from "@/lib/domain/cost";
 import { expiryStatus, type ExpiryStatus } from "@/lib/domain/expiry";
-import { formatQuantityText } from "@/lib/domain/format";
+import { displayQuantity, type DisplaySystem } from "@/lib/domain/scaling";
+import type { RoundingMode } from "@/lib/domain/quantity";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Inventory · Pantry" };
 
 type EnrichedRow = InventoryRow & { summary: PriceSummary; status: ExpiryStatus | null };
 
-export default function InventoryPage() {
+function resolveSystem(units: string | undefined, fallback: "metric" | "imperial"): DisplaySystem {
+  return units === "original" || units === "imperial" || units === "metric" ? units : fallback;
+}
+
+export default async function InventoryPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const sp = await searchParams;
   const rows = listInventory();
   const settings = getSettings();
   const now = new Date();
+  const system = resolveSystem(
+    Array.isArray(sp.units) ? sp.units[0] : sp.units,
+    settings.unitSystem === "metric" ? "metric" : "imperial",
+  );
+  const rounding: RoundingMode = settings.roundingMode === "exact" ? "exact" : "cooking";
   const priceMap = listPriceEntriesFor([...new Set(rows.map((r) => r.ingredient.id))]);
 
   const enriched: EnrichedRow[] = rows.map((r) => {
@@ -53,7 +69,7 @@ export default function InventoryPage() {
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-8">
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-4 flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">Inventory</h1>
         <div className="flex gap-2">
           <Link href="/inventory/purchase" className={buttonVariants({ variant: "outline" })}>
@@ -64,6 +80,13 @@ export default function InventoryPage() {
           </Link>
         </div>
       </div>
+
+      {rows.length > 0 && (
+        <div className="mb-6 flex items-center justify-end gap-2 text-xs text-muted-foreground">
+          <span>Show units as</span>
+          <UnitSystemToggle current={system} />
+        </div>
+      )}
 
       {rows.length === 0 ? (
         <p className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
@@ -88,7 +111,7 @@ export default function InventoryPage() {
               </CardHeader>
               <CardContent className="divide-y">
                 {useSoon.map((e) => (
-                  <Row key={`soon-${e.item.id}`} e={e} currency={settings.currency} now={now} />
+                  <Row key={`soon-${e.item.id}`} e={e} currency={settings.currency} now={now} system={system} rounding={rounding} />
                 ))}
               </CardContent>
             </Card>
@@ -99,7 +122,7 @@ export default function InventoryPage() {
               <h2 className="mb-2 text-sm font-medium text-muted-foreground">{name}</h2>
               <div className="divide-y rounded-lg border px-3">
                 {g.rows.map((e) => (
-                  <Row key={e.item.id} e={e} currency={settings.currency} now={now} />
+                  <Row key={e.item.id} e={e} currency={settings.currency} now={now} system={system} rounding={rounding} />
                 ))}
               </div>
             </section>
@@ -110,13 +133,23 @@ export default function InventoryPage() {
   );
 }
 
-function Row({ e, currency, now }: { e: EnrichedRow; currency: string; now: Date }) {
-  const qty = formatQuantityText({
-    amount: e.item.quantity,
-    amountMax: null,
-    unit: e.item.unit,
-    raw: null,
-  });
+function Row({
+  e,
+  currency,
+  now,
+  system,
+  rounding,
+}: {
+  e: EnrichedRow;
+  currency: string;
+  now: Date;
+  system: DisplaySystem;
+  rounding: RoundingMode;
+}) {
+  const qty = displayQuantity(
+    { amount: e.item.quantity, amountMax: null, unit: e.item.unit, raw: null },
+    { factor: 1, system, rounding },
+  );
   return (
     <div className="flex items-center justify-between gap-3 py-2.5">
       <div className="min-w-0">
@@ -132,7 +165,7 @@ function Row({ e, currency, now }: { e: EnrichedRow; currency: string; now: Date
           )}
           <ExpiryBadge expiry={e.item.expiryDate} now={now} />
         </div>
-        <PriceSummaryInline summary={e.summary} currency={currency} />
+        <PriceSummaryInline summary={e.summary} currency={currency} system={system} />
       </div>
       <div className="flex shrink-0 items-center gap-1">
         <Link

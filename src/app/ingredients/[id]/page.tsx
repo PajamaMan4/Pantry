@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { PriceChart } from "@/components/price-chart";
 import { ExpiryBadge } from "@/components/expiry-badge";
+import { UnitSystemToggle } from "@/components/unit-system-toggle";
 import { IngredientEditForm } from "../ingredient-edit-form";
 import { AddPriceForm } from "../add-price-form";
 import { DeletePriceButton } from "../delete-price-button";
@@ -14,11 +15,24 @@ import { getIngredientDetail } from "@/lib/db/ingredients";
 import { getSettings } from "@/lib/db/settings";
 import { priceSummary } from "@/lib/domain/cost";
 import { formatMoney, pricePerDisplayUnit, formatQuantityText } from "@/lib/domain/format";
+import { displayQuantity, type DisplaySystem } from "@/lib/domain/scaling";
+import type { RoundingMode } from "@/lib/domain/quantity";
 
 export const dynamic = "force-dynamic";
 
-export default async function IngredientDetailPage({ params }: { params: Promise<{ id: string }> }) {
+function resolveSystem(units: string | undefined, fallback: "metric" | "imperial"): DisplaySystem {
+  return units === "original" || units === "imperial" || units === "metric" ? units : fallback;
+}
+
+export default async function IngredientDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const { id } = await params;
+  const sp = await searchParams;
   const ingredientId = Number(id);
   if (!Number.isInteger(ingredientId)) notFound();
 
@@ -28,6 +42,11 @@ export default async function IngredientDetailPage({ params }: { params: Promise
   const { ingredient, inventory, recipes, priceEntries } = detail;
   const settings = getSettings();
   const now = new Date();
+  const system = resolveSystem(
+    Array.isArray(sp.units) ? sp.units[0] : sp.units,
+    settings.unitSystem === "metric" ? "metric" : "imperial",
+  );
+  const rounding: RoundingMode = settings.roundingMode === "exact" ? "exact" : "cooking";
 
   const summary = priceSummary(
     priceEntries,
@@ -35,12 +54,14 @@ export default async function IngredientDetailPage({ params }: { params: Promise
     settings.averageWindowMonths,
     now,
   );
-  const unitLabel = pricePerDisplayUnit(summary.average ?? 0, ingredient.defaultUnit).unitLabel;
+  const unitLabel = pricePerDisplayUnit(summary.average ?? 0, ingredient.defaultUnit, system).unitLabel;
   const perUnit = (v: number | null) =>
-    v == null ? "—" : `${formatMoney(pricePerDisplayUnit(v, ingredient.defaultUnit).value, settings.currency)}/${unitLabel}`;
+    v == null
+      ? "—"
+      : `${formatMoney(pricePerDisplayUnit(v, ingredient.defaultUnit, system).value, settings.currency)}/${unitLabel}`;
   const chartPoints = summary.points.map((p) => ({
     date: +p.date,
-    price: pricePerDisplayUnit(p.price, ingredient.defaultUnit).value,
+    price: pricePerDisplayUnit(p.price, ingredient.defaultUnit, system).value,
   }));
 
   return (
@@ -57,7 +78,10 @@ export default async function IngredientDetailPage({ params }: { params: Promise
 
       {/* Price history */}
       <section className="mt-6">
-        <h2 className="mb-3 text-lg font-medium">Price history</h2>
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <h2 className="text-lg font-medium">Price history</h2>
+          <UnitSystemToggle current={system} />
+        </div>
         {summary.count === 0 ? (
           <p className="text-sm text-muted-foreground">No price data yet. Add one below.</p>
         ) : (
@@ -111,7 +135,10 @@ export default async function IngredientDetailPage({ params }: { params: Promise
             {inventory.map(({ item, location }) => (
               <li key={item.id} className="flex items-center gap-2">
                 <span className="tabular-nums">
-                  {formatQuantityText({ amount: item.quantity, amountMax: null, unit: item.unit, raw: null })}
+                  {displayQuantity(
+                    { amount: item.quantity, amountMax: null, unit: item.unit, raw: null },
+                    { factor: 1, system, rounding },
+                  )}
                 </span>
                 <span className="text-muted-foreground">in {location?.name ?? "Unsorted"}</span>
                 <ExpiryBadge expiry={item.expiryDate} now={now} />

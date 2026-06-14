@@ -7,12 +7,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { UNIT_OPTIONS } from "@/lib/domain/units";
-import { updateIngredientAction } from "./actions";
+import { updateIngredientAction, createIngredientFullAction } from "./actions";
 
 const selectClass = "h-9 rounded-md border border-input bg-transparent px-2 text-sm";
 
 export type IngredientEditInitial = {
-  id: number;
+  id?: number;
   name: string;
   category: string;
   defaultUnit: string;
@@ -21,6 +21,7 @@ export type IngredientEditInitial = {
 };
 
 export function IngredientEditForm({ initial }: { initial: IngredientEditInitial }) {
+  const isCreate = initial.id == null;
   const [name, setName] = React.useState(initial.name);
   const [category, setCategory] = React.useState(initial.category);
   const [defaultUnit, setDefaultUnit] = React.useState(initial.defaultUnit);
@@ -29,16 +30,17 @@ export function IngredientEditForm({ initial }: { initial: IngredientEditInitial
   const [pending, startTransition] = React.useTransition();
 
   function save() {
+    const input = { name, category, defaultUnit, density, isStaple };
     startTransition(async () => {
-      const res = await updateIngredientAction(initial.id, {
-        name,
-        category,
-        defaultUnit,
-        density,
-        isStaple,
-      });
-      if (res.ok) toast.success("Ingredient updated");
-      else toast.error(res.error);
+      if (isCreate) {
+        // On success this redirects to the new ingredient; only errors return.
+        const res = await createIngredientFullAction(input);
+        if (res && !res.ok) toast.error(res.error);
+      } else {
+        const res = await updateIngredientAction(initial.id!, input);
+        if (res.ok) toast.success("Ingredient updated");
+        else toast.error(res.error);
+      }
     });
   }
 
@@ -90,7 +92,7 @@ export function IngredientEditForm({ initial }: { initial: IngredientEditInitial
       </label>
 
       <Button onClick={save} disabled={pending}>
-        {pending ? "Saving…" : "Save ingredient"}
+        {pending ? "Saving…" : isCreate ? "Create ingredient" : "Save ingredient"}
       </Button>
     </div>
   );

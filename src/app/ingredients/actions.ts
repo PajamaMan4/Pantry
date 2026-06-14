@@ -1,15 +1,24 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { ingredientEditSchema } from "@/lib/validation/ingredient";
+import { redirect } from "next/navigation";
+import { ingredientEditSchema, ingredientInputSchema } from "@/lib/validation/ingredient";
 import { priceEntrySchema } from "@/lib/validation/inventory";
-import { updateIngredient } from "@/lib/db/ingredients";
+import { updateIngredient, getOrCreateIngredient } from "@/lib/db/ingredients";
 import { createPriceEntry, deletePriceEntry } from "@/lib/db/prices";
 
 export type IngredientActionResult = { ok: true } | { ok: false; error: string };
 
 function firstError(issues: { message: string }[]): string {
   return issues[0]?.message ?? "Please check the form and try again.";
+}
+
+export async function createIngredientFullAction(input: unknown): Promise<IngredientActionResult> {
+  const parsed = ingredientInputSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: firstError(parsed.error.issues) };
+  const ingredient = getOrCreateIngredient(parsed.data);
+  revalidatePath("/ingredients");
+  redirect(`/ingredients/${ingredient.id}`);
 }
 
 export async function updateIngredientAction(

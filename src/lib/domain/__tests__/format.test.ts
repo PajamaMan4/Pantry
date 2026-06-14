@@ -6,6 +6,7 @@ import {
   totalTimeMin,
   formatMinutes,
   renderStepText,
+  pricePerDisplayUnit,
 } from "@/lib/domain/format";
 
 describe("formatNumber", () => {
@@ -54,6 +55,30 @@ describe("renderStepText", () => {
     expect(renderStepText({ text: "Add {q9}.", quantities: { q1: { amount: 1, unit: null } } })).toBe(
       "Add {q9}.",
     );
+  });
+});
+
+describe("pricePerDisplayUnit", () => {
+  it("expresses mass prices per kg (metric) or per lb (imperial)", () => {
+    const metric = pricePerDisplayUnit(0.005, "g", "metric"); // $0.005/g
+    expect(metric.unitLabel).toBe("kg");
+    expect(metric.value).toBeCloseTo(5, 6);
+
+    const imperial = pricePerDisplayUnit(0.005, "g", "imperial");
+    expect(imperial.unitLabel).toBe("lb");
+    expect(imperial.value).toBeCloseTo(2.268, 3);
+  });
+
+  it("expresses volume prices per L (metric) or per cup (imperial)", () => {
+    expect(pricePerDisplayUnit(0.00159, "ml", "metric")).toMatchObject({ unitLabel: "L" });
+    const cup = pricePerDisplayUnit(0.00159, "ml", "imperial");
+    expect(cup.unitLabel).toBe("cup");
+    expect(cup.value).toBeCloseTo(0.3762, 3);
+  });
+
+  it("leaves counts and unit-less prices unchanged", () => {
+    expect(pricePerDisplayUnit(0.5, "each", "imperial")).toMatchObject({ value: 0.5 });
+    expect(pricePerDisplayUnit(0.5, null, "metric")).toMatchObject({ value: 0.5, unitLabel: "" });
   });
 });
 

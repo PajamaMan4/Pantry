@@ -1,6 +1,5 @@
-// Presentational helpers (pure, testable). NOTE: no unit conversion happens here
-// — that's Phase 2 (§5.2/§5.3). This just formats stored amounts/times for display.
-import { UNITS } from "./units";
+// Presentational helpers (pure, testable).
+import { UNITS, convert, categoryOf } from "./units";
 
 /** Round to at most 2 decimals and drop trailing zeros: 2 -> "2", 1.5 -> "1.5". */
 export function formatNumber(n: number): string {
@@ -21,17 +20,27 @@ export function formatMoney(value: number, currency: string): string {
   }
 }
 
+export type PriceDisplaySystem = "metric" | "imperial" | "original";
+
 /**
- * Choose a readable unit to express a per-default-unit price: per-gram becomes
- * per-kg, per-ml becomes per-L; everything else stays as the default unit.
+ * Express a per-default-unit price in a readable unit for the chosen system:
+ * mass → kg (metric) or lb (imperial); volume → L (metric) or cup (imperial).
+ * Counts / unit-less prices are left as-is. "original" displays like metric.
  */
 export function pricePerDisplayUnit(
   perDefaultUnit: number,
   defaultUnit: string | null,
+  system: PriceDisplaySystem = "metric",
 ): { value: number; unitLabel: string } {
-  if (defaultUnit === "g") return { value: perDefaultUnit * 1000, unitLabel: "kg" };
-  if (defaultUnit === "ml") return { value: perDefaultUnit * 1000, unitLabel: "L" };
-  return { value: perDefaultUnit, unitLabel: unitLabel(defaultUnit) };
+  const category = categoryOf(defaultUnit);
+  if (!defaultUnit || !category || category === "count") {
+    return { value: perDefaultUnit, unitLabel: unitLabel(defaultUnit) };
+  }
+  const imperial = system === "imperial";
+  const target = category === "mass" ? (imperial ? "lb" : "kg") : imperial ? "cup" : "l";
+  // price per target unit = price per default unit × (default units in one target)
+  const value = perDefaultUnit * convert(1, target, defaultUnit);
+  return { value, unitLabel: UNITS[target].label };
 }
 
 /**
