@@ -25,3 +25,10 @@ export function updateSettings(values: SettingsUpdate): Settings {
     .returning()
     .get();
 }
+
+export type InventoryView = "alphabetical" | "location";
+
+export function setInventoryView(view: InventoryView): void {
+  getSettings(); // ensure the row exists
+  db.update(settings).set({ inventoryView: view }).where(eq(settings.id, SETTINGS_ID)).run();
+}

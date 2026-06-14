@@ -1,18 +1,20 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { PlusIcon } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { PriceChart } from "@/components/price-chart";
-import { ExpiryBadge } from "@/components/expiry-badge";
 import { UnitSystemToggle } from "@/components/unit-system-toggle";
 import { IngredientEditForm } from "../ingredient-edit-form";
-import { AddPriceForm } from "../add-price-form";
 import { DeletePriceButton } from "../delete-price-button";
+import { AddInventory } from "../add-inventory";
+import { InventoryItemRow, type SerialInventoryItem } from "../inventory-item-row";
+import { PriceForms } from "../price-forms";
+import { DeleteIngredientDialog } from "../delete-ingredient-dialog";
 import { getIngredientDetail } from "@/lib/db/ingredients";
 import { getSettings } from "@/lib/db/settings";
+import { listLocations } from "@/lib/db/locations";
 import { priceSummary } from "@/lib/domain/cost";
 import { formatMoney, pricePerDisplayUnit, formatQuantityText } from "@/lib/domain/format";
 import { displayQuantity, type DisplaySystem } from "@/lib/domain/scaling";
@@ -41,7 +43,9 @@ export default async function IngredientDetailPage({
 
   const { ingredient, inventory, recipes, priceEntries } = detail;
   const settings = getSettings();
+  const locations = listLocations().map((l) => ({ id: l.id, name: l.name }));
   const now = new Date();
+  const nowMs = now.getTime();
   const system = resolveSystem(
     Array.isArray(sp.units) ? sp.units[0] : sp.units,
     settings.unitSystem === "metric" ? "metric" : "imperial",
@@ -64,24 +68,83 @@ export default async function IngredientDetailPage({
     price: pricePerDisplayUnit(p.price, ingredient.defaultUnit, system).value,
   }));
 
+  const stockItems: SerialInventoryItem[] = inventory.map(({ item, location }) => ({
+    id: item.id,
+    quantity: item.quantity,
+    unit: item.unit,
+    locationId: item.locationId,
+    locationName: location?.name ?? null,
+    qtyDisplay: displayQuantity(
+      { amount: item.quantity, amountMax: null, unit: item.unit, raw: null },
+      { factor: 1, system, rounding },
+    ),
+    expiryMs: item.expiryDate?.getTime() ?? null,
+    openedMs: item.openedDate?.getTime() ?? null,
+    notes: item.notes,
+  }));
+
   return (
     <div className="mx-auto w-full max-w-2xl px-4 py-8">
-      <Link href="/inventory" className="text-sm text-muted-foreground hover:text-foreground">
-        ← Inventory
+      <Link href="/ingredients" className="text-sm text-muted-foreground hover:text-foreground">
+        ← Ingredients
       </Link>
 
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        <h1 className="text-2xl font-semibold tracking-tight">{ingredient.name}</h1>
-        {ingredient.category && <Badge variant="secondary">{ingredient.category}</Badge>}
-        {ingredient.isStaple && <Badge variant="outline">staple</Badge>}
+      <div className="mt-3 flex items-start justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <h1 className="text-2xl font-semibold tracking-tight">{ingredient.name}</h1>
+          {ingredient.category && <Badge variant="secondary">{ingredient.category}</Badge>}
+          {ingredient.isStaple && <Badge variant="outline">staple</Badge>}
+        </div>
+        <UnitSystemToggle current={system} />
       </div>
 
-      {/* Price history */}
+      {/* 1 — In Stock */}
       <section className="mt-6">
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <h2 className="text-lg font-medium">Price history</h2>
-          <UnitSystemToggle current={system} />
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="text-lg font-medium">In stock</h2>
+          <AddInventory ingredientId={ingredient.id} locations={locations} defaultUnit={ingredient.defaultUnit} />
         </div>
+        {stockItems.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Not currently in inventory.</p>
+        ) : (
+          <div className="divide-y rounded-lg border px-3">
+            {stockItems.map((item) => (
+              <InventoryItemRow
+                key={item.id}
+                item={item}
+                ingredientId={ingredient.id}
+                locations={locations}
+                defaultUnit={ingredient.defaultUnit}
+                nowMs={nowMs}
+              />
+            ))}
+          </div>
+        )}
+      </section>
+
+      <Separator className="my-6" />
+
+      {/* 2 — Used In */}
+      <section>
+        <h2 className="mb-2 text-lg font-medium">Used in</h2>
+        {recipes.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No recipes use this yet.</p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {recipes.map((r) => (
+              <Link key={r.id} href={`/recipes/${r.id}`} className={buttonVariants({ variant: "outline", size: "sm" })}>
+                {r.name}
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <Separator className="my-6" />
+
+      {/* 3 — Price History */}
+      <section>
+        <h2 className="mb-3 text-lg font-medium">Price history</h2>
         {summary.count === 0 ? (
           <p className="text-sm text-muted-foreground">No price data yet. Add one below.</p>
         ) : (
@@ -97,8 +160,8 @@ export default async function IngredientDetailPage({
           </>
         )}
 
-        <div className="mt-4 rounded-lg border p-3">
-          <AddPriceForm ingredientId={ingredient.id} defaultUnit={ingredient.defaultUnit} />
+        <div className="mt-4">
+          <PriceForms ingredientId={ingredient.id} defaultUnit={ingredient.defaultUnit} locations={locations} />
         </div>
 
         {priceEntries.length > 0 && (
@@ -111,7 +174,7 @@ export default async function IngredientDetailPage({
                   {formatQuantityText({ amount: e.quantity, amountMax: null, unit: e.unit, raw: null })}
                   {e.store && <span className="text-muted-foreground"> · {e.store}</span>}
                 </span>
-                <DeletePriceButton id={e.id} ingredientId={ingredient.id} />
+                <DeletePriceButton id={e.id} />
               </li>
             ))}
           </ul>
@@ -120,59 +183,7 @@ export default async function IngredientDetailPage({
 
       <Separator className="my-6" />
 
-      {/* Where it's stored */}
-      <section>
-        <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-lg font-medium">In stock</h2>
-          <Link href="/inventory/new" className={buttonVariants({ variant: "outline", size: "sm" })}>
-            <PlusIcon className="size-4" /> Add
-          </Link>
-        </div>
-        {inventory.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Not currently in inventory.</p>
-        ) : (
-          <ul className="space-y-1 text-sm">
-            {inventory.map(({ item, location }) => (
-              <li key={item.id} className="flex items-center gap-2">
-                <span className="tabular-nums">
-                  {displayQuantity(
-                    { amount: item.quantity, amountMax: null, unit: item.unit, raw: null },
-                    { factor: 1, system, rounding },
-                  )}
-                </span>
-                <span className="text-muted-foreground">in {location?.name ?? "Unsorted"}</span>
-                <ExpiryBadge expiry={item.expiryDate} now={now} />
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <Separator className="my-6" />
-
-      {/* Used in recipes */}
-      <section>
-        <h2 className="mb-2 text-lg font-medium">Used in</h2>
-        {recipes.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No recipes use this yet.</p>
-        ) : (
-          <div className="flex flex-wrap gap-2">
-            {recipes.map((r) => (
-              <Link
-                key={r.id}
-                href={`/recipes/${r.id}`}
-                className={buttonVariants({ variant: "outline", size: "sm" })}
-              >
-                {r.name}
-              </Link>
-            ))}
-          </div>
-        )}
-      </section>
-
-      <Separator className="my-6" />
-
-      {/* Details / density */}
+      {/* 4 — Details */}
       <section>
         <Card>
           <CardHeader>
@@ -192,6 +203,10 @@ export default async function IngredientDetailPage({
           </CardContent>
         </Card>
       </section>
+
+      <div className="mt-8 flex justify-end border-t pt-6">
+        <DeleteIngredientDialog id={ingredient.id} name={ingredient.name} recipeNames={recipes.map((r) => r.name)} />
+      </div>
     </div>
   );
 }

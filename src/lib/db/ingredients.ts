@@ -4,6 +4,8 @@ import {
   ingredients,
   recipeIngredients,
   recipes,
+  inventoryItems,
+  priceEntries,
   type Ingredient,
   type PriceEntry,
 } from "./schema";
@@ -79,6 +81,16 @@ export function updateIngredient(id: number, input: IngredientEditInput): Ingred
     .where(eq(ingredients.id, id))
     .returning()
     .get();
+}
+
+/** Permanently delete an ingredient and everything that references it. */
+export function deleteIngredient(id: number): void {
+  db.transaction((tx) => {
+    tx.delete(recipeIngredients).where(eq(recipeIngredients.ingredientId, id)).run();
+    tx.delete(inventoryItems).where(eq(inventoryItems.ingredientId, id)).run();
+    tx.delete(priceEntries).where(eq(priceEntries.ingredientId, id)).run();
+    tx.delete(ingredients).where(eq(ingredients.id, id)).run();
+  });
 }
 
 export type IngredientDetail = {

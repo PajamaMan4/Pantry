@@ -14,23 +14,22 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { deleteInventoryItemAction } from "./actions";
+import { clearStockAction } from "./actions";
 
-export function DeleteItemButton({ id, name }: { id: number; name: string }) {
+export function ClearStockButton({ ingredientId, name }: { ingredientId: number; name: string }) {
   const [pending, startTransition] = React.useTransition();
 
   return (
     <AlertDialog>
-      <AlertDialogTrigger
-        render={<Button variant="ghost" size="icon" aria-label={`Remove ${name}`} />}
-      >
+      <AlertDialogTrigger render={<Button variant="ghost" size="icon" aria-label={`Clear stock for ${name}`} />}>
         <TrashIcon className="size-4" />
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Remove {name} from inventory?</AlertDialogTitle>
+          <AlertDialogTitle>Clear stock for {name}?</AlertDialogTitle>
           <AlertDialogDescription>
-            This removes the stock row. Recorded price history is kept.
+            This removes all stored inventory for {name} (sets it to “not in stock”). The ingredient
+            and its price history are kept.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -38,9 +37,9 @@ export function DeleteItemButton({ id, name }: { id: number; name: string }) {
           <AlertDialogAction
             variant="destructive"
             disabled={pending}
-            onClick={() => startTransition(async () => void (await deleteInventoryItemAction(id)))}
+            onClick={() => startTransition(async () => void (await clearStockAction(ingredientId)))}
           >
-            {pending ? "Removing…" : "Remove"}
+            {pending ? "Clearing…" : "Clear stock"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

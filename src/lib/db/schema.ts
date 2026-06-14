@@ -165,6 +165,7 @@ export const settings = sqliteTable("settings", {
   averageWindowMonths: integer("average_window_months").notNull().default(6), // 3-6
   currency: text("currency").notNull().default("USD"),
   roundingMode: text("rounding_mode").notNull().default("cooking"), // 'cooking' | 'exact'
+  inventoryView: text("inventory_view").notNull().default("alphabetical"), // 'alphabetical' | 'location'
 });
 
 // Convenience inferred types for the rest of the app.

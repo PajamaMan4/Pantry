@@ -16,3 +16,6 @@ export const settingsUpdateSchema = z.object({
 });
 
 export type SettingsUpdate = z.infer<typeof settingsUpdateSchema>;
+
+export const inventoryViewSchema = z.enum(["alphabetical", "location"]);
+export type InventoryViewValue = z.infer<typeof inventoryViewSchema>;

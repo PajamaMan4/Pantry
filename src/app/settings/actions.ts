@@ -2,11 +2,46 @@
 
 import { revalidatePath } from "next/cache";
 import { settingsUpdateSchema } from "@/lib/validation/settings";
+import { locationNameSchema } from "@/lib/validation/location";
 import { updateSettings } from "@/lib/db/settings";
+import { createLocation, renameLocation, deleteLocation } from "@/lib/db/locations";
 
 export type SaveSettingsResult =
   | { ok: true; savedAt: number }
   | { ok: false; error: string };
+
+export type LocationActionResult = { ok: true } | { ok: false; error: string };
+export type CreateLocationResult =
+  | { ok: true; location: { id: number; name: string } }
+  | { ok: false; error: string };
+
+function revalidateLocations(): void {
+  revalidatePath("/settings");
+  revalidatePath("/ingredients");
+  revalidatePath("/ingredients/[id]", "page");
+}
+
+export async function createLocationAction(input: unknown): Promise<CreateLocationResult> {
+  const parsed = locationNameSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid name" };
+  const location = createLocation(parsed.data.name);
+  revalidateLocations();
+  return { ok: true, location: { id: location.id, name: location.name } };
+}
+
+export async function renameLocationAction(id: number, input: unknown): Promise<LocationActionResult> {
+  const parsed = locationNameSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid name" };
+  renameLocation(id, parsed.data.name);
+  revalidateLocations();
+  return { ok: true };
+}
+
+export async function deleteLocationAction(id: number): Promise<{ ok: true }> {
+  deleteLocation(id);
+  revalidateLocations();
+  return { ok: true };
+}
 
 // Form action (used with React's useActionState). Reads the named form fields,
 // validates them with the shared Zod schema (§4.1), and persists.

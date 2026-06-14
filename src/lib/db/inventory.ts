@@ -161,6 +161,22 @@ export function deleteInventoryItem(id: number): void {
   db.delete(inventoryItems).where(eq(inventoryItems.id, id)).run();
 }
 
+/** Clear all stored stock for an ingredient (alphabetical-view "remove from stock"). */
+export function clearInventoryForIngredient(ingredientId: number): void {
+  db.delete(inventoryItems).where(eq(inventoryItems.ingredientId, ingredientId)).run();
+}
+
+/** All inventory rows grouped by ingredient id (for the alphabetical list view). */
+export function inventoryByIngredient(): Map<number, InventoryRow[]> {
+  const map = new Map<number, InventoryRow[]>();
+  for (const row of listInventory()) {
+    const arr = map.get(row.ingredient.id) ?? [];
+    arr.push(row);
+    map.set(row.ingredient.id, arr);
+  }
+  return map;
+}
+
 /**
  * The "I just got back from the store" action (§3.4): in one transaction, add
  * stock AND record the price paid. Stock merges into an existing row with the

@@ -34,7 +34,7 @@ export default function Home() {
 
       {useSoon > 0 && (
         <Link
-          href="/inventory"
+          href="/ingredients"
           className="mb-6 flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-4 py-2.5 text-sm dark:border-amber-800 dark:bg-amber-950/40"
         >
           <AlertTriangleIcon className="size-4 text-amber-500" />
@@ -55,8 +55,7 @@ export default function Home() {
       <section className="mt-8 grid gap-4 sm:grid-cols-3">
         <QuickLink href="/recipes" title="Recipes" desc="Browse, search & filter." cta="View recipes →" />
         <QuickLink href="/recipes/new" title="Add a recipe" desc="Ingredients, steps, tags." cta="New recipe →" />
-        <QuickLink href="/inventory" title="Inventory" desc="Stock, expiry & prices." cta="View inventory →" />
-        <QuickLink href="/inventory/purchase" title="Log a purchase" desc="Update stock + prices." cta="Log purchase →" />
+        <QuickLink href="/ingredients" title="Ingredients" desc="Stock, expiry & prices." cta="View ingredients →" />
         <QuickLink href="/settings" title="Settings" desc="Units, pricing, rounding." cta="Open settings →" />
       </section>
     </div>

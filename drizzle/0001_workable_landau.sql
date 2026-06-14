@@ -1,0 +1,1 @@
+ALTER TABLE `settings` ADD `inventory_view` text DEFAULT 'alphabetical' NOT NULL;
