@@ -1,6 +1,14 @@
 import { asc, eq, like, sql } from "drizzle-orm";
 import { db } from "./client";
-import { ingredients, type Ingredient } from "./schema";
+import {
+  ingredients,
+  recipeIngredients,
+  recipes,
+  type Ingredient,
+  type PriceEntry,
+} from "./schema";
+import { listInventoryForIngredient } from "./inventory";
+import { listPriceEntries } from "./prices";
 
 export function listIngredients(): Ingredient[] {
   return db.select().from(ingredients).orderBy(asc(ingredients.name)).all();
@@ -54,4 +62,48 @@ export function getOrCreateIngredient(input: CreateIngredientInput): Ingredient 
     })
     .returning()
     .get();
+}
+
+export type IngredientEditInput = {
+  name: string;
+  category: string | null;
+  defaultUnit: string | null;
+  density: number | null;
+  isStaple: boolean;
+};
+
+export function updateIngredient(id: number, input: IngredientEditInput): Ingredient {
+  return db
+    .update(ingredients)
+    .set({ ...input, updatedAt: new Date() })
+    .where(eq(ingredients.id, id))
+    .returning()
+    .get();
+}
+
+export type IngredientDetail = {
+  ingredient: Ingredient;
+  inventory: ReturnType<typeof listInventoryForIngredient>;
+  recipes: { id: number; name: string }[];
+  priceEntries: PriceEntry[];
+};
+
+export function getIngredientDetail(id: number): IngredientDetail | undefined {
+  const ingredient = db.select().from(ingredients).where(eq(ingredients.id, id)).get();
+  if (!ingredient) return undefined;
+
+  const usedIn = db
+    .selectDistinct({ id: recipes.id, name: recipes.name })
+    .from(recipeIngredients)
+    .innerJoin(recipes, eq(recipeIngredients.recipeId, recipes.id))
+    .where(eq(recipeIngredients.ingredientId, id))
+    .orderBy(asc(recipes.name))
+    .all();
+
+  return {
+    ingredient,
+    inventory: listInventoryForIngredient(id),
+    recipes: usedIn,
+    priceEntries: listPriceEntries(id),
+  };
 }

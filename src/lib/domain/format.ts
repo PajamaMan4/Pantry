@@ -12,6 +12,28 @@ export function unitLabel(unit: string | null | undefined): string {
   return UNITS[unit]?.label ?? unit;
 }
 
+export function formatMoney(value: number, currency: string): string {
+  const maximumFractionDigits = value !== 0 && Math.abs(value) < 1 ? 3 : 2;
+  try {
+    return new Intl.NumberFormat(undefined, { style: "currency", currency, maximumFractionDigits }).format(value);
+  } catch {
+    return `${currency} ${value.toFixed(2)}`;
+  }
+}
+
+/**
+ * Choose a readable unit to express a per-default-unit price: per-gram becomes
+ * per-kg, per-ml becomes per-L; everything else stays as the default unit.
+ */
+export function pricePerDisplayUnit(
+  perDefaultUnit: number,
+  defaultUnit: string | null,
+): { value: number; unitLabel: string } {
+  if (defaultUnit === "g") return { value: perDefaultUnit * 1000, unitLabel: "kg" };
+  if (defaultUnit === "ml") return { value: perDefaultUnit * 1000, unitLabel: "L" };
+  return { value: perDefaultUnit, unitLabel: unitLabel(defaultUnit) };
+}
+
 /**
  * Render a stored quantity as text for the ingredient list (Phase 1, display
  * only): "2 cup", "0.5 tsp", "2–3 cloves", or the raw descriptor ("to taste").

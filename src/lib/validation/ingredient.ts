@@ -17,3 +17,15 @@ export const ingredientInputSchema = z.object({
 });
 
 export type IngredientInput = z.infer<typeof ingredientInputSchema>;
+
+// Editing an existing ingredient (ingredient detail page): name required, the
+// rest optional. Density drives volume<->weight conversion (§3.3).
+export const ingredientEditSchema = z.object({
+  name: z.string().trim().min(1, "Ingredient name is required").max(200),
+  category: nullableText,
+  defaultUnit: unitEnum,
+  density: nullableNumber,
+  isStaple: z.boolean().default(false),
+});
+
+export type IngredientEditValues = z.infer<typeof ingredientEditSchema>;
