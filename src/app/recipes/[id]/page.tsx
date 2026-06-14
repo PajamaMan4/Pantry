@@ -1,15 +1,17 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ClockIcon, PencilIcon } from "lucide-react";
+import { ClockIcon, PencilIcon, ChefHatIcon } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { FavoriteButton } from "../favorite-button";
 import { DeleteRecipe } from "../delete-recipe";
 import { RecipeScaler } from "../recipe-scaler";
+import { UndoCookButton } from "../undo-cook-button";
 import { getRecipeDetail } from "@/lib/db/recipes";
 import { getSettings } from "@/lib/db/settings";
-import { formatMinutes, totalTimeMin } from "@/lib/domain/format";
+import { getCookData, cookStats, listCookLogsForRecipe } from "@/lib/db/cook";
+import { formatMinutes, totalTimeMin, formatNumber, formatMoney } from "@/lib/domain/format";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +26,9 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ i
   const { recipe, ingredients, tags } = detail;
   const settings = getSettings();
   const total = totalTimeMin(recipe.prepTimeMin, recipe.cookTimeMin);
+  const cookData = getCookData(recipeId)!;
+  const stats = cookStats(recipeId);
+  const history = listCookLogsForRecipe(recipeId, 5);
 
   return (
     <div className="mx-auto w-full max-w-2xl px-4 py-8">
@@ -59,6 +64,12 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ i
             </span>
           )}
         </span>
+        {stats.timesCooked > 0 && (
+          <span className="inline-flex items-center gap-1">
+            <ChefHatIcon className="size-4" /> Made {stats.timesCooked}×
+            {stats.lastCookedAt && <span className="text-xs"> · last {stats.lastCookedAt.toLocaleDateString()}</span>}
+          </span>
+        )}
       </div>
 
       {tags.length > 0 && (
@@ -74,6 +85,7 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ i
       <Separator className="my-6" />
 
       <RecipeScaler
+        recipeId={recipe.id}
         baseServings={recipe.baseServings}
         defaultSystem={settings.unitSystem === "metric" ? "metric" : "imperial"}
         rounding={settings.roundingMode === "exact" ? "exact" : "cooking"}
@@ -90,6 +102,8 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ i
           density: ri.ingredient.density,
         }))}
         steps={recipe.steps}
+        cookIngredients={cookData.ingredients}
+        cookStock={cookData.stock}
       />
 
       {recipe.notes && (
@@ -98,6 +112,29 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ i
           <section>
             <h2 className="mb-2 text-lg font-medium">Notes</h2>
             <p className="text-sm whitespace-pre-wrap text-muted-foreground">{recipe.notes}</p>
+          </section>
+        </>
+      )}
+
+      {history.length > 0 && (
+        <>
+          <Separator className="my-6" />
+          <section>
+            <h2 className="mb-2 text-lg font-medium">Cook history</h2>
+            <ul className="divide-y rounded-lg border px-3">
+              {history.map((log) => (
+                <li key={log.id} className="flex items-center justify-between gap-2 py-2 text-sm">
+                  <span>
+                    <span className="text-muted-foreground">{new Date(log.cookedAt).toLocaleDateString()}</span>{" "}
+                    · {formatNumber(log.servingsMade)} serving{log.servingsMade === 1 ? "" : "s"}
+                    {log.totalCost != null && (
+                      <span className="text-muted-foreground"> · {formatMoney(log.totalCost, settings.currency)}</span>
+                    )}
+                  </span>
+                  <UndoCookButton cookLogId={log.id} recipeId={recipe.id} />
+                </li>
+              ))}
+            </ul>
           </section>
         </>
       )}

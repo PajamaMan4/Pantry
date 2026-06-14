@@ -9,6 +9,8 @@ import { cn } from "@/lib/utils";
 import { scaleFactor, displayQuantity, renderStep, type DisplaySystem } from "@/lib/domain/scaling";
 import { formatNumber } from "@/lib/domain/format";
 import type { RoundingMode } from "@/lib/domain/quantity";
+import type { CookIngredientInput, CookStockRow } from "@/lib/domain/cook";
+import { CookButton } from "./cook-button";
 
 export type ScalerIngredient = {
   id: number; // recipe_ingredients row id (React key)
@@ -33,11 +35,14 @@ export type ScalerStep = {
 };
 
 type Props = {
+  recipeId: number;
   baseServings: number;
   ingredients: ScalerIngredient[];
   steps: ScalerStep[];
   defaultSystem: "imperial" | "metric";
   rounding: RoundingMode;
+  cookIngredients: CookIngredientInput[];
+  cookStock: { ingredientId: number; rows: CookStockRow[] }[];
 };
 
 const SYSTEMS: { value: DisplaySystem; label: string }[] = [
@@ -46,7 +51,16 @@ const SYSTEMS: { value: DisplaySystem; label: string }[] = [
   { value: "metric", label: "Metric" },
 ];
 
-export function RecipeScaler({ baseServings, ingredients, steps, defaultSystem, rounding }: Props) {
+export function RecipeScaler({
+  recipeId,
+  baseServings,
+  ingredients,
+  steps,
+  defaultSystem,
+  rounding,
+  cookIngredients,
+  cookStock,
+}: Props) {
   const [target, setTarget] = React.useState(baseServings);
   const [system, setSystem] = React.useState<DisplaySystem>(defaultSystem);
 
@@ -67,6 +81,16 @@ export function RecipeScaler({ baseServings, ingredients, steps, defaultSystem, 
 
   return (
     <div>
+      <div className="mb-3">
+        <CookButton
+          recipeId={recipeId}
+          baseServings={baseServings}
+          servings={target}
+          ingredients={cookIngredients}
+          stock={cookStock}
+        />
+      </div>
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         {/* Servings stepper */}
         <div className="flex items-center gap-2">

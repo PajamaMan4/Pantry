@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ClockIcon, UsersIcon } from "lucide-react";
+import { ClockIcon, UsersIcon, ChefHatIcon } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { FavoriteButton } from "@/app/recipes/favorite-button";
@@ -7,7 +7,7 @@ import { formatMinutes, totalTimeMin, formatNumber } from "@/lib/domain/format";
 import type { RecipeListItem } from "@/lib/db/recipes";
 
 export function RecipeCard({ item }: { item: RecipeListItem }) {
-  const { recipe, tags } = item;
+  const { recipe, tags, lastCookedAt } = item;
   const total = totalTimeMin(recipe.prepTimeMin, recipe.cookTimeMin);
 
   return (
@@ -30,6 +30,11 @@ export function RecipeCard({ item }: { item: RecipeListItem }) {
           <span className="inline-flex items-center gap-1">
             <UsersIcon className="size-4" /> Serves {formatNumber(recipe.baseServings)}
           </span>
+          {lastCookedAt && (
+            <span className="inline-flex items-center gap-1">
+              <ChefHatIcon className="size-4" /> {new Date(lastCookedAt).toLocaleDateString()}
+            </span>
+          )}
         </div>
 
         {tags.length > 0 && (

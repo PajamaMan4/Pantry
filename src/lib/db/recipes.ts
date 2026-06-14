@@ -12,6 +12,7 @@ import {
   type Step,
   type Tag,
 } from "./schema";
+import { lastCookedByRecipe } from "./cook";
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -41,7 +42,7 @@ export type RecipeWriteInput = {
 };
 
 // ---- Read shapes ------------------------------------------------------------
-export type RecipeListItem = { recipe: Recipe; tags: Tag[] };
+export type RecipeListItem = { recipe: Recipe; tags: Tag[]; lastCookedAt: Date | null };
 
 export type RecipeIngredientDetail = RecipeIngredient & {
   ingredient: Pick<Ingredient, "id" | "name" | "defaultUnit" | "category" | "density">;
@@ -112,7 +113,13 @@ export function listRecipes(filters: RecipeListFilters = {}): RecipeListItem[] {
     tagsByRecipe.set(row.recipeId, list);
   }
 
-  return recipeRows.map((recipe) => ({ recipe, tags: tagsByRecipe.get(recipe.id) ?? [] }));
+  const lastCooked = lastCookedByRecipe(ids);
+
+  return recipeRows.map((recipe) => ({
+    recipe,
+    tags: tagsByRecipe.get(recipe.id) ?? [],
+    lastCookedAt: lastCooked.get(recipe.id) ?? null,
+  }));
 }
 
 export function getRecipeDetail(id: number): RecipeDetail | undefined {
