@@ -1,7 +1,6 @@
-// Price normalization + summary (§5.4, price portion). Pure + tested.
-// recipeCost() (the cost calculator) is added in Phase 5; this file currently
-// covers turning dated price entries into a normalized range/average that the
-// inventory + ingredient screens display (§3.5).
+// Price normalization, summary, and the recipe cost calculator (§5.4). Pure +
+// tested — turns dated price entries into a normalized range/average (§3.5) and
+// estimates a recipe's cost from amount-used × price-per-unit (§3.7).
 import { convert } from "./units";
 
 export type PriceMode = "current" | "average";
@@ -123,4 +122,79 @@ export function unitPrice(
   const win = all.filter((p) => p.date >= since);
   const pool = win.length ? win : all;
   return pool.reduce((s, x) => s + x.perDefaultUnit, 0) / pool.length;
+}
+
+// ---- Recipe cost calculator (§3.7 / §5.4) -----------------------------------
+export interface CostIngredient {
+  ingredientId: number;
+  amount: number | null;
+  unit: string | null;
+  optional: boolean;
+  defaultUnit: string | null;
+  density: number | null;
+}
+
+export interface LineCost {
+  ingredientId: number;
+  cost: number | null;
+  reason?: "no-price" | "unconvertible";
+}
+
+export interface RecipeCost {
+  total: number; // base-batch cost of the priced lines
+  perServing: number; // scale-invariant
+  lines: LineCost[]; // one per non-optional ingredient
+  unknownIngredientIds: number[];
+  knownCount: number; // priced lines
+  countedCount: number; // non-optional ingredients considered
+}
+
+/**
+ * Estimate a recipe's cost from `amount used × price-per-default-unit`, computed
+ * on `servings` (use base servings; per-serving is scale-invariant). Optional
+ * ingredients are excluded. Lines with no price, no amount, or an unconvertible
+ * unit are flagged and kept out of the total so it's honest about what it omits.
+ *
+ * `priceByIngredient` maps ingredientId → price per the ingredient's default
+ * unit (or null when unpriced) — typically built from `unitPrice()`.
+ */
+export function recipeCost(
+  ingredients: CostIngredient[],
+  priceByIngredient: Map<number, number | null>,
+  servings: number,
+): RecipeCost {
+  let total = 0;
+  const lines: LineCost[] = [];
+  const unknown: number[] = [];
+  let countedCount = 0;
+
+  for (const r of ingredients) {
+    if (r.optional) continue;
+    countedCount += 1;
+    const price = priceByIngredient.get(r.ingredientId) ?? null;
+
+    if (price == null || r.amount == null || r.unit == null || r.defaultUnit == null) {
+      unknown.push(r.ingredientId);
+      lines.push({ ingredientId: r.ingredientId, cost: null, reason: "no-price" });
+      continue;
+    }
+    try {
+      const amtInDefault = convert(r.amount, r.unit, r.defaultUnit, r.density ?? undefined);
+      const cost = amtInDefault * price;
+      total += cost;
+      lines.push({ ingredientId: r.ingredientId, cost });
+    } catch {
+      unknown.push(r.ingredientId);
+      lines.push({ ingredientId: r.ingredientId, cost: null, reason: "unconvertible" });
+    }
+  }
+
+  return {
+    total,
+    perServing: servings > 0 ? total / servings : total,
+    lines,
+    unknownIngredientIds: unknown,
+    knownCount: countedCount - unknown.length,
+    countedCount,
+  };
 }

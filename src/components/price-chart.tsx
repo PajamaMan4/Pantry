@@ -24,12 +24,21 @@ export function PriceChart({
 }) {
   if (points.length < 2) return null;
 
+  // Recharts derives tick keys from the data values, so duplicate dates
+  // (e.g. multiple price records on the same day) produce duplicate keys.
+  // Keep the latest point for each date.
+  const dedupedPoints = Array.from(
+    new Map(points.map((p) => [p.date, p])).values(),
+  );
+
+  if (dedupedPoints.length < 2) return null;
+
   const fmtDate = (t: number) =>
     new Date(t).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 
   return (
     <ResponsiveContainer width="100%" height={200}>
-      <LineChart data={points} margin={{ top: 8, right: 12, bottom: 4, left: 4 }}>
+      <LineChart data={dedupedPoints} margin={{ top: 8, right: 12, bottom: 4, left: 4 }}>
         <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
         <XAxis
           dataKey="date"

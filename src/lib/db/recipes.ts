@@ -13,6 +13,8 @@ import {
   type Tag,
 } from "./schema";
 import { lastCookedByRecipe } from "./cook";
+import { recipeCostSummaries } from "./recipe-cost";
+import type { RecipeCost } from "../domain/cost";
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -42,7 +44,7 @@ export type RecipeWriteInput = {
 };
 
 // ---- Read shapes ------------------------------------------------------------
-export type RecipeListItem = { recipe: Recipe; tags: Tag[]; lastCookedAt: Date | null };
+export type RecipeListItem = { recipe: Recipe; tags: Tag[]; lastCookedAt: Date | null; cost: RecipeCost };
 
 export type RecipeIngredientDetail = RecipeIngredient & {
   ingredient: Pick<Ingredient, "id" | "name" | "defaultUnit" | "category" | "density">;
@@ -114,11 +116,21 @@ export function listRecipes(filters: RecipeListFilters = {}): RecipeListItem[] {
   }
 
   const lastCooked = lastCookedByRecipe(ids);
+  const costByRecipe = recipeCostSummaries(ids);
+  const emptyCost: RecipeCost = {
+    total: 0,
+    perServing: 0,
+    lines: [],
+    unknownIngredientIds: [],
+    knownCount: 0,
+    countedCount: 0,
+  };
 
   return recipeRows.map((recipe) => ({
     recipe,
     tags: tagsByRecipe.get(recipe.id) ?? [],
     lastCookedAt: lastCooked.get(recipe.id) ?? null,
+    cost: costByRecipe.get(recipe.id) ?? emptyCost,
   }));
 }
 

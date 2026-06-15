@@ -79,14 +79,9 @@ export function RecipeScaler({
   const opts = { factor, system, rounding };
   const setServings = (n: number) => setTarget(Math.max(0.25, Math.round(n * 100) / 100));
 
-  const stockMap = React.useMemo(
-    () => new Map(cookStock.map((s) => [s.ingredientId, s.rows])),
-    [cookStock],
-  );
-  const plan = React.useMemo(
-    () => planCook(cookIngredients, stockMap, factor),
-    [cookIngredients, stockMap, factor],
-  );
+  // Computed directly — the React Compiler memoizes these automatically.
+  const stockMap = new Map(cookStock.map((s) => [s.ingredientId, s.rows]));
+  const plan = planCook(cookIngredients, stockMap, factor);
 
   return (
     <div>

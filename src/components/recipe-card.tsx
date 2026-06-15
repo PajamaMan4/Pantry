@@ -1,13 +1,13 @@
 import Link from "next/link";
-import { ClockIcon, UsersIcon, ChefHatIcon } from "lucide-react";
+import { ClockIcon, UsersIcon, ChefHatIcon, CoinsIcon } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { FavoriteButton } from "@/app/recipes/favorite-button";
-import { formatMinutes, totalTimeMin, formatNumber } from "@/lib/domain/format";
+import { formatMinutes, totalTimeMin, formatNumber, formatMoney } from "@/lib/domain/format";
 import type { RecipeListItem } from "@/lib/db/recipes";
 
-export function RecipeCard({ item }: { item: RecipeListItem }) {
-  const { recipe, tags, lastCookedAt } = item;
+export function RecipeCard({ item, currency }: { item: RecipeListItem; currency: string }) {
+  const { recipe, tags, lastCookedAt, cost } = item;
   const total = totalTimeMin(recipe.prepTimeMin, recipe.cookTimeMin);
 
   return (
@@ -30,6 +30,12 @@ export function RecipeCard({ item }: { item: RecipeListItem }) {
           <span className="inline-flex items-center gap-1">
             <UsersIcon className="size-4" /> Serves {formatNumber(recipe.baseServings)}
           </span>
+          {cost.knownCount > 0 && (
+            <span className="inline-flex items-center gap-1" title={cost.unknownIngredientIds.length > 0 ? "Some ingredients are unpriced" : undefined}>
+              <CoinsIcon className="size-4" /> {formatMoney(cost.perServing, currency)}/serving
+              {cost.unknownIngredientIds.length > 0 && <span className="text-xs">*</span>}
+            </span>
+          )}
           {lastCookedAt && (
             <span className="inline-flex items-center gap-1">
               <ChefHatIcon className="size-4" /> {new Date(lastCookedAt).toLocaleDateString()}

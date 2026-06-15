@@ -8,9 +8,11 @@ import { FavoriteButton } from "../favorite-button";
 import { DeleteRecipe } from "../delete-recipe";
 import { RecipeScaler } from "../recipe-scaler";
 import { UndoCookButton } from "../undo-cook-button";
+import { RecipeCostSummary } from "../recipe-cost-summary";
 import { getRecipeDetail } from "@/lib/db/recipes";
 import { getSettings } from "@/lib/db/settings";
 import { getCookData, cookStats, listCookLogsForRecipe } from "@/lib/db/cook";
+import { recipeCostFor } from "@/lib/db/recipe-cost";
 import { formatMinutes, totalTimeMin, formatNumber, formatMoney } from "@/lib/domain/format";
 
 export const dynamic = "force-dynamic";
@@ -29,6 +31,10 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ i
   const cookData = getCookData(recipeId)!;
   const stats = cookStats(recipeId);
   const history = listCookLogsForRecipe(recipeId, 5);
+  const cost = recipeCostFor(recipeId);
+  const ingredientNames: Record<number, string> = Object.fromEntries(
+    ingredients.map((ri) => [ri.ingredientId, ri.ingredient.name]),
+  );
 
   return (
     <div className="mx-auto w-full max-w-2xl px-4 py-8">
@@ -80,6 +86,15 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ i
             </Badge>
           ))}
         </div>
+      )}
+
+      {cost && (
+        <RecipeCostSummary
+          cost={cost}
+          currency={settings.currency}
+          baseServings={recipe.baseServings}
+          names={ingredientNames}
+        />
       )}
 
       <Separator className="my-6" />

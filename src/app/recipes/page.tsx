@@ -7,6 +7,7 @@ import { RecipeFilters } from "./recipe-filters";
 import { listRecipes, type RecipeListFilters } from "@/lib/db/recipes";
 import { listTags } from "@/lib/db/tags";
 import { listIngredients } from "@/lib/db/ingredients";
+import { getSettings } from "@/lib/db/settings";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Recipes · Pantry" };
@@ -36,6 +37,7 @@ export default async function RecipesPage({
   const recipes = listRecipes(filters);
   const tags = listTags();
   const ingredients = listIngredients();
+  const settings = getSettings();
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-8">
@@ -64,7 +66,7 @@ export default async function RecipesPage({
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
           {recipes.map((item) => (
-            <RecipeCard key={item.recipe.id} item={item} />
+            <RecipeCard key={item.recipe.id} item={item} currency={settings.currency} />
           ))}
         </div>
       )}

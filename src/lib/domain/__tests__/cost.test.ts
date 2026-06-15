@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { normalizePrices, priceSummary, unitPrice } from "@/lib/domain/cost";
+import {
+  normalizePrices,
+  priceSummary,
+  unitPrice,
+  recipeCost,
+  type CostIngredient,
+} from "@/lib/domain/cost";
 
 const FLOUR = { defaultUnit: "g", density: 0.53 };
 
@@ -100,5 +106,50 @@ describe("unitPrice", () => {
 
   it("returns null with no usable entries", () => {
     expect(unitPrice([], { defaultUnit: "g" }, "average", 6, now)).toBeNull();
+  });
+});
+
+describe("recipeCost", () => {
+  const FLOUR: CostIngredient = { ingredientId: 1, amount: 200, unit: "g", optional: false, defaultUnit: "g", density: 0.53 };
+  const SUGAR: CostIngredient = { ingredientId: 2, amount: 50, unit: "g", optional: false, defaultUnit: "g", density: null };
+
+  it("sums amount × price-per-unit and derives per-serving", () => {
+    const c = recipeCost([FLOUR, SUGAR], new Map([[1, 0.005], [2, 0.004]]), 4);
+    // flour 200g*0.005 = 1.0 ; sugar 50g*0.004 = 0.2 → total 1.2
+    expect(c.total).toBeCloseTo(1.2, 6);
+    expect(c.perServing).toBeCloseTo(0.3, 6);
+    expect(c.knownCount).toBe(2);
+    expect(c.unknownIngredientIds).toEqual([]);
+  });
+
+  it("converts the recipe unit to the default unit via density", () => {
+    const cupFlour: CostIngredient = { ingredientId: 1, amount: 1, unit: "cup", optional: false, defaultUnit: "g", density: 0.53 };
+    const c = recipeCost([cupFlour], new Map([[1, 0.01]]), 1);
+    // 1 cup flour ≈ 125.39 g × $0.01/g ≈ $1.25
+    expect(c.total).toBeCloseTo(1.2539, 3);
+  });
+
+  it("flags ingredients with no price and excludes them from the total", () => {
+    const c = recipeCost([FLOUR, SUGAR], new Map([[1, 0.005], [2, null]]), 1);
+    expect(c.total).toBeCloseTo(1.0, 6);
+    expect(c.unknownIngredientIds).toEqual([2]);
+    expect(c.lines.find((l) => l.ingredientId === 2)?.reason).toBe("no-price");
+    expect(c.knownCount).toBe(1);
+    expect(c.countedCount).toBe(2);
+  });
+
+  it("flags unconvertible units", () => {
+    const cupNoDensity: CostIngredient = { ingredientId: 2, amount: 1, unit: "cup", optional: false, defaultUnit: "g", density: null };
+    const c = recipeCost([cupNoDensity], new Map([[2, 0.01]]), 1);
+    expect(c.total).toBe(0);
+    expect(c.lines[0].reason).toBe("unconvertible");
+    expect(c.unknownIngredientIds).toEqual([2]);
+  });
+
+  it("excludes optional ingredients entirely", () => {
+    const optional: CostIngredient = { ...SUGAR, optional: true };
+    const c = recipeCost([FLOUR, optional], new Map([[1, 0.005], [2, 0.004]]), 1);
+    expect(c.total).toBeCloseTo(1.0, 6);
+    expect(c.countedCount).toBe(1);
   });
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { saveSettingsAction, type SaveSettingsResult } from "./actions";
 import {
   Select,
@@ -24,11 +24,14 @@ export function SettingsForm({ initial }: { initial: Settings }) {
     saveSettingsAction,
     null,
   );
+  // Capture once: Select's defaultValue must not change after mount (Base UI
+  // warns otherwise), but `initial` changes when the page revalidates on save.
+  const [initialValues] = useState(initial);
 
   return (
     <form action={formAction} className="space-y-6">
       <Field label="Unit system" htmlFor="unitSystem">
-        <Select name="unitSystem" defaultValue={initial.unitSystem} items={UNIT_SYSTEMS}>
+        <Select name="unitSystem" defaultValue={initialValues.unitSystem} items={UNIT_SYSTEMS}>
           <SelectTrigger id="unitSystem" className="w-full">
             <SelectValue />
           </SelectTrigger>
@@ -43,7 +46,7 @@ export function SettingsForm({ initial }: { initial: Settings }) {
       </Field>
 
       <Field label="Price mode" htmlFor="priceMode" hint="Which price feeds the cost calculator.">
-        <Select name="priceMode" defaultValue={initial.priceMode} items={PRICE_MODES}>
+        <Select name="priceMode" defaultValue={initialValues.priceMode} items={PRICE_MODES}>
           <SelectTrigger id="priceMode" className="w-full">
             <SelectValue />
           </SelectTrigger>
@@ -64,7 +67,7 @@ export function SettingsForm({ initial }: { initial: Settings }) {
       >
         <Select
           name="averageWindowMonths"
-          defaultValue={String(initial.averageWindowMonths)}
+          defaultValue={String(initialValues.averageWindowMonths)}
           items={WINDOWS}
         >
           <SelectTrigger id="averageWindowMonths" className="w-full">
@@ -81,7 +84,7 @@ export function SettingsForm({ initial }: { initial: Settings }) {
       </Field>
 
       <Field label="Rounding mode" htmlFor="roundingMode">
-        <Select name="roundingMode" defaultValue={initial.roundingMode} items={ROUNDING_MODES}>
+        <Select name="roundingMode" defaultValue={initialValues.roundingMode} items={ROUNDING_MODES}>
           <SelectTrigger id="roundingMode" className="w-full">
             <SelectValue />
           </SelectTrigger>
@@ -99,7 +102,7 @@ export function SettingsForm({ initial }: { initial: Settings }) {
         <Input
           id="currency"
           name="currency"
-          defaultValue={initial.currency}
+          defaultValue={initialValues.currency}
           maxLength={8}
           className="w-40 uppercase"
         />
