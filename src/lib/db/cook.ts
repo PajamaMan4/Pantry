@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "./client";
 import {
   recipes,
@@ -41,6 +41,7 @@ export function getCookData(recipeId: number): CookData | undefined {
     .from(recipeIngredients)
     .innerJoin(ingredients, eq(recipeIngredients.ingredientId, ingredients.id))
     .where(eq(recipeIngredients.recipeId, recipeId))
+    .orderBy(asc(recipeIngredients.displayOrder))
     .all();
 
   const cookIngredients: CookIngredientInput[] = rows.map(({ ri, ing }) => ({

@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { scaleFactor, displayQuantity, renderStep, type DisplaySystem } from "@/lib/domain/scaling";
 import { formatNumber } from "@/lib/domain/format";
 import type { RoundingMode } from "@/lib/domain/quantity";
-import type { CookIngredientInput, CookStockRow } from "@/lib/domain/cook";
+import { planCook, type CookIngredientInput, type CookStockRow } from "@/lib/domain/cook";
 import { CookButton } from "./cook-button";
 
 export type ScalerIngredient = {
@@ -78,6 +78,15 @@ export function RecipeScaler({
 
   const opts = { factor, system, rounding };
   const setServings = (n: number) => setTarget(Math.max(0.25, Math.round(n * 100) / 100));
+
+  const stockMap = React.useMemo(
+    () => new Map(cookStock.map((s) => [s.ingredientId, s.rows])),
+    [cookStock],
+  );
+  const plan = React.useMemo(
+    () => planCook(cookIngredients, stockMap, factor),
+    [cookIngredients, stockMap, factor],
+  );
 
   return (
     <div>
@@ -166,13 +175,20 @@ export function RecipeScaler({
           <p className="text-sm text-muted-foreground">No ingredients listed.</p>
         ) : (
           <ul className="space-y-1.5">
-            {ingredients.map((ing) => {
+            {ingredients.map((ing, i) => {
               const qty = displayQuantity(
                 { amount: ing.amount, amountMax: ing.amountMax, unit: ing.unit, raw: ing.raw },
                 { ...opts, density: ing.density ?? undefined },
               );
+              const status = plan.lines[i]?.status;
               return (
                 <li key={ing.id} className="flex flex-wrap items-baseline gap-x-2 text-sm">
+                  {status === "ok" && <span aria-label="In stock" title="In stock">✅</span>}
+                  {(status === "partial" || status === "missing") && (
+                    <span aria-label="Not enough in stock" title="Not enough in stock">
+                      ❌
+                    </span>
+                  )}
                   {qty && <span className="tabular-nums text-foreground">{qty}</span>}
                   <span className="font-medium">{ing.name}</span>
                   {ing.prep && <span className="text-muted-foreground">— {ing.prep}</span>}
