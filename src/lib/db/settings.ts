@@ -32,3 +32,19 @@ export function setInventoryView(view: InventoryView): void {
   getSettings(); // ensure the row exists
   db.update(settings).set({ inventoryView: view }).where(eq(settings.id, SETTINGS_ID)).run();
 }
+
+export function setAnthropicApiKey(key: string | null): void {
+  getSettings(); // ensure the row exists
+  db.update(settings).set({ anthropicApiKey: key }).where(eq(settings.id, SETTINGS_ID)).run();
+}
+
+/**
+ * Resolve the Anthropic API key for recipe import: the key saved in Settings
+ * takes precedence, falling back to the ANTHROPIC_API_KEY environment variable.
+ */
+export function resolveAnthropicApiKey(): string | null {
+  const stored = getSettings().anthropicApiKey?.trim();
+  if (stored) return stored;
+  const env = process.env.ANTHROPIC_API_KEY?.trim();
+  return env || null;
+}

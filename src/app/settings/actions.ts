@@ -1,13 +1,17 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { settingsUpdateSchema } from "@/lib/validation/settings";
+import { settingsUpdateSchema, anthropicKeySchema } from "@/lib/validation/settings";
 import { locationNameSchema } from "@/lib/validation/location";
-import { updateSettings } from "@/lib/db/settings";
+import { updateSettings, setAnthropicApiKey, resolveAnthropicApiKey } from "@/lib/db/settings";
 import { createLocation, renameLocation, deleteLocation } from "@/lib/db/locations";
 
 export type SaveSettingsResult =
   | { ok: true; savedAt: number }
+  | { ok: false; error: string };
+
+export type SaveApiKeyResult =
+  | { ok: true; hasKey: boolean }
   | { ok: false; error: string };
 
 export type LocationActionResult = { ok: true } | { ok: false; error: string };
@@ -65,4 +69,21 @@ export async function saveSettingsAction(
   updateSettings(parsed.data);
   revalidatePath("/settings");
   return { ok: true, savedAt: Date.now() };
+}
+
+// Separate from saveSettingsAction so saving general settings never touches the
+// API key, and vice versa.
+export async function saveApiKeyAction(
+  _prev: SaveApiKeyResult | null,
+  formData: FormData,
+): Promise<SaveApiKeyResult> {
+  const parsed = anthropicKeySchema.safeParse({ anthropicApiKey: formData.get("anthropicApiKey") });
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid API key" };
+  }
+
+  setAnthropicApiKey(parsed.data.anthropicApiKey);
+  revalidatePath("/settings");
+  revalidatePath("/recipes/import");
+  return { ok: true, hasKey: resolveAnthropicApiKey() != null };
 }

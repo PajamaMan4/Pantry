@@ -288,3 +288,10 @@ export function setFavorite(id: number, value: boolean): void {
     .where(eq(recipes.id, id))
     .run();
 }
+
+export function setRating(id: number, rating: number | null): void {
+  db.update(recipes)
+    .set({ rating, updatedAt: new Date() })
+    .where(eq(recipes.id, id))
+    .run();
+}

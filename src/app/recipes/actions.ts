@@ -9,6 +9,7 @@ import {
   updateRecipe,
   deleteRecipe,
   setFavorite,
+  setRating,
   type RecipeWriteInput,
 } from "@/lib/db/recipes";
 import { getOrCreateIngredient } from "@/lib/db/ingredients";
@@ -48,6 +49,13 @@ export async function deleteRecipeAction(id: number): Promise<void> {
 
 export async function toggleFavoriteAction(id: number, value: boolean): Promise<{ ok: true }> {
   setFavorite(id, value);
+  revalidatePath("/recipes");
+  revalidatePath(`/recipes/${id}`);
+  return { ok: true };
+}
+
+export async function setRatingAction(id: number, rating: number | null): Promise<{ ok: true }> {
+  setRating(id, rating == null ? null : Math.max(1, Math.min(5, Math.round(rating))));
   revalidatePath("/recipes");
   revalidatePath(`/recipes/${id}`);
   return { ok: true };

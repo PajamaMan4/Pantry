@@ -46,6 +46,7 @@ export const recipes = sqliteTable("recipes", {
   cookTimeMin: integer("cook_time_min"),
   baseServings: real("base_servings").notNull().default(1),
   notes: text("notes"),
+  rating: integer("rating"), // 1–5, optional
   isFavorite: integer("is_favorite", { mode: "boolean" }).notNull().default(false),
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
@@ -166,6 +167,20 @@ export const settings = sqliteTable("settings", {
   currency: text("currency").notNull().default("USD"),
   roundingMode: text("rounding_mode").notNull().default("cooking"), // 'cooking' | 'exact'
   inventoryView: text("inventory_view").notNull().default("alphabetical"), // 'alphabetical' | 'location'
+  anthropicApiKey: text("anthropic_api_key"), // optional, enables Claude recipe import
+});
+
+export const shoppingListItems = sqliteTable("shopping_list_items", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  ingredientId: integer("ingredient_id").references(() => ingredients.id, { onDelete: "set null" }),
+  name: text("name").notNull(), // free text or ingredient-name snapshot
+  quantity: real("quantity"),
+  unit: text("unit"),
+  price: real("price"), // optional price paid — records a PriceEntry when received
+  checked: integer("checked", { mode: "boolean" }).notNull().default(false),
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .notNull()
+    .$defaultFn(() => new Date()),
 });
 
 // Convenience inferred types for the rest of the app.
@@ -185,3 +200,5 @@ export type CookLog = typeof cookLogs.$inferSelect;
 export type CookLogLine = typeof cookLogLines.$inferSelect;
 export type Settings = typeof settings.$inferSelect;
 export type NewSettings = typeof settings.$inferInsert;
+export type ShoppingListItem = typeof shoppingListItems.$inferSelect;
+export type NewShoppingListItem = typeof shoppingListItems.$inferInsert;

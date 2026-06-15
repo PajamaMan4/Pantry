@@ -4,6 +4,7 @@ import { CoinsIcon, ClockAlertIcon, CheckCircle2Icon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { AddMissingButton } from "./add-missing-button";
 import { getRecommendations } from "@/lib/db/recommend";
 import { getSettings } from "@/lib/db/settings";
 import { formatMoney } from "@/lib/domain/format";
@@ -117,13 +118,16 @@ function RecommendCard({
         </div>
 
         {missingNames.length > 0 && (
-          <p className="mt-2 text-sm">
-            <span className="text-muted-foreground">Missing:</span>{" "}
-            {missingNames.join(", ")}
-            {r.unknownUnits > 0 && (
-              <span className="text-muted-foreground"> ({r.unknownUnits} can&apos;t be checked)</span>
-            )}
-          </p>
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm">
+              <span className="text-muted-foreground">Missing:</span>{" "}
+              {missingNames.join(", ")}
+              {r.unknownUnits > 0 && (
+                <span className="text-muted-foreground"> ({r.unknownUnits} can&apos;t be checked)</span>
+              )}
+            </p>
+            <AddMissingButton recipeId={r.recipe.id} />
+          </div>
         )}
       </CardContent>
     </Card>

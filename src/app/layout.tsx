@@ -44,6 +44,9 @@ export default function RootLayout({
             <Link href="/ingredients" className="text-muted-foreground hover:text-foreground">
               Ingredients
             </Link>
+            <Link href="/shopping" className="text-muted-foreground hover:text-foreground">
+              Shopping
+            </Link>
             <Link href="/settings" className="text-muted-foreground hover:text-foreground">
               Settings
             </Link>

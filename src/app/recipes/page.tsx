@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { PlusIcon } from "lucide-react";
+import { PlusIcon, SparklesIcon } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { RecipeCard } from "@/components/recipe-card";
 import { RecipeFilters } from "./recipe-filters";
@@ -43,9 +43,14 @@ export default async function RecipesPage({
     <div className="mx-auto w-full max-w-3xl px-4 py-8">
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">Recipes</h1>
-        <Link href="/recipes/new" className={buttonVariants()}>
-          <PlusIcon className="size-4" /> New recipe
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href="/recipes/import" className={buttonVariants({ variant: "outline" })}>
+            <SparklesIcon className="size-4" /> Import
+          </Link>
+          <Link href="/recipes/new" className={buttonVariants()}>
+            <PlusIcon className="size-4" /> New recipe
+          </Link>
+        </div>
       </div>
 
       <div className="mb-6">

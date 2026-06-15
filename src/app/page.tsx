@@ -5,6 +5,7 @@ import { db } from "@/lib/db/client";
 import { ingredients, recipes, inventoryItems, priceEntries } from "@/lib/db/schema";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ExpiryBadge } from "@/components/expiry-badge";
 import { listInventory } from "@/lib/db/inventory";
 import { getRecommendations } from "@/lib/db/recommend";
 import { expiryStatus } from "@/lib/domain/expiry";
@@ -20,10 +21,10 @@ export default function Home() {
     inventory: db.select({ n: sql<number>`count(*)` }).from(inventoryItems).get()?.n ?? 0,
     prices: db.select({ n: sql<number>`count(*)` }).from(priceEntries).get()?.n ?? 0,
   };
-  const useSoon = listInventory().filter((r) => {
-    const s = expiryStatus(r.item.expiryDate, now);
-    return s === "expired" || s === "soon";
-  }).length;
+  const expiringItems = listInventory()
+    .map((r) => ({ row: r, status: expiryStatus(r.item.expiryDate, now) }))
+    .filter((x) => x.status === "expired" || x.status === "soon")
+    .sort((a, b) => (a.row.item.expiryDate?.getTime() ?? Infinity) - (b.row.item.expiryDate?.getTime() ?? Infinity));
   const suggestions = getRecommendations("available")
     .results.filter((r) => r.makeable || r.almost)
     .slice(0, 4);
@@ -37,17 +38,27 @@ export default function Home() {
         </p>
       </header>
 
-      {useSoon > 0 && (
-        <Link
-          href="/ingredients"
-          className="mb-6 flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-4 py-2.5 text-sm dark:border-amber-800 dark:bg-amber-950/40"
-        >
-          <AlertTriangleIcon className="size-4 text-amber-500" />
-          <span>
-            <strong>{useSoon}</strong> item{useSoon === 1 ? "" : "s"} to use soon or expired.
-          </span>
-          <span className="ml-auto text-muted-foreground">View →</span>
-        </Link>
+      {expiringItems.length > 0 && (
+        <Card className="mb-6 border-amber-300 dark:border-amber-800">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <AlertTriangleIcon className="size-4 text-amber-500" /> Use soon
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="divide-y py-0">
+            {expiringItems.slice(0, 6).map(({ row }) => (
+              <div key={row.item.id} className="flex items-center justify-between gap-2 py-2 text-sm">
+                <Link href={`/ingredients/${row.ingredient.id}`} className="font-medium hover:underline">
+                  {row.ingredient.name}
+                </Link>
+                <ExpiryBadge expiry={row.item.expiryDate} now={now} />
+              </div>
+            ))}
+            {expiringItems.length > 6 && (
+              <div className="py-2 text-xs text-muted-foreground">+{expiringItems.length - 6} more</div>
+            )}
+          </CardContent>
+        </Card>
       )}
 
       <section className="grid grid-cols-2 gap-4 sm:grid-cols-4">

@@ -9,6 +9,7 @@ import { DeleteRecipe } from "../delete-recipe";
 import { RecipeScaler } from "../recipe-scaler";
 import { UndoCookButton } from "../undo-cook-button";
 import { RecipeCostSummary } from "../recipe-cost-summary";
+import { RatingStars } from "@/components/rating-stars";
 import { getRecipeDetail } from "@/lib/db/recipes";
 import { getSettings } from "@/lib/db/settings";
 import { getCookData, cookStats, listCookLogsForRecipe } from "@/lib/db/cook";
@@ -48,6 +49,9 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ i
           <FavoriteButton id={recipe.id} isFavorite={recipe.isFavorite} />
         </div>
         <div className="flex shrink-0 items-center gap-2">
+          <Link href={`/recipes/${recipe.id}/cook`} className={buttonVariants({ size: "sm" })}>
+            <ChefHatIcon className="size-4" /> Cook mode
+          </Link>
           <Link
             href={`/recipes/${recipe.id}/edit`}
             className={buttonVariants({ variant: "outline", size: "sm" })}
@@ -56,6 +60,10 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ i
           </Link>
           <DeleteRecipe id={recipe.id} />
         </div>
+      </div>
+
+      <div className="mt-2">
+        <RatingStars recipeId={recipe.id} rating={recipe.rating} />
       </div>
 
       {recipe.description && <p className="mt-2 text-muted-foreground">{recipe.description}</p>}

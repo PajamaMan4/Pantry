@@ -19,3 +19,16 @@ export type SettingsUpdate = z.infer<typeof settingsUpdateSchema>;
 
 export const inventoryViewSchema = z.enum(["alphabetical", "location"]);
 export type InventoryViewValue = z.infer<typeof inventoryViewSchema>;
+
+// API key for Claude-assisted recipe import. Blank clears the stored key.
+export const anthropicKeySchema = z.object({
+  anthropicApiKey: z.preprocess(
+    (v) => (typeof v === "string" && v.trim() === "" ? null : v),
+    z
+      .string()
+      .trim()
+      .max(200)
+      .nullable(),
+  ),
+});
+export type AnthropicKeyInput = z.infer<typeof anthropicKeySchema>;

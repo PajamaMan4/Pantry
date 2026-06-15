@@ -3,6 +3,7 @@ import { ClockIcon, UsersIcon, ChefHatIcon, CoinsIcon } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { FavoriteButton } from "@/app/recipes/favorite-button";
+import { RatingDisplay } from "@/components/rating-stars";
 import { formatMinutes, totalTimeMin, formatNumber, formatMoney } from "@/lib/domain/format";
 import type { RecipeListItem } from "@/lib/db/recipes";
 
@@ -41,6 +42,7 @@ export function RecipeCard({ item, currency }: { item: RecipeListItem; currency:
               <ChefHatIcon className="size-4" /> {new Date(lastCookedAt).toLocaleDateString()}
             </span>
           )}
+          <RatingDisplay rating={recipe.rating} />
         </div>
 
         {tags.length > 0 && (
