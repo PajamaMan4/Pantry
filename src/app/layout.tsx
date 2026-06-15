@@ -38,6 +38,9 @@ export default function RootLayout({
             <Link href="/recipes" className="text-muted-foreground hover:text-foreground">
               Recipes
             </Link>
+            <Link href="/make" className="text-muted-foreground hover:text-foreground">
+              Make
+            </Link>
             <Link href="/ingredients" className="text-muted-foreground hover:text-foreground">
               Ingredients
             </Link>
