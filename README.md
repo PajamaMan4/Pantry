@@ -2,6 +2,14 @@
 
 Personal, local-first, single-user cooking and kitchen management app. Manage recipes, track pantry inventory, scale servings, and monitor ingredient costs — all stored locally in SQLite with no cloud dependency.
 
+## License
+
+This project is licensed under the [PolyForm Noncommercial License 1.0.0](LICENSE).
+In short: you're free to use, modify, and share this code for personal,
+educational, or other noncommercial purposes. Commercial use (selling it,
+using it in a paid product, etc.) is not permitted without a separate
+agreement.
+
 ## Features
 
 - **Recipe management** — create, edit, and organize recipes with ingredients, steps, tags, and notes
