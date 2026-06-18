@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ClockIcon, PencilIcon, ChefHatIcon } from "lucide-react";
+import { ClockIcon, PencilIcon, ChefHatIcon, DownloadIcon } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -59,6 +59,13 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ i
           >
             <PencilIcon className="size-4" /> Edit
           </Link>
+          <a
+            href={`/api/recipes/${recipe.id}/export`}
+            download
+            className={buttonVariants({ variant: "outline", size: "sm" })}
+          >
+            <DownloadIcon className="size-4" /> Export
+          </a>
           <AddMissingButton recipeId={recipe.id} />
           <DeleteRecipe id={recipe.id} />
         </div>

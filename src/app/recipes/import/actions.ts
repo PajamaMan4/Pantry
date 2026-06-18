@@ -7,9 +7,9 @@ import { resolveAnthropicApiKey } from "@/lib/db/settings";
 import { extractRecipe } from "@/lib/import/extract-recipe";
 import { createRecipe, type RecipeIngredientInput, type RecipeWriteInput } from "@/lib/db/recipes";
 import type { Step } from "@/lib/db/schema";
+import { pantryFileSchema } from "@/lib/pantry-file";
 
-export type ImportResult =
-  | { ok: false; error: string; needsKey?: boolean };
+export type ImportResult = { ok: false; error: string; needsKey?: boolean };
 
 // Maps common unit words the model emits onto our canonical unit ids. Anything
 // not recognized stays as null (and is preserved in the row's `raw` text so the
@@ -84,5 +84,58 @@ export async function importRecipeAction(rawText: string): Promise<ImportResult>
   const id = createRecipe(draft);
   revalidatePath("/recipes");
   // Drop the user into the editor to review the imported draft before it's final.
+  redirect(`/recipes/${id}/edit`);
+}
+
+export async function importPantryFileAction(json: unknown): Promise<ImportResult> {
+  const parsed = pantryFileSchema.safeParse(json);
+  if (!parsed.success) {
+    const msg = parsed.error.issues[0]?.message ?? "unknown error";
+    return { ok: false, error: `Invalid .pantry file: ${msg}` };
+  }
+
+  const f = parsed.data;
+
+  const ingredients: RecipeIngredientInput[] = f.ingredients.map((ing) => ({
+    ingredientId: null,
+    name: ing.name,
+    amount: ing.amount,
+    amountMax: ing.amountMax,
+    unit: ing.unit,
+    raw: ing.raw,
+    prep: ing.prep,
+    optional: ing.optional,
+  }));
+
+  const steps: Step[] = f.steps.map((s) => ({
+    id: s.id,
+    text: s.text,
+    ...(s.quantities
+      ? {
+          quantities: Object.fromEntries(
+            Object.entries(s.quantities).map(([k, q]) => [
+              k,
+              { ingredientId: null, amount: q.amount, amountMax: q.amountMax ?? null, unit: q.unit },
+            ]),
+          ),
+        }
+      : {}),
+  }));
+
+  const draft: RecipeWriteInput = {
+    name: f.name,
+    description: f.description,
+    prepTimeMin: f.prepTimeMin,
+    cookTimeMin: f.cookTimeMin,
+    baseServings: f.baseServings,
+    notes: f.notes,
+    isFavorite: f.isFavorite,
+    tags: f.tags,
+    ingredients,
+    steps,
+  };
+
+  const id = createRecipe(draft);
+  revalidatePath("/recipes");
   redirect(`/recipes/${id}/edit`);
 }

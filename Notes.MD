@@ -3,10 +3,12 @@
 -lb/gal
 -g/each (unit would be for situations such as 1 egg)
 -oz/each
-2. Clickable check boxes on the recipe pages for steps
 3. A barcode scanner which can add items to pantry (not sure this is realistic)
+    3.1. this is doable but would need some additional work to either wrap the web app or to make it a full app on iOS.
 4. Recipe and ingredient images (want it to be toggable)
 5. Should recipe page perhaps have different sub pages for breakfast, lunch, dinner, dessert, like a real recipe book has chapters?
+6. Add a mass recipe export button.
+7. Definitely need to update the layout/visuals.
 
 **Changes to make**
 

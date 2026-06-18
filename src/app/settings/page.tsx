@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { DownloadIcon } from "lucide-react";
 import { getSettings, resolveAnthropicApiKey } from "@/lib/db/settings";
 import { listLocations } from "@/lib/db/locations";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { buttonVariants } from "@/components/ui/button";
 import { SettingsForm } from "./settings-form";
 import { LocationManager } from "./location-manager";
 import { ApiKeyForm } from "./api-key-form";
@@ -54,8 +56,21 @@ export default function SettingsPage() {
             Optional — recipes can always be entered manually.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <ApiKeyForm hasKey={hasApiKey} />
+          <div className="border-t pt-4">
+            <p className="mb-2 text-sm text-muted-foreground">
+              Share this schema with Claude to generate or convert recipes in the .pantry format.
+            </p>
+            <a
+              href="/api/schema/pantry"
+              download="pantry-file.ts"
+              className={buttonVariants({ variant: "outline", size: "sm" })}
+            >
+              <DownloadIcon className="size-4" />
+              Export .pantry JSON schema
+            </a>
+          </div>
         </CardContent>
       </Card>
 
