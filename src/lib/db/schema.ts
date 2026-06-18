@@ -74,7 +74,7 @@ export const recipeIngredients = sqliteTable(
     optional: integer("optional", { mode: "boolean" }).notNull().default(false),
     displayOrder: integer("display_order").notNull().default(0),
   },
-  (t) => [index("ri_recipe_idx").on(t.recipeId)],
+  (t) => [index("ri_recipe_idx").on(t.recipeId), index("ri_ingredient_idx").on(t.ingredientId)],
 );
 
 export const tags = sqliteTable("tags", {
@@ -82,14 +82,18 @@ export const tags = sqliteTable("tags", {
   name: text("name").notNull().unique(),
 });
 
-export const recipeTags = sqliteTable("recipe_tags", {
-  recipeId: integer("recipe_id")
-    .notNull()
-    .references(() => recipes.id, { onDelete: "cascade" }),
-  tagId: integer("tag_id")
-    .notNull()
-    .references(() => tags.id, { onDelete: "cascade" }),
-});
+export const recipeTags = sqliteTable(
+  "recipe_tags",
+  {
+    recipeId: integer("recipe_id")
+      .notNull()
+      .references(() => recipes.id, { onDelete: "cascade" }),
+    tagId: integer("tag_id")
+      .notNull()
+      .references(() => tags.id, { onDelete: "cascade" }),
+  },
+  (t) => [index("rt_recipe_idx").on(t.recipeId), index("rt_tag_idx").on(t.tagId)],
+);
 
 export const storageLocations = sqliteTable("storage_locations", {
   id: integer("id").primaryKey({ autoIncrement: true }),

@@ -1,18 +1,34 @@
 import Link from "next/link";
-import { ClockIcon, UsersIcon, ChefHatIcon, CoinsIcon } from "lucide-react";
+import { ClockIcon, UsersIcon, ChefHatIcon, CoinsIcon, ClockAlertIcon, CheckCircle2Icon } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { FavoriteButton } from "@/app/recipes/favorite-button";
 import { RatingDisplay } from "@/components/rating-stars";
+import { AddMissingButton } from "@/components/add-missing-button";
 import { formatMinutes, totalTimeMin, formatNumber, formatMoney } from "@/lib/domain/format";
 import type { RecipeListItem } from "@/lib/db/recipes";
+import type { RecommendResult } from "@/lib/domain/recommend";
+import { cn } from "@/lib/utils";
 
-export function RecipeCard({ item, currency }: { item: RecipeListItem; currency: string }) {
+export function RecipeCard({
+  item,
+  currency,
+  recommend,
+  ingredientNames,
+}: {
+  item: RecipeListItem;
+  currency: string;
+  recommend?: RecommendResult;
+  ingredientNames?: Map<number, string>;
+}) {
   const { recipe, tags, lastCookedAt, cost } = item;
   const total = totalTimeMin(recipe.prepTimeMin, recipe.cookTimeMin);
+  const missingNames = recommend && ingredientNames
+    ? recommend.missing.map((id) => ingredientNames.get(id) ?? "?")
+    : [];
 
   return (
-    <Card>
+    <Card className={cn(recommend?.makeable && "border-emerald-300 dark:border-emerald-800")}>
       <CardContent className="py-4">
         <div className="flex items-start justify-between gap-2">
           <Link
@@ -21,7 +37,22 @@ export function RecipeCard({ item, currency }: { item: RecipeListItem; currency:
           >
             {recipe.name}
           </Link>
-          <FavoriteButton id={recipe.id} isFavorite={recipe.isFavorite} />
+          <div className="flex shrink-0 items-center gap-2">
+            {recommend?.makeable ? (
+              <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                <CheckCircle2Icon className="size-3.5" /> makeable
+              </Badge>
+            ) : recommend?.almost ? (
+              <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                almost there
+              </Badge>
+            ) : recommend ? (
+              <Badge variant="secondary">
+                {recommend.haveCount}/{recommend.requiredCount}
+              </Badge>
+            ) : null}
+            <FavoriteButton id={recipe.id} isFavorite={recipe.isFavorite} />
+          </div>
         </div>
 
         <div className="mt-2 flex flex-wrap gap-4 text-sm text-muted-foreground">
@@ -42,6 +73,11 @@ export function RecipeCard({ item, currency }: { item: RecipeListItem; currency:
               <ChefHatIcon className="size-4" /> {new Date(lastCookedAt).toLocaleDateString()}
             </span>
           )}
+          {recommend && recommend.expiryUrgency > 0 && (
+            <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400">
+              <ClockAlertIcon className="size-4" /> uses expiring stock
+            </span>
+          )}
           <RatingDisplay rating={recipe.rating} />
         </div>
 
@@ -52,6 +88,19 @@ export function RecipeCard({ item, currency }: { item: RecipeListItem; currency:
                 {t.name}
               </Badge>
             ))}
+          </div>
+        )}
+
+        {recommend && missingNames.length > 0 && (
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm">
+              <span className="text-muted-foreground">Missing:</span>{" "}
+              {missingNames.join(", ")}
+              {recommend.unknownUnits > 0 && (
+                <span className="text-muted-foreground"> ({recommend.unknownUnits} can&apos;t be checked)</span>
+              )}
+            </p>
+            <AddMissingButton recipeId={recipe.id} />
           </div>
         )}
       </CardContent>

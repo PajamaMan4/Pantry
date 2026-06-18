@@ -12,7 +12,8 @@ import { AddInventory } from "../add-inventory";
 import { InventoryItemRow, type SerialInventoryItem } from "../inventory-item-row";
 import { PriceForms } from "../price-forms";
 import { DeleteIngredientDialog } from "../delete-ingredient-dialog";
-import { getIngredientDetail } from "@/lib/db/ingredients";
+import { MergeIngredientDialog } from "../merge-ingredient-dialog";
+import { getIngredientDetail, listIngredients } from "@/lib/db/ingredients";
 import { getSettings } from "@/lib/db/settings";
 import { listLocations } from "@/lib/db/locations";
 import { priceSummary } from "@/lib/domain/cost";
@@ -204,7 +205,14 @@ export default async function IngredientDetailPage({
         </Card>
       </section>
 
-      <div className="mt-8 flex justify-end border-t pt-6">
+      <div className="mt-8 flex flex-wrap justify-end gap-2 border-t pt-6">
+        <MergeIngredientDialog
+          currentId={ingredient.id}
+          currentName={ingredient.name}
+          others={listIngredients()
+            .filter((i) => i.id !== ingredient.id)
+            .map((i) => ({ id: i.id, name: i.name }))}
+        />
         <DeleteIngredientDialog id={ingredient.id} name={ingredient.name} recipeNames={recipes.map((r) => r.name)} />
       </div>
     </div>

@@ -10,6 +10,7 @@ import { RecipeScaler } from "../recipe-scaler";
 import { UndoCookButton } from "../undo-cook-button";
 import { RecipeCostSummary } from "../recipe-cost-summary";
 import { RatingStars } from "@/components/rating-stars";
+import { AddMissingButton } from "@/components/add-missing-button";
 import { getRecipeDetail } from "@/lib/db/recipes";
 import { getSettings } from "@/lib/db/settings";
 import { getCookData, cookStats, listCookLogsForRecipe } from "@/lib/db/cook";
@@ -58,6 +59,7 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ i
           >
             <PencilIcon className="size-4" /> Edit
           </Link>
+          <AddMissingButton recipeId={recipe.id} />
           <DeleteRecipe id={recipe.id} />
         </div>
       </div>

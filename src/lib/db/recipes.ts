@@ -58,7 +58,7 @@ export type RecipeDetail = {
 
 export type RecipeListFilters = {
   search?: string;
-  tagId?: number;
+  tagIds?: number[];
   ingredientId?: number;
   maxTotalTimeMin?: number;
   favoritesOnly?: boolean;
@@ -77,10 +77,12 @@ export function listRecipes(filters: RecipeListFilters = {}): RecipeListItem[] {
       sql`(coalesce(${recipes.prepTimeMin}, 0) + coalesce(${recipes.cookTimeMin}, 0)) <= ${filters.maxTotalTimeMin}`,
     );
   }
-  if (filters.tagId != null) {
-    conds.push(
-      sql`EXISTS (SELECT 1 FROM ${recipeTags} rt WHERE rt.recipe_id = ${recipes.id} AND rt.tag_id = ${filters.tagId})`,
-    );
+  if (filters.tagIds && filters.tagIds.length > 0) {
+    for (const tagId of filters.tagIds) {
+      conds.push(
+        sql`EXISTS (SELECT 1 FROM ${recipeTags} rt WHERE rt.recipe_id = ${recipes.id} AND rt.tag_id = ${tagId})`,
+      );
+    }
   }
   if (filters.ingredientId != null) {
     conds.push(

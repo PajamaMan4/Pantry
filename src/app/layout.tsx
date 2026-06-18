@@ -1,7 +1,8 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
+import { PwaRegister } from "./pwa-register";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -17,6 +18,12 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Pantry",
   description: "Personal cooking & kitchen-management app. Local-first, single-user.",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: { capable: true, title: "Pantry", statusBarStyle: "default" },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#f59e0b",
 };
 
 export default function RootLayout({
@@ -38,9 +45,6 @@ export default function RootLayout({
             <Link href="/recipes" className="text-muted-foreground hover:text-foreground">
               Recipes
             </Link>
-            <Link href="/make" className="text-muted-foreground hover:text-foreground">
-              Make
-            </Link>
             <Link href="/ingredients" className="text-muted-foreground hover:text-foreground">
               Ingredients
             </Link>
@@ -54,6 +58,7 @@ export default function RootLayout({
         </header>
         <main className="flex flex-1 flex-col">{children}</main>
         <Toaster />
+        <PwaRegister />
       </body>
     </html>
   );

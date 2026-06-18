@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { getSettings, resolveAnthropicApiKey } from "@/lib/db/settings";
 import { listLocations } from "@/lib/db/locations";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -55,6 +56,23 @@ export default function SettingsPage() {
         </CardHeader>
         <CardContent>
           <ApiKeyForm hasKey={hasApiKey} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Data &amp; backups</CardTitle>
+          <CardDescription>
+            Export a snapshot, create backups, or restore the database from a file.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Link
+            href="/data"
+            className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+          >
+            Open data &amp; backups →
+          </Link>
         </CardContent>
       </Card>
     </div>

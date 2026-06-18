@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { MinusIcon, PlusIcon, RotateCcwIcon } from "lucide-react";
+import { MinusIcon, PlusIcon, RotateCcwIcon, CheckIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -63,6 +63,14 @@ export function RecipeScaler({
 }: Props) {
   const [target, setTarget] = React.useState(baseServings);
   const [system, setSystem] = React.useState<DisplaySystem>(defaultSystem);
+  const [checkedSteps, setCheckedSteps] = React.useState<Set<string>>(new Set());
+
+  const toggleStep = (id: string) =>
+    setCheckedSteps((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
 
   const factor = scaleFactor(baseServings, target);
 
@@ -207,16 +215,34 @@ export function RecipeScaler({
           <p className="text-sm text-muted-foreground">No steps yet.</p>
         ) : (
           <ol className="space-y-3">
-            {steps.map((step, i) => (
-              <li key={step.id} className="flex gap-3">
-                <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium">
-                  {i + 1}
-                </span>
-                <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                  {renderStep(step, { ...opts, densityFor })}
-                </p>
-              </li>
-            ))}
+            {steps.map((step, i) => {
+              const done = checkedSteps.has(step.id);
+              return (
+                <li key={step.id} className="flex gap-3">
+                  <button
+                    type="button"
+                    aria-label={done ? `Uncheck step ${i + 1}` : `Check step ${i + 1}`}
+                    onClick={() => toggleStep(step.id)}
+                    className={cn(
+                      "mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-medium transition-colors",
+                      done
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-muted-foreground hover:bg-muted/70",
+                    )}
+                  >
+                    {done ? <CheckIcon className="size-3.5" /> : i + 1}
+                  </button>
+                  <p
+                    className={cn(
+                      "text-sm leading-relaxed whitespace-pre-wrap transition-colors",
+                      done && "text-muted-foreground line-through",
+                    )}
+                  >
+                    {renderStep(step, { ...opts, densityFor })}
+                  </p>
+                </li>
+              );
+            })}
           </ol>
         )}
       </section>

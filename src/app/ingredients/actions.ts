@@ -13,6 +13,7 @@ import {
   updateIngredient,
   getOrCreateIngredient,
   deleteIngredient,
+  mergeIngredients,
 } from "@/lib/db/ingredients";
 import { createPriceEntry, deletePriceEntry } from "@/lib/db/prices";
 import {
@@ -58,6 +59,22 @@ export async function deleteIngredientAction(id: number): Promise<void> {
   deleteIngredient(id);
   revalidatePath("/ingredients");
   redirect("/ingredients");
+}
+
+// Merge `sourceId` into `targetId`; on success redirect to the kept ingredient.
+export async function mergeIngredientAction(
+  sourceId: number,
+  targetId: number,
+): Promise<IngredientActionResult> {
+  try {
+    mergeIngredients(sourceId, targetId);
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Couldn't merge ingredients." };
+  }
+  revalidatePath("/ingredients");
+  revalidatePath("/recipes");
+  revalidatePath("/recipes/[id]", "page");
+  redirect(`/ingredients/${targetId}`);
 }
 
 export async function clearStockAction(ingredientId: number): Promise<{ ok: true }> {

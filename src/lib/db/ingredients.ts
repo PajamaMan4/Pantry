@@ -6,11 +6,14 @@ import {
   recipes,
   inventoryItems,
   priceEntries,
+  cookLogLines,
+  shoppingListItems,
   type Ingredient,
   type PriceEntry,
 } from "./schema";
 import { listInventoryForIngredient } from "./inventory";
 import { listPriceEntries } from "./prices";
+import { repointStepIngredient } from "../domain/merge";
 
 export function listIngredients(): Ingredient[] {
   return db.select().from(ingredients).orderBy(asc(ingredients.name)).all();
@@ -81,6 +84,65 @@ export function updateIngredient(id: number, input: IngredientEditInput): Ingred
     .where(eq(ingredients.id, id))
     .returning()
     .get();
+}
+
+export type MergeResult = {
+  movedRecipeRows: number;
+  movedInventory: number;
+  movedPrices: number;
+};
+
+/**
+ * Merge `sourceId` into `targetId`: repoint every reference (recipe ingredients,
+ * inventory, prices, cook-log lines, shopping items, and step-quantity links
+ * inside recipe JSON) onto the target, then delete the source ingredient. Runs
+ * in one transaction so a failure leaves the data untouched.
+ */
+export function mergeIngredients(sourceId: number, targetId: number): MergeResult {
+  if (sourceId === targetId) throw new Error("Pick two different ingredients to merge.");
+
+  return db.transaction((tx) => {
+    const source = tx.select().from(ingredients).where(eq(ingredients.id, sourceId)).get();
+    const target = tx.select().from(ingredients).where(eq(ingredients.id, targetId)).get();
+    if (!source) throw new Error("The ingredient to merge no longer exists.");
+    if (!target) throw new Error("The ingredient to keep no longer exists.");
+
+    const movedRecipeRows = tx
+      .update(recipeIngredients)
+      .set({ ingredientId: targetId })
+      .where(eq(recipeIngredients.ingredientId, sourceId))
+      .run().changes;
+    const movedInventory = tx
+      .update(inventoryItems)
+      .set({ ingredientId: targetId })
+      .where(eq(inventoryItems.ingredientId, sourceId))
+      .run().changes;
+    const movedPrices = tx
+      .update(priceEntries)
+      .set({ ingredientId: targetId })
+      .where(eq(priceEntries.ingredientId, sourceId))
+      .run().changes;
+    tx.update(cookLogLines)
+      .set({ ingredientId: targetId })
+      .where(eq(cookLogLines.ingredientId, sourceId))
+      .run();
+    tx.update(shoppingListItems)
+      .set({ ingredientId: targetId })
+      .where(eq(shoppingListItems.ingredientId, sourceId))
+      .run();
+
+    // Repoint step-quantity references embedded in recipe JSON.
+    const allRecipes = tx.select({ id: recipes.id, steps: recipes.steps }).from(recipes).all();
+    for (const r of allRecipes) {
+      const { steps, changed } = repointStepIngredient(r.steps ?? [], sourceId, targetId);
+      if (changed) {
+        tx.update(recipes).set({ steps, updatedAt: new Date() }).where(eq(recipes.id, r.id)).run();
+      }
+    }
+
+    tx.delete(ingredients).where(eq(ingredients.id, sourceId)).run();
+    return { movedRecipeRows, movedInventory, movedPrices };
+  });
 }
 
 /** Permanently delete an ingredient and everything that references it. */
