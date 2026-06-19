@@ -131,6 +131,7 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ i
           raw: ri.raw,
           prep: ri.prep,
           optional: ri.optional,
+          isStaple: ri.ingredient.isStaple,
           density: ri.ingredient.density,
           sectionTitle: ri.sectionTitle,
         }))}

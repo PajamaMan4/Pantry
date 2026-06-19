@@ -48,7 +48,7 @@ export type RecipeWriteInput = {
 export type RecipeListItem = { recipe: Recipe; tags: Tag[]; lastCookedAt: Date | null; cost: RecipeCost };
 
 export type RecipeIngredientDetail = RecipeIngredient & {
-  ingredient: Pick<Ingredient, "id" | "name" | "defaultUnit" | "category" | "density">;
+  ingredient: Pick<Ingredient, "id" | "name" | "defaultUnit" | "category" | "density" | "isStaple">;
 };
 
 export type RecipeDetail = {
@@ -157,6 +157,7 @@ export function getRecipeDetail(id: number): RecipeDetail | undefined {
       defaultUnit: ing.defaultUnit,
       category: ing.category,
       density: ing.density,
+      isStaple: ing.isStaple,
     },
   }));
 

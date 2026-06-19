@@ -23,6 +23,7 @@ export type ScalerIngredient = {
   raw: string | null;
   prep: string | null;
   optional: boolean;
+  isStaple: boolean;
   density: number | null;
   sectionTitle: string | null;
 };
@@ -195,6 +196,7 @@ export function RecipeScaler({
                       { ...opts, density: ing.density ?? undefined },
                     );
                     const status = plan.lines[i]?.status;
+                    const hasStock = (stockMap.get(ing.ingredientId) ?? []).some((r) => r.quantity > 0);
                     return (
                       <li key={ing.id} className="flex flex-wrap items-baseline gap-x-2 text-sm">
                         {status === "ok" && <span aria-label="In stock" title="In stock">✅</span>}
@@ -202,6 +204,15 @@ export function RecipeScaler({
                           <span aria-label="Not enough in stock" title="Not enough in stock">
                             ❌
                           </span>
+                        )}
+                        {status === "skipped" && (
+                          ing.isStaple ? (
+                            <span aria-label="Staple (always in stock)" title="Staple (always in stock)">✅</span>
+                          ) : hasStock ? (
+                            <span aria-label="In stock" title="In stock">✅</span>
+                          ) : (
+                            <span aria-label="Not in stock" title="Not in stock">❌</span>
+                          )
                         )}
                         {qty && <span className="tabular-nums text-foreground">{qty}</span>}
                         <span className="font-medium">{ing.name}</span>
