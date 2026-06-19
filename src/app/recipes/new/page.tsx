@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { listIngredients } from "@/lib/db/ingredients";
+import { listIngredientsWithAliases } from "@/lib/db/ingredients";
 import { listTags } from "@/lib/db/tags";
 import { RecipeForm } from "../recipe-form";
 
@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "New recipe · Pantry" };
 
 export default function NewRecipePage() {
-  const ingredients = listIngredients();
+  const ingredients = listIngredientsWithAliases();
   const tags = listTags();
 
   return (
@@ -18,6 +18,7 @@ export default function NewRecipePage() {
           id: i.id,
           name: i.name,
           defaultUnit: i.defaultUnit,
+          aliases: i.aliases,
         }))}
         tagSuggestions={tags.map((t) => t.name)}
       />

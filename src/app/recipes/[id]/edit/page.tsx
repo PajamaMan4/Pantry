@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { listIngredients } from "@/lib/db/ingredients";
+import { listIngredientsWithAliases } from "@/lib/db/ingredients";
 import { listTags } from "@/lib/db/tags";
 import { getRecipeDetail } from "@/lib/db/recipes";
 import { RecipeForm, type RecipeFormInitial } from "../../recipe-form";
@@ -48,7 +48,7 @@ export default async function EditRecipePage({ params }: { params: Promise<{ id:
     })),
   };
 
-  const ingredients = listIngredients();
+  const ingredients = listIngredientsWithAliases();
   const tags = listTags();
 
   return (
@@ -60,6 +60,7 @@ export default async function EditRecipePage({ params }: { params: Promise<{ id:
           id: i.id,
           name: i.name,
           defaultUnit: i.defaultUnit,
+          aliases: i.aliases,
         }))}
         tagSuggestions={tags.map((t) => t.name)}
       />

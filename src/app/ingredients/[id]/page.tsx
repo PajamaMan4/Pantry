@@ -13,6 +13,7 @@ import { InventoryItemRow, type SerialInventoryItem } from "../inventory-item-ro
 import { PriceForms } from "../price-forms";
 import { DeleteIngredientDialog } from "../delete-ingredient-dialog";
 import { MergeIngredientDialog } from "../merge-ingredient-dialog";
+import { AliasesSection } from "../aliases-section";
 import { getIngredientDetail, listIngredients } from "@/lib/db/ingredients";
 import { getSettings } from "@/lib/db/settings";
 import { listLocations } from "@/lib/db/locations";
@@ -42,7 +43,7 @@ export default async function IngredientDetailPage({
   const detail = getIngredientDetail(ingredientId);
   if (!detail) notFound();
 
-  const { ingredient, inventory, recipes, priceEntries } = detail;
+  const { ingredient, inventory, recipes, priceEntries, aliases } = detail;
   const settings = getSettings();
   const locations = listLocations().map((l) => ({ id: l.id, name: l.name }));
   const now = new Date();
@@ -143,7 +144,18 @@ export default async function IngredientDetailPage({
 
       <Separator className="my-6" />
 
-      {/* 3 — Price History */}
+      {/* 3 — Aliases */}
+      <section>
+        <h2 className="mb-2 text-lg font-medium">Aliases</h2>
+        <p className="mb-3 text-sm text-muted-foreground">
+          Other names for this ingredient. Typing any alias in the recipe editor will resolve to this ingredient instead of creating a duplicate.
+        </p>
+        <AliasesSection ingredientId={ingredient.id} initialAliases={aliases} />
+      </section>
+
+      <Separator className="my-6" />
+
+      {/* 5 — Price History */}
       <section>
         <h2 className="mb-3 text-lg font-medium">Price history</h2>
         {summary.count === 0 ? (
@@ -184,7 +196,7 @@ export default async function IngredientDetailPage({
 
       <Separator className="my-6" />
 
-      {/* 4 — Details */}
+      {/* 6 — Details */}
       <section>
         <Card>
           <CardHeader>

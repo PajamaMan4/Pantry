@@ -1,7 +1,8 @@
-import { asc, eq, like, sql } from "drizzle-orm";
+import { asc, eq, inArray, like, or, sql } from "drizzle-orm";
 import { db } from "./client";
 import {
   ingredients,
+  ingredientAliases,
   recipeIngredients,
   recipes,
   inventoryItems,
@@ -9,6 +10,7 @@ import {
   cookLogLines,
   shoppingListItems,
   type Ingredient,
+  type IngredientAlias,
   type PriceEntry,
 } from "./schema";
 import { listInventoryForIngredient } from "./inventory";
@@ -19,15 +21,39 @@ export function listIngredients(): Ingredient[] {
   return db.select().from(ingredients).orderBy(asc(ingredients.name)).all();
 }
 
+export type IngredientWithAliases = Ingredient & { aliases: string[] };
+
+export function listIngredientsWithAliases(): IngredientWithAliases[] {
+  const all = db.select().from(ingredients).orderBy(asc(ingredients.name)).all();
+  const aliasRows = db.select().from(ingredientAliases).all();
+  const aliasMap = new Map<number, string[]>();
+  for (const row of aliasRows) {
+    const list = aliasMap.get(row.ingredientId) ?? [];
+    list.push(row.alias);
+    aliasMap.set(row.ingredientId, list);
+  }
+  return all.map((i) => ({ ...i, aliases: aliasMap.get(i.id) ?? [] }));
+}
+
 export function searchIngredients(query: string, limit = 12): Ingredient[] {
   const q = query.trim();
-  const base = db.select().from(ingredients);
-  if (!q) return base.orderBy(asc(ingredients.name)).limit(limit).all();
-  return base
-    .where(like(ingredients.name, `%${q}%`))
-    .orderBy(asc(ingredients.name))
-    .limit(limit)
-    .all();
+  if (!q) {
+    return db.select().from(ingredients).orderBy(asc(ingredients.name)).limit(limit).all();
+  }
+  const pat = `%${q}%`;
+  const byAlias = db
+    .selectDistinct({ id: ingredientAliases.ingredientId })
+    .from(ingredientAliases)
+    .where(like(ingredientAliases.alias, pat))
+    .all()
+    .map((r) => r.id);
+
+  const where =
+    byAlias.length > 0
+      ? or(like(ingredients.name, pat), inArray(ingredients.id, byAlias))
+      : like(ingredients.name, pat);
+
+  return db.select().from(ingredients).where(where).orderBy(asc(ingredients.name)).limit(limit).all();
 }
 
 export function getIngredient(id: number): Ingredient | undefined {
@@ -43,18 +69,31 @@ export type CreateIngredientInput = {
 };
 
 /**
- * Get an existing ingredient by case-insensitive name, or create it. This backs
- * the "Create '<name>'" create-on-the-fly path in the recipe editor typeahead
- * (§3.1) and keeps near-duplicate names from multiplying.
+ * Get an existing ingredient by case-insensitive name or alias, or create it.
+ * Backs the "Create '<name>'" path in the recipe editor typeahead (§3.1) and
+ * prevents near-duplicates from multiplying (e.g. "Eggs" → returns "Egg").
  */
 export function getOrCreateIngredient(input: CreateIngredientInput): Ingredient {
   const name = input.name.trim();
-  const existing = db
+
+  // 1. Exact name match (case-insensitive)
+  const byName = db
     .select()
     .from(ingredients)
     .where(sql`lower(${ingredients.name}) = lower(${name})`)
     .get();
-  if (existing) return existing;
+  if (byName) return byName;
+
+  // 2. Alias match (case-insensitive)
+  const byAlias = db
+    .select({ ingredientId: ingredientAliases.ingredientId })
+    .from(ingredientAliases)
+    .where(sql`lower(${ingredientAliases.alias}) = lower(${name})`)
+    .get();
+  if (byAlias) {
+    const aliased = db.select().from(ingredients).where(eq(ingredients.id, byAlias.ingredientId)).get();
+    if (aliased) return aliased;
+  }
 
   return db
     .insert(ingredients)
@@ -85,6 +124,54 @@ export function updateIngredient(id: number, input: IngredientEditInput): Ingred
     .returning()
     .get();
 }
+
+// ---- Alias CRUD ----
+
+export function listAliases(ingredientId: number): IngredientAlias[] {
+  return db
+    .select()
+    .from(ingredientAliases)
+    .where(eq(ingredientAliases.ingredientId, ingredientId))
+    .orderBy(asc(ingredientAliases.alias))
+    .all();
+}
+
+export function addAlias(ingredientId: number, alias: string): IngredientAlias {
+  const trimmed = alias.trim();
+  // Reject if already the canonical name (case-insensitive)
+  const canonical = db.select().from(ingredients).where(eq(ingredients.id, ingredientId)).get();
+  if (canonical && canonical.name.toLowerCase() === trimmed.toLowerCase()) {
+    throw new Error("That's already the ingredient's name.");
+  }
+  // Reject if another ingredient has this name
+  const conflictName = db
+    .select()
+    .from(ingredients)
+    .where(sql`lower(${ingredients.name}) = lower(${trimmed})`)
+    .get();
+  if (conflictName) {
+    throw new Error(`"${trimmed}" is already an ingredient name — use Merge instead.`);
+  }
+  // Reject if alias already exists on another ingredient
+  const conflictAlias = db
+    .select()
+    .from(ingredientAliases)
+    .where(sql`lower(${ingredientAliases.alias}) = lower(${trimmed})`)
+    .get();
+  if (conflictAlias) {
+    if (conflictAlias.ingredientId === ingredientId) {
+      throw new Error("That alias already exists for this ingredient.");
+    }
+    throw new Error("That alias is already used by another ingredient.");
+  }
+  return db.insert(ingredientAliases).values({ ingredientId, alias: trimmed }).returning().get();
+}
+
+export function removeAlias(id: number): void {
+  db.delete(ingredientAliases).where(eq(ingredientAliases.id, id)).run();
+}
+
+// ---- Merge ----
 
 export type MergeResult = {
   movedRecipeRows: number;
@@ -160,6 +247,7 @@ export type IngredientDetail = {
   inventory: ReturnType<typeof listInventoryForIngredient>;
   recipes: { id: number; name: string }[];
   priceEntries: PriceEntry[];
+  aliases: IngredientAlias[];
 };
 
 export function getIngredientDetail(id: number): IngredientDetail | undefined {
@@ -179,5 +267,6 @@ export function getIngredientDetail(id: number): IngredientDetail | undefined {
     inventory: listInventoryForIngredient(id),
     recipes: usedIn,
     priceEntries: listPriceEntries(id),
+    aliases: listAliases(id),
   };
 }

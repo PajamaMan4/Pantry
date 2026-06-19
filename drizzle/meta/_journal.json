@@ -36,6 +36,13 @@
       "when": 1781829045880,
       "tag": "0004_modern_blonde_phantom",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1781832985814,
+      "tag": "0005_slippery_kabuki",
+      "breakpoints": true
     }
   ]
 }

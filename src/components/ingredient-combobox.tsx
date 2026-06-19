@@ -8,6 +8,7 @@ export type IngredientOption = {
   id: number;
   name: string;
   defaultUnit: string | null;
+  aliases?: string[];
 };
 
 type Props = {
@@ -37,15 +38,24 @@ export function IngredientCombobox({
   const wrapRef = React.useRef<HTMLDivElement>(null);
 
   const trimmed = query.trim();
+
   const filtered = React.useMemo(() => {
     const q = trimmed.toLowerCase();
     const list = q
-      ? options.filter((o) => o.name.toLowerCase().includes(q))
+      ? options.filter(
+          (o) =>
+            o.name.toLowerCase().includes(q) ||
+            (o.aliases ?? []).some((a) => a.toLowerCase().includes(q)),
+        )
       : options;
     return list.slice(0, 8);
   }, [options, trimmed]);
 
-  const exactMatch = options.some((o) => o.name.toLowerCase() === trimmed.toLowerCase());
+  const exactMatch = options.some(
+    (o) =>
+      o.name.toLowerCase() === trimmed.toLowerCase() ||
+      (o.aliases ?? []).some((a) => a.toLowerCase() === trimmed.toLowerCase()),
+  );
   const showCreate = trimmed.length > 0 && !exactMatch;
   const itemCount = filtered.length + (showCreate ? 1 : 0);
 
@@ -116,26 +126,34 @@ export function IngredientCombobox({
           className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border bg-popover p-1 text-sm text-popover-foreground shadow-md"
           role="listbox"
         >
-          {filtered.map((opt, i) => (
-            <li key={opt.id}>
-              <button
-                type="button"
-                role="option"
-                aria-selected={i === active}
-                onMouseEnter={() => setActive(i)}
-                onClick={() => choose(opt)}
-                className={cn(
-                  "flex w-full items-center justify-between rounded-sm px-2 py-1.5 text-left",
-                  i === active && "bg-muted",
-                )}
-              >
-                <span>{opt.name}</span>
-                {opt.defaultUnit && (
-                  <span className="text-xs text-muted-foreground">{opt.defaultUnit}</span>
-                )}
-              </button>
-            </li>
-          ))}
+          {filtered.map((opt, i) => {
+            const q = trimmed.toLowerCase();
+            const matchedAlias =
+              q && !opt.name.toLowerCase().includes(q)
+                ? (opt.aliases ?? []).find((a) => a.toLowerCase().includes(q))
+                : undefined;
+
+            return (
+              <li key={opt.id}>
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={i === active}
+                  onMouseEnter={() => setActive(i)}
+                  onClick={() => choose(opt)}
+                  className={cn(
+                    "flex w-full items-center justify-between rounded-sm px-2 py-1.5 text-left",
+                    i === active && "bg-muted",
+                  )}
+                >
+                  <span>{opt.name}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {matchedAlias ? `also "${matchedAlias}"` : (opt.defaultUnit ?? "")}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
 
           {showCreate && (
             <li>
@@ -152,7 +170,7 @@ export function IngredientCombobox({
                 )}
               >
                 <span className="text-muted-foreground">{creating ? "Creating…" : "Create"}</span>
-                <span className="font-medium">“{trimmed}”</span>
+                <span className="font-medium">"{trimmed}"</span>
               </button>
             </li>
           )}

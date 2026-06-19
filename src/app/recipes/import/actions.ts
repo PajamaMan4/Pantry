@@ -119,10 +119,10 @@ export async function importPantryFileAction(json: unknown): Promise<ImportResul
     ...(s.quantities
       ? {
           quantities: Object.fromEntries(
-            Object.entries(s.quantities).map(([k, q]) => [
-              k,
-              { ingredientId: null, amount: q.amount, amountMax: q.amountMax ?? null, unit: q.unit },
-            ]),
+            Object.entries(s.quantities).map(([k, q]) => {
+              const sq = q as { amount: number; amountMax?: number | null; unit: string | null };
+              return [k, { ingredientId: null, amount: sq.amount, amountMax: sq.amountMax ?? null, unit: sq.unit }];
+            }),
           ),
         }
       : {}),

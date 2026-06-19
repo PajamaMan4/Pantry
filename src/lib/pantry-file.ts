@@ -15,7 +15,7 @@ const fileStepQuantitySchema = z.object({
 const fileStepSchema = z.object({
   id: z.string().min(1),
   text: z.string(),
-  quantities: z.record(fileStepQuantitySchema).optional(),
+  quantities: z.record(z.string(), fileStepQuantitySchema).optional(),
 });
 
 const fileIngredientSchema = z.object({

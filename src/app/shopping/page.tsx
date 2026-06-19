@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { listShoppingItems } from "@/lib/db/shopping";
-import { listIngredients } from "@/lib/db/ingredients";
+import { listIngredientsWithAliases } from "@/lib/db/ingredients";
 import { getSettings } from "@/lib/db/settings";
 import { ShoppingAddForm } from "./shopping-add-form";
 import { ShoppingItemRow, type SerialShoppingItem } from "./shopping-item-row";
@@ -13,7 +13,7 @@ const str = (n: number | null) => (n == null ? "" : String(n));
 
 export default function ShoppingPage() {
   const items = listShoppingItems();
-  const ingredients = listIngredients();
+  const ingredients = listIngredientsWithAliases();
   const { currency } = getSettings();
   const checkedCount = items.filter((i) => i.checked).length;
 
@@ -37,7 +37,7 @@ export default function ShoppingPage() {
 
       <div className="mb-4">
         <ShoppingAddForm
-          ingredientOptions={ingredients.map((i) => ({ id: i.id, name: i.name, defaultUnit: i.defaultUnit }))}
+          ingredientOptions={ingredients.map((i) => ({ id: i.id, name: i.name, defaultUnit: i.defaultUnit, aliases: i.aliases }))}
         />
       </div>
 

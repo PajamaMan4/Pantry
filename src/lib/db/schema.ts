@@ -179,6 +179,18 @@ export const settings = sqliteTable("settings", {
   anthropicApiKey: text("anthropic_api_key"), // optional, enables Claude recipe import
 });
 
+export const ingredientAliases = sqliteTable(
+  "ingredient_aliases",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    ingredientId: integer("ingredient_id")
+      .notNull()
+      .references(() => ingredients.id, { onDelete: "cascade" }),
+    alias: text("alias").notNull().unique(),
+  },
+  (t) => [index("alias_ing_idx").on(t.ingredientId)],
+);
+
 export const shoppingListItems = sqliteTable("shopping_list_items", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   ingredientId: integer("ingredient_id").references(() => ingredients.id, { onDelete: "set null" }),
@@ -211,3 +223,4 @@ export type Settings = typeof settings.$inferSelect;
 export type NewSettings = typeof settings.$inferInsert;
 export type ShoppingListItem = typeof shoppingListItems.$inferSelect;
 export type NewShoppingListItem = typeof shoppingListItems.$inferInsert;
+export type IngredientAlias = typeof ingredientAliases.$inferSelect;

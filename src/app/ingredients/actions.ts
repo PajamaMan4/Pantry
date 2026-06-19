@@ -14,6 +14,8 @@ import {
   getOrCreateIngredient,
   deleteIngredient,
   mergeIngredients,
+  addAlias,
+  removeAlias,
 } from "@/lib/db/ingredients";
 import { createPriceEntry, deletePriceEntry } from "@/lib/db/prices";
 import {
@@ -75,6 +77,26 @@ export async function mergeIngredientAction(
   revalidatePath("/recipes");
   revalidatePath("/recipes/[id]", "page");
   redirect(`/ingredients/${targetId}`);
+}
+
+// ---- aliases ----
+export async function addAliasAction(ingredientId: number, alias: string): Promise<IngredientActionResult> {
+  const trimmed = alias.trim();
+  if (!trimmed) return { ok: false, error: "Alias cannot be empty." };
+  if (trimmed.length > 200) return { ok: false, error: "Alias is too long." };
+  try {
+    addAlias(ingredientId, trimmed);
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Could not add alias." };
+  }
+  revalidateIngredients();
+  return { ok: true };
+}
+
+export async function removeAliasAction(id: number): Promise<{ ok: true }> {
+  removeAlias(id);
+  revalidateIngredients();
+  return { ok: true };
 }
 
 export async function clearStockAction(ingredientId: number): Promise<{ ok: true }> {
