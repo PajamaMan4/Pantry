@@ -48,12 +48,23 @@ export const recipes = sqliteTable("recipes", {
   notes: text("notes"),
   rating: integer("rating"), // 1–5, optional
   isFavorite: integer("is_favorite", { mode: "boolean" }).notNull().default(false),
+  // Optional link to a variant group ("Alfredo Pasta"): recipes sharing a group
+  // are variants of one another. null => standalone recipe. set-null on delete so
+  // removing a recipe (or its group) never breaks the remaining members (§ variants).
+  groupId: integer("group_id").references(() => recipeGroups.id, { onDelete: "set null" }),
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
     .$defaultFn(() => new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp" })
     .notNull()
     .$defaultFn(() => new Date()),
+});
+
+// A named group of variant recipes. The group only collects independent recipes;
+// it stores no recipe data itself.
+export const recipeGroups = sqliteTable("recipe_groups", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull(),
 });
 
 export const recipeIngredients = sqliteTable(
@@ -212,6 +223,7 @@ export type NewRecipe = typeof recipes.$inferInsert;
 export type RecipeIngredient = typeof recipeIngredients.$inferSelect;
 export type NewRecipeIngredient = typeof recipeIngredients.$inferInsert;
 export type Tag = typeof tags.$inferSelect;
+export type RecipeGroup = typeof recipeGroups.$inferSelect;
 export type StorageLocation = typeof storageLocations.$inferSelect;
 export type InventoryItem = typeof inventoryItems.$inferSelect;
 export type NewInventoryItem = typeof inventoryItems.$inferInsert;
