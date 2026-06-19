@@ -3,7 +3,9 @@ import Link from "next/link";
 import { PlusIcon, SparklesIcon } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { RecipeCard } from "@/components/recipe-card";
+import { RecipeGroupCard } from "@/components/recipe-group-card";
 import { RecipeFilters } from "./recipe-filters";
+import { collapseIntoGroups } from "@/lib/domain/variants";
 import { listRecipes, type RecipeListFilters } from "@/lib/db/recipes";
 import { listTags } from "@/lib/db/tags";
 import { listIngredients } from "@/lib/db/ingredients";
@@ -135,15 +137,29 @@ export default async function RecipesPage({
         </p>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
-          {recipes.map((item) => (
-            <RecipeCard
-              key={item.recipe.id}
-              item={item}
-              currency={settings.currency}
-              recommend={recByRecipeId.get(item.recipe.id)}
-              ingredientNames={ingredientNames}
-            />
-          ))}
+          {collapseIntoGroups(recipes, (item) => item.group).map((row) =>
+            row.kind === "single" ? (
+              <RecipeCard
+                key={`r-${row.item.recipe.id}`}
+                item={row.item}
+                currency={settings.currency}
+                recommend={recByRecipeId.get(row.item.recipe.id)}
+                ingredientNames={ingredientNames}
+              />
+            ) : (
+              <RecipeGroupCard key={`g-${row.group.id}`} name={row.group.name} count={row.members.length}>
+                {row.members.map((m) => (
+                  <RecipeCard
+                    key={m.recipe.id}
+                    item={m}
+                    currency={settings.currency}
+                    recommend={recByRecipeId.get(m.recipe.id)}
+                    ingredientNames={ingredientNames}
+                  />
+                ))}
+              </RecipeGroupCard>
+            ),
+          )}
         </div>
       )}
     </div>

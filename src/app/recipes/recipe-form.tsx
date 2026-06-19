@@ -58,6 +58,7 @@ export type RecipeFormInitial = {
   notes: string | null;
   isFavorite: boolean;
   tags: string[];
+  groupName: string | null;
   ingredients: {
     ingredientId: number;
     ingredientName: string;
@@ -75,6 +76,7 @@ export type RecipeFormInitial = {
 type Props = {
   ingredientOptions: IngredientOption[];
   tagSuggestions: string[];
+  groupSuggestions: string[];
   initial?: RecipeFormInitial;
 };
 
@@ -124,7 +126,7 @@ function initialSections(initial?: RecipeFormInitial): IngredientSection[] {
   return sections;
 }
 
-export function RecipeForm({ ingredientOptions, tagSuggestions, initial }: Props) {
+export function RecipeForm({ ingredientOptions, tagSuggestions, groupSuggestions, initial }: Props) {
   const router = useRouter();
   const isEdit = initial != null;
 
@@ -137,6 +139,8 @@ export function RecipeForm({ ingredientOptions, tagSuggestions, initial }: Props
   const [notes, setNotes] = React.useState(initial?.notes ?? "");
   const [isFavorite, setIsFavorite] = React.useState(initial?.isFavorite ?? false);
   const [tags, setTags] = React.useState<string[]>(initial?.tags ?? []);
+  const [groupName, setGroupName] = React.useState(initial?.groupName ?? "");
+  const groupListId = React.useId();
 
   const [sections, setSections] = React.useState<IngredientSection[]>(() => initialSections(initial));
 
@@ -264,6 +268,7 @@ export function RecipeForm({ ingredientOptions, tagSuggestions, initial }: Props
       notes,
       isFavorite,
       tags,
+      groupName: groupName.trim() === "" ? null : groupName.trim(),
       ingredients,
       steps: cleanedSteps,
     };
@@ -319,6 +324,24 @@ export function RecipeForm({ ingredientOptions, tagSuggestions, initial }: Props
         <div className="grid gap-2">
           <Label>Tags</Label>
           <TagInput value={tags} suggestions={tagSuggestions} onChange={setTags} />
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="group">Variant group</Label>
+          <Input
+            id="group"
+            list={groupListId}
+            value={groupName}
+            onChange={(e) => setGroupName(e.target.value)}
+            placeholder="e.g. Alfredo Pasta — leave blank for a standalone recipe"
+          />
+          <datalist id={groupListId}>
+            {groupSuggestions.map((g) => (
+              <option key={g} value={g} />
+            ))}
+          </datalist>
+          <p className="text-xs text-muted-foreground">
+            Recipes sharing a group are shown together as variants of one another.
+          </p>
         </div>
         <label className="flex items-center gap-2 text-sm">
           <Checkbox checked={isFavorite} onCheckedChange={(v) => setIsFavorite(v === true)} />
