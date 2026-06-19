@@ -214,8 +214,8 @@ export function RecipeScaler({
                             <span aria-label="Not in stock" title="Not in stock">❌</span>
                           )
                         )}
-                        {qty && <span className="tabular-nums text-foreground">{qty}</span>}
                         <span className="font-medium">{ing.name}</span>
+                        {qty && <span className="tabular-nums text-foreground">{qty}</span>}
                         {ing.prep && <span className="text-muted-foreground">— {ing.prep}</span>}
                         {ing.optional && (
                           <Badge variant="outline" className="text-[10px]">

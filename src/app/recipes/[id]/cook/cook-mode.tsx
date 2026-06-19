@@ -147,8 +147,8 @@ export function CookMode({
                   );
                   return (
                     <li key={ing.id}>
-                      {qty && <span className="tabular-nums">{qty} </span>}
                       <span className="font-medium">{ing.name}</span>
+                      {qty && <span className="tabular-nums"> {qty}</span>}
                       {ing.prep && <span className="text-muted-foreground"> — {ing.prep}</span>}
                     </li>
                   );
