@@ -43,6 +43,13 @@
       "when": 1781832985814,
       "tag": "0005_slippery_kabuki",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1781878162048,
+      "tag": "0006_sticky_longshot",
+      "breakpoints": true
     }
   ]
 }

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { listIngredientsWithAliases } from "@/lib/db/ingredients";
 import { listTags } from "@/lib/db/tags";
+import { listRecipeGroups } from "@/lib/db/recipe-groups";
 import { getRecipeDetail } from "@/lib/db/recipes";
 import { RecipeForm, type RecipeFormInitial } from "../../recipe-form";
 
@@ -25,6 +26,7 @@ export default async function EditRecipePage({ params }: { params: Promise<{ id:
     notes: recipe.notes,
     isFavorite: recipe.isFavorite,
     tags: detail.tags.map((t) => t.name),
+    groupName: detail.group?.name ?? null,
     ingredients: detail.ingredients.map((ri) => ({
       ingredientId: ri.ingredientId,
       ingredientName: ri.ingredient.name,
@@ -50,6 +52,7 @@ export default async function EditRecipePage({ params }: { params: Promise<{ id:
 
   const ingredients = listIngredientsWithAliases();
   const tags = listTags();
+  const groups = listRecipeGroups();
 
   return (
     <div className="mx-auto w-full max-w-2xl px-4 py-8">
@@ -63,6 +66,7 @@ export default async function EditRecipePage({ params }: { params: Promise<{ id:
           aliases: i.aliases,
         }))}
         tagSuggestions={tags.map((t) => t.name)}
+        groupSuggestions={groups.map((g) => g.name)}
       />
     </div>
   );

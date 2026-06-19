@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ClockIcon, PencilIcon, ChefHatIcon, DownloadIcon } from "lucide-react";
+import { ClockIcon, PencilIcon, ChefHatIcon, DownloadIcon, LayersIcon } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -11,7 +11,7 @@ import { UndoCookButton } from "../undo-cook-button";
 import { RecipeCostSummary } from "../recipe-cost-summary";
 import { RatingStars } from "@/components/rating-stars";
 import { AddMissingButton } from "@/components/add-missing-button";
-import { getRecipeDetail } from "@/lib/db/recipes";
+import { getRecipeDetail, getVariantsInGroup } from "@/lib/db/recipes";
 import { getSettings } from "@/lib/db/settings";
 import { getCookData, cookStats, listCookLogsForRecipe } from "@/lib/db/cook";
 import { recipeCostFor } from "@/lib/db/recipe-cost";
@@ -27,7 +27,8 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ i
   const detail = getRecipeDetail(recipeId);
   if (!detail) notFound();
 
-  const { recipe, ingredients, tags } = detail;
+  const { recipe, ingredients, tags, group } = detail;
+  const variants = group ? getVariantsInGroup(group.id, recipe.id) : [];
   const settings = getSettings();
   const total = totalTimeMin(recipe.prepTimeMin, recipe.cookTimeMin);
   const cookData = getCookData(recipeId)!;
@@ -112,6 +113,25 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ i
           baseServings={recipe.baseServings}
           names={ingredientNames}
         />
+      )}
+
+      {group && variants.length > 0 && (
+        <div className="mt-4 rounded-lg border bg-muted/30 p-3">
+          <div className="mb-2 inline-flex items-center gap-2 text-sm font-medium">
+            <LayersIcon className="size-4" /> Variants · {group.name}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {variants.map((v) => (
+              <Link
+                key={v.id}
+                href={`/recipes/${v.id}`}
+                className={buttonVariants({ variant: "outline", size: "sm" })}
+              >
+                {v.name}
+              </Link>
+            ))}
+          </div>
+        </div>
       )}
 
       <Separator className="my-6" />

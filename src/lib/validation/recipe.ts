@@ -55,6 +55,8 @@ export const recipeInputSchema = z.object({
   tags: z.array(z.string().trim().min(1)).default([]),
   ingredients: z.array(ingredientRowSchema).default([]),
   steps: z.array(stepSchema).default([]),
+  // Variant group name (blank => standalone). Resolved to a group on write.
+  groupName: nullableText,
 });
 
 export type RecipeInput = z.infer<typeof recipeInputSchema>;

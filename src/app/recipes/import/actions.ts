@@ -78,6 +78,7 @@ export async function importRecipeAction(rawText: string): Promise<ImportResult>
     notes: null,
     isFavorite: false,
     tags: [],
+    groupName: null,
     ingredients,
     steps,
   };
@@ -137,6 +138,7 @@ export async function importPantryFileAction(json: unknown): Promise<ImportResul
     notes: f.notes,
     isFavorite: f.isFavorite,
     tags: f.tags,
+    groupName: null,
     ingredients,
     steps,
   };
