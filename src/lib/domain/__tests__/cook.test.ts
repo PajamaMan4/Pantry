@@ -123,3 +123,63 @@ describe("planCook — edge cases", () => {
     expect(ok.lines[0].status).toBe("ok");
   });
 });
+
+describe("planCook — duplicate ingredients across sections are summed", () => {
+  // Butter appears in both the crust (125 g) and the filling (100 g): 225 g total.
+  it("ok on both lines when stock covers the COMBINED total", () => {
+    const plan = planCook(
+      [
+        ing({ ingredientId: 1, name: "butter", amount: 125, unit: "g" }),
+        ing({ ingredientId: 1, name: "butter", amount: 100, unit: "g" }),
+      ],
+      stock({ 1: [{ inventoryItemId: 10, quantity: 250, unit: "g", expiryMs: null }] }),
+      1,
+    );
+    expect(plan.lines.map((l) => l.status)).toEqual(["ok", "ok"]);
+    // Deducted once for the whole ingredient, not once per line.
+    expect(plan.deductions).toEqual([{ inventoryItemId: 10, ingredientId: 1, amount: 225, unit: "g" }]);
+  });
+
+  it("not-enough on both lines when stock covers each line but NOT the sum", () => {
+    const plan = planCook(
+      [
+        ing({ ingredientId: 1, name: "butter", amount: 125, unit: "g" }),
+        ing({ ingredientId: 1, name: "butter", amount: 100, unit: "g" }),
+      ],
+      stock({ 1: [{ inventoryItemId: 10, quantity: 200, unit: "g", expiryMs: null }] }), // 200 < 225
+      1,
+    );
+    // Both lines reflect the combined shortfall, even though 200 ≥ either single line.
+    expect(plan.lines.map((l) => l.status)).toEqual(["partial", "partial"]);
+    expect(plan.deductions).toEqual([{ inventoryItemId: 10, ingredientId: 1, amount: 200, unit: "g" }]);
+    expect(plan.warnings).toHaveLength(1); // one warning for the ingredient, not two
+  });
+
+  it("reconciles units before summing (1 cup + 100 g of flour vs stock in g)", () => {
+    const plan = planCook(
+      [
+        ing({ ingredientId: 1, name: "flour", amount: 1, unit: "cup", density: 0.53 }), // ≈125.39 g
+        ing({ ingredientId: 1, name: "flour", amount: 100, unit: "g", density: 0.53 }),
+      ],
+      stock({ 1: [{ inventoryItemId: 10, quantity: 1000, unit: "g", expiryMs: null }] }),
+      1,
+    );
+    expect(plan.lines.map((l) => l.status)).toEqual(["ok", "ok"]);
+    expect(plan.deductions).toHaveLength(1);
+    expect(plan.deductions[0].amount).toBeCloseTo(225.39, 1);
+  });
+
+  it("a non-numeric occurrence is skipped on its own line; the numeric one still checks the total", () => {
+    const plan = planCook(
+      [
+        ing({ ingredientId: 1, name: "salt", amount: 5, unit: "g" }),
+        ing({ ingredientId: 1, name: "salt", amount: null, unit: null }), // "to taste"
+      ],
+      stock({ 1: [{ inventoryItemId: 10, quantity: 50, unit: "g", expiryMs: null }] }),
+      1,
+    );
+    expect(plan.lines[0].status).toBe("ok");
+    expect(plan.lines[1].status).toBe("skipped");
+    expect(plan.deductions).toEqual([{ inventoryItemId: 10, ingredientId: 1, amount: 5, unit: "g" }]);
+  });
+});

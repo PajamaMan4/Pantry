@@ -37,6 +37,7 @@ const ingredientRowSchema = z
     raw: nullableText,
     prep: nullableText,
     optional: z.boolean().default(false),
+    sectionTitle: nullableText,
   })
   .refine((r) => r.ingredientId != null || (r.name != null && r.name.length > 0), {
     message: "Pick an ingredient or type a name.",

@@ -132,6 +132,7 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ i
           prep: ri.prep,
           optional: ri.optional,
           density: ri.ingredient.density,
+          sectionTitle: ri.sectionTitle,
         }))}
         steps={recipe.steps}
         cookIngredients={cookData.ingredients}

@@ -37,6 +37,7 @@ export default async function CookPage({ params }: { params: Promise<{ id: strin
           prep: ri.prep,
           optional: ri.optional,
           density: ri.ingredient.density,
+          sectionTitle: ri.sectionTitle,
         }))}
         steps={recipe.steps}
       />

@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { nanoid } from "nanoid";
-import { PlusIcon, TrashIcon, ArrowUpIcon, ArrowDownIcon } from "lucide-react";
+import { PlusIcon, TrashIcon, ArrowUpIcon, ArrowDownIcon, LayersIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,6 +37,15 @@ type IngredientRow = {
   optional: boolean;
 };
 
+// Ingredients are edited inside section boxes. A single section with a blank
+// title is just a flat, unlabeled list; titled / multiple sections produce a
+// multi-part recipe ("For the crust", "For the filling", ...).
+type IngredientSection = {
+  key: string;
+  title: string;
+  rows: IngredientRow[];
+};
+
 type StepRow = EditorStep;
 
 export type RecipeFormInitial = {
@@ -58,6 +67,7 @@ export type RecipeFormInitial = {
     raw: string | null;
     prep: string | null;
     optional: boolean;
+    sectionTitle: string | null;
   }[];
   steps: StepRow[];
 };
@@ -84,6 +94,36 @@ function emptyRow(): IngredientRow {
   };
 }
 
+function emptySection(title = ""): IngredientSection {
+  return { key: nanoid(), title, rows: [emptyRow()] };
+}
+
+// Build the initial section list by grouping the saved ingredients on their
+// (contiguous) section title — mirrors how the recipe page renders them.
+function initialSections(initial?: RecipeFormInitial): IngredientSection[] {
+  if (!initial || initial.ingredients.length === 0) return [emptySection()];
+
+  const sections: IngredientSection[] = [];
+  for (const r of initial.ingredients) {
+    const title = r.sectionTitle ?? "";
+    const row: IngredientRow = {
+      key: nanoid(),
+      ingredientId: r.ingredientId,
+      ingredientName: r.ingredientName,
+      amount: numToStr(r.amount),
+      amountMax: numToStr(r.amountMax),
+      unit: r.unit ?? "",
+      raw: r.raw ?? "",
+      prep: r.prep ?? "",
+      optional: r.optional,
+    };
+    const last = sections[sections.length - 1];
+    if (last && last.title === title) last.rows.push(row);
+    else sections.push({ key: nanoid(), title, rows: [row] });
+  }
+  return sections;
+}
+
 export function RecipeForm({ ingredientOptions, tagSuggestions, initial }: Props) {
   const router = useRouter();
   const isEdit = initial != null;
@@ -98,21 +138,7 @@ export function RecipeForm({ ingredientOptions, tagSuggestions, initial }: Props
   const [isFavorite, setIsFavorite] = React.useState(initial?.isFavorite ?? false);
   const [tags, setTags] = React.useState<string[]>(initial?.tags ?? []);
 
-  const [rows, setRows] = React.useState<IngredientRow[]>(
-    initial && initial.ingredients.length > 0
-      ? initial.ingredients.map((r) => ({
-          key: nanoid(),
-          ingredientId: r.ingredientId,
-          ingredientName: r.ingredientName,
-          amount: numToStr(r.amount),
-          amountMax: numToStr(r.amountMax),
-          unit: r.unit ?? "",
-          raw: r.raw ?? "",
-          prep: r.prep ?? "",
-          optional: r.optional,
-        }))
-      : [emptyRow()],
-  );
+  const [sections, setSections] = React.useState<IngredientSection[]>(() => initialSections(initial));
 
   const [steps, setSteps] = React.useState<StepRow[]>(
     initial && initial.steps.length > 0
@@ -120,28 +146,56 @@ export function RecipeForm({ ingredientOptions, tagSuggestions, initial }: Props
       : [{ id: nanoid(), text: "", quantities: {} }],
   );
 
+  // A recipe is "sectioned" once there's more than one box or the single box is
+  // titled — drives whether the remove-section control is offered.
+  const hasSections = sections.length > 1 || sections.some((s) => s.title.trim() !== "");
+
   // Ingredients (with a resolved master id) the step linker can attach to.
   const ingredientChoices = React.useMemo(() => {
     const seen = new Set<number>();
     const out: { id: number; name: string }[] = [];
-    for (const r of rows) {
-      if (r.ingredientId != null && !seen.has(r.ingredientId)) {
-        seen.add(r.ingredientId);
-        out.push({ id: r.ingredientId, name: r.ingredientName });
+    for (const sec of sections) {
+      for (const r of sec.rows) {
+        if (r.ingredientId != null && !seen.has(r.ingredientId)) {
+          seen.add(r.ingredientId);
+          out.push({ id: r.ingredientId, name: r.ingredientName });
+        }
       }
     }
     return out;
-  }, [rows]);
+  }, [sections]);
 
   const [error, setError] = React.useState<string | null>(null);
   const [pending, startTransition] = React.useTransition();
 
-  // ---- row helpers ----
-  function patchRow(key: string, patch: Partial<IngredientRow>) {
-    setRows((rs) => rs.map((r) => (r.key === key ? { ...r, ...patch } : r)));
+  // ---- section / row helpers ----
+  function patchSection(sectionKey: string, patch: Partial<IngredientSection>) {
+    setSections((ss) => ss.map((s) => (s.key === sectionKey ? { ...s, ...patch } : s)));
+  }
+  function addSection() {
+    setSections((ss) => [...ss, emptySection()]);
+  }
+  function removeSection(sectionKey: string) {
+    setSections((ss) => {
+      if (ss.length <= 1) return [emptySection()];
+      return ss.filter((s) => s.key !== sectionKey);
+    });
   }
 
-  async function createIngredientForRow(key: string, ingName: string) {
+  function mapRows(sectionKey: string, fn: (rows: IngredientRow[]) => IngredientRow[]) {
+    setSections((ss) => ss.map((s) => (s.key === sectionKey ? { ...s, rows: fn(s.rows) } : s)));
+  }
+  function addRow(sectionKey: string) {
+    mapRows(sectionKey, (rows) => [...rows, emptyRow()]);
+  }
+  function removeRow(sectionKey: string, rowKey: string) {
+    mapRows(sectionKey, (rows) => rows.filter((r) => r.key !== rowKey));
+  }
+  function patchRow(sectionKey: string, rowKey: string, patch: Partial<IngredientRow>) {
+    mapRows(sectionKey, (rows) => rows.map((r) => (r.key === rowKey ? { ...r, ...patch } : r)));
+  }
+
+  async function createIngredientForRow(sectionKey: string, rowKey: string, ingName: string) {
     const res = await createIngredientAction({ name: ingName });
     if (!res.ok) {
       setError(res.error);
@@ -153,15 +207,11 @@ export function RecipeForm({ ingredientOptions, tagSuggestions, initial }: Props
       defaultUnit: res.ingredient.defaultUnit,
     };
     setOptions((prev) => (prev.some((o) => o.id === opt.id) ? prev : [...prev, opt]));
-    setRows((rs) =>
-      rs.map((r) =>
-        r.key === key
-          ? {
-              ...r,
-              ingredientId: opt.id,
-              ingredientName: opt.name,
-              unit: r.unit || opt.defaultUnit || "",
-            }
+    // Link the row to the new ingredient, filling its unit from the default when blank.
+    mapRows(sectionKey, (rows) =>
+      rows.map((r) =>
+        r.key === rowKey
+          ? { ...r, ingredientId: opt.id, ingredientName: opt.name, unit: r.unit || opt.defaultUnit || "" }
           : r,
       ),
     );
@@ -183,9 +233,24 @@ export function RecipeForm({ ingredientOptions, tagSuggestions, initial }: Props
 
   function submit() {
     setError(null);
-    const cleanedRows = rows.filter(
-      (r) => r.ingredientId != null || r.ingredientName.trim() !== "",
-    );
+    // Flatten sections in order; a blank title means "ungrouped" (null).
+    const ingredients = sections.flatMap((sec) => {
+      const title = sec.title.trim();
+      return sec.rows
+        .filter((r) => r.ingredientId != null || r.ingredientName.trim() !== "")
+        .map((r) => ({
+          ingredientId: r.ingredientId,
+          name: r.ingredientName,
+          amount: r.amount,
+          amountMax: r.amountMax,
+          unit: r.unit,
+          raw: r.raw,
+          prep: r.prep,
+          optional: r.optional,
+          sectionTitle: title === "" ? null : title,
+        }));
+    });
+
     const cleanedSteps = steps
       .map((s) => ({ id: s.id, text: s.text.trim(), quantities: s.quantities }))
       .filter((s) => s.text !== "");
@@ -199,16 +264,7 @@ export function RecipeForm({ ingredientOptions, tagSuggestions, initial }: Props
       notes,
       isFavorite,
       tags,
-      ingredients: cleanedRows.map((r) => ({
-        ingredientId: r.ingredientId,
-        name: r.ingredientName,
-        amount: r.amount,
-        amountMax: r.amountMax,
-        unit: r.unit,
-        raw: r.raw,
-        prep: r.prep,
-        optional: r.optional,
-      })),
+      ingredients,
       steps: cleanedSteps,
     };
 
@@ -272,98 +328,137 @@ export function RecipeForm({ ingredientOptions, tagSuggestions, initial }: Props
 
       <Separator />
 
-      {/* Ingredients */}
+      {/* Ingredients — grouped into optional section boxes */}
       <section className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-medium">Ingredients</h2>
-          <Button type="button" variant="outline" size="sm" onClick={() => setRows((rs) => [...rs, emptyRow()])}>
-            <PlusIcon className="size-4" /> Add ingredient
+          <Button type="button" variant="outline" size="sm" onClick={addSection}>
+            <LayersIcon className="size-4" /> Add section
           </Button>
         </div>
 
-        <div className="space-y-3">
-          {rows.map((row) => (
-            <div key={row.key} className="rounded-lg border p-3">
-              <div className="flex flex-wrap items-start gap-2">
-                <div className="min-w-56 flex-1">
-                  <IngredientCombobox
-                    options={options}
-                    selectedName={row.ingredientName}
-                    onType={(n) => patchRow(row.key, { ingredientName: n, ingredientId: null })}
-                    onSelect={(opt) =>
-                      patchRow(row.key, {
-                        ingredientId: opt.id,
-                        ingredientName: opt.name,
-                        unit: row.unit || opt.defaultUnit || "",
-                      })
-                    }
-                    onCreate={(n) => createIngredientForRow(row.key, n)}
-                  />
-                </div>
+        <p className="text-sm text-muted-foreground">
+          Name a section (e.g. “For the crust”) to group a multi-part recipe, or leave the title blank
+          for a simple list.
+        </p>
+
+        <div className="space-y-4">
+          {sections.map((section) => (
+            <div key={section.key} className="space-y-3 rounded-lg border bg-muted/30 p-3">
+              {/* Section header: title + remove */}
+              <div className="flex items-center gap-2">
                 <Input
-                  type="number"
-                  min={0}
-                  step="any"
-                  className="w-20"
-                  placeholder="amt"
-                  value={row.amount}
-                  onChange={(e) => patchRow(row.key, { amount: e.target.value })}
+                  className="flex-1 bg-background font-medium"
+                  placeholder="Section name (optional) — e.g. For the filling"
+                  value={section.title}
+                  onChange={(e) => patchSection(section.key, { title: e.target.value })}
+                  aria-label="Section name"
                 />
-                <span className="pt-2 text-muted-foreground">–</span>
-                <Input
-                  type="number"
-                  min={0}
-                  step="any"
-                  className="w-20"
-                  placeholder="max"
-                  value={row.amountMax}
-                  onChange={(e) => patchRow(row.key, { amountMax: e.target.value })}
-                />
-                <select
-                  className="h-9 rounded-md border border-input bg-transparent px-2 text-sm"
-                  value={row.unit}
-                  onChange={(e) => patchRow(row.key, { unit: e.target.value })}
-                  aria-label="Unit"
-                >
-                  <option value="">unit…</option>
-                  {UNIT_OPTIONS.map((u) => (
-                    <option key={u.value} value={u.value}>
-                      {u.label}
-                    </option>
-                  ))}
-                </select>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  aria-label="Remove ingredient"
-                  onClick={() => setRows((rs) => (rs.length > 1 ? rs.filter((r) => r.key !== row.key) : rs))}
-                >
-                  <TrashIcon className="size-4" />
-                </Button>
+                {hasSections && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Remove section"
+                    title="Remove section"
+                    onClick={() => removeSection(section.key)}
+                  >
+                    <TrashIcon className="size-4" />
+                  </Button>
+                )}
               </div>
 
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                <Input
-                  className="w-40"
-                  placeholder="prep, e.g. diced"
-                  value={row.prep}
-                  onChange={(e) => patchRow(row.key, { prep: e.target.value })}
-                />
-                <Input
-                  className="w-44"
-                  placeholder="or text, e.g. to taste"
-                  value={row.raw}
-                  onChange={(e) => patchRow(row.key, { raw: e.target.value })}
-                />
-                <label className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                  <Checkbox
-                    checked={row.optional}
-                    onCheckedChange={(v) => patchRow(row.key, { optional: v === true })}
-                  />
-                  optional
-                </label>
+              {/* Ingredient rows for this section */}
+              <div className="space-y-3">
+                {section.rows.map((row) => (
+                  <div key={row.key} className="rounded-md border bg-background p-3">
+                    <div className="flex flex-wrap items-start gap-2">
+                      <div className="min-w-56 flex-1">
+                        <IngredientCombobox
+                          options={options}
+                          selectedName={row.ingredientName}
+                          onType={(n) => patchRow(section.key, row.key, { ingredientName: n, ingredientId: null })}
+                          onSelect={(opt) =>
+                            patchRow(section.key, row.key, {
+                              ingredientId: opt.id,
+                              ingredientName: opt.name,
+                              unit: row.unit || opt.defaultUnit || "",
+                            })
+                          }
+                          onCreate={(n) => createIngredientForRow(section.key, row.key, n)}
+                        />
+                      </div>
+                      <Input
+                        type="number"
+                        min={0}
+                        step="any"
+                        className="w-20"
+                        placeholder="amt"
+                        value={row.amount}
+                        onChange={(e) => patchRow(section.key, row.key, { amount: e.target.value })}
+                      />
+                      <span className="pt-2 text-muted-foreground">–</span>
+                      <Input
+                        type="number"
+                        min={0}
+                        step="any"
+                        className="w-20"
+                        placeholder="max"
+                        value={row.amountMax}
+                        onChange={(e) => patchRow(section.key, row.key, { amountMax: e.target.value })}
+                      />
+                      <select
+                        className="h-9 rounded-md border border-input bg-transparent px-2 text-sm"
+                        value={row.unit}
+                        onChange={(e) => patchRow(section.key, row.key, { unit: e.target.value })}
+                        aria-label="Unit"
+                      >
+                        <option value="">unit…</option>
+                        {UNIT_OPTIONS.map((u) => (
+                          <option key={u.value} value={u.value}>
+                            {u.label}
+                          </option>
+                        ))}
+                      </select>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        aria-label="Remove ingredient"
+                        onClick={() => removeRow(section.key, row.key)}
+                      >
+                        <TrashIcon className="size-4" />
+                      </Button>
+                    </div>
+
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <Input
+                        className="w-40"
+                        placeholder="prep, e.g. diced"
+                        value={row.prep}
+                        onChange={(e) => patchRow(section.key, row.key, { prep: e.target.value })}
+                      />
+                      <Input
+                        className="w-44"
+                        placeholder="or text, e.g. to taste"
+                        value={row.raw}
+                        onChange={(e) => patchRow(section.key, row.key, { raw: e.target.value })}
+                      />
+                      <label className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                        <Checkbox
+                          checked={row.optional}
+                          onCheckedChange={(v) => patchRow(section.key, row.key, { optional: v === true })}
+                        />
+                        optional
+                      </label>
+                    </div>
+                  </div>
+                ))}
               </div>
+
+              <Button type="button" variant="outline" size="sm" onClick={() => addRow(section.key)}>
+                <PlusIcon className="size-4" /> Add ingredient
+              </Button>
             </div>
           ))}
         </div>

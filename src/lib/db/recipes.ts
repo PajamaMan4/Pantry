@@ -28,6 +28,7 @@ export type RecipeIngredientInput = {
   raw: string | null;
   prep: string | null;
   optional: boolean;
+  sectionTitle?: string | null; // optional grouping label for multi-part recipes
 };
 
 export type RecipeWriteInput = {
@@ -214,6 +215,7 @@ function writeIngredients(tx: Tx, recipeId: number, rows: RecipeIngredientInput[
         raw: row.raw,
         prep: row.prep,
         optional: row.optional,
+        sectionTitle: row.sectionTitle ?? null,
         displayOrder: i,
       })),
     )

@@ -29,6 +29,13 @@
       "when": 1781744495449,
       "tag": "0003_common_king_cobra",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1781829045880,
+      "tag": "0004_modern_blonde_phantom",
+      "breakpoints": true
     }
   ]
 }

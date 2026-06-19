@@ -177,6 +177,51 @@ function seed() {
         .run();
     }
 
+    // 4b) a multi-part recipe exercising ingredient sections — butter and sugar
+    //     deliberately appear in BOTH the crust and the filling so the recipe
+    //     page has to sum across sections before checking stock (§2.4 / §3.3).
+    const TART_NAME = "Simple Butter Tart";
+    const tartExists = tx.select({ id: recipes.id }).from(recipes).where(eq(recipes.name, TART_NAME)).get();
+    if (!tartExists) {
+      const tart = tx
+        .insert(recipes)
+        .values({
+          name: TART_NAME,
+          description: "A short, sweet pastry with a custardy butter filling — a good test of sectioned ingredients.",
+          steps: [
+            { id: nanoid(), text: "Rub the crust butter into the flour, sugar, and salt; press into a tin and chill." },
+            { id: nanoid(), text: "Beat the filling butter with the sugar, eggs, and vanilla until smooth." },
+            { id: nanoid(), text: "Pour the filling into the crust and bake at 350°F until just set, about 25 minutes." },
+          ],
+          prepTimeMin: 20,
+          cookTimeMin: 25,
+          baseServings: 8,
+        })
+        .returning({ id: recipes.id })
+        .get();
+
+      tx.insert(recipeIngredients).values([
+        // For the crust
+        { recipeId: tart.id, ingredientId: id("All-purpose flour"), amount: 250, unit: "g", sectionTitle: "For the crust", displayOrder: 0 },
+        { recipeId: tart.id, ingredientId: id("Butter"), amount: 125, unit: "g", prep: "cold, cubed", sectionTitle: "For the crust", displayOrder: 1 },
+        { recipeId: tart.id, ingredientId: id("Granulated sugar"), amount: 50, unit: "g", sectionTitle: "For the crust", displayOrder: 2 },
+        { recipeId: tart.id, ingredientId: id("Salt"), amount: 1, unit: "pinch", sectionTitle: "For the crust", displayOrder: 3 },
+        // For the filling
+        { recipeId: tart.id, ingredientId: id("Butter"), amount: 100, unit: "g", prep: "softened", sectionTitle: "For the filling", displayOrder: 4 },
+        { recipeId: tart.id, ingredientId: id("Granulated sugar"), amount: 150, unit: "g", sectionTitle: "For the filling", displayOrder: 5 },
+        { recipeId: tart.id, ingredientId: id("Egg"), amount: 3, unit: "each", sectionTitle: "For the filling", displayOrder: 6 },
+        { recipeId: tart.id, ingredientId: id("Vanilla extract"), amount: 1, unit: "tsp", optional: true, sectionTitle: "For the filling", displayOrder: 7 },
+      ]).run();
+
+      tx.insert(tags).values([{ name: "dessert" }, { name: "baking" }]).onConflictDoNothing().run();
+      const tartTagRows = tx.select({ id: tags.id, name: tags.name }).from(tags).all();
+      const tartTagId = new Map(tartTagRows.map((r) => [r.name, r.id] as const));
+      tx.insert(recipeTags)
+        .values(["dessert", "baking"].map((t) => ({ recipeId: tart.id, tagId: tartTagId.get(t)! })))
+        .onConflictDoNothing()
+        .run();
+    }
+
     // 5) a little inventory + price history (only if those tables are empty).
     const invCount = tx.select({ n: sql<number>`count(*)` }).from(inventoryItems).get();
     if ((invCount?.n ?? 0) === 0) {

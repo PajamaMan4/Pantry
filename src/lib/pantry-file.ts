@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ingredientGroupsSchema, type IngredientGroups } from "@/lib/domain/sections";
 
 export const PANTRY_FILE_VERSION = 1;
 
@@ -27,6 +28,12 @@ const fileIngredientSchema = z.object({
   optional: z.boolean(),
 });
 
+export type FileIngredient = z.infer<typeof fileIngredientSchema>;
+
+// `ingredients` is either a flat array or an array of labeled sections (§2.4).
+const fileIngredientsSchema = ingredientGroupsSchema(fileIngredientSchema);
+export type FileIngredients = IngredientGroups<FileIngredient>;
+
 export const pantryFileSchema = z.object({
   pantryVersion: z.literal(1),
   name: z.string().min(1),
@@ -37,7 +44,7 @@ export const pantryFileSchema = z.object({
   notes: z.string().nullable(),
   isFavorite: z.boolean(),
   tags: z.array(z.string()),
-  ingredients: z.array(fileIngredientSchema),
+  ingredients: fileIngredientsSchema,
   steps: z.array(fileStepSchema),
 });
 

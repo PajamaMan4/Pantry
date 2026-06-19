@@ -1,6 +1,32 @@
 import { NextResponse } from "next/server";
 import { getRecipeDetail } from "@/lib/db/recipes";
-import { PANTRY_FILE_VERSION, type PantryFile } from "@/lib/pantry-file";
+import { PANTRY_FILE_VERSION, type FileIngredient, type FileIngredients, type PantryFile } from "@/lib/pantry-file";
+import { groupRowsBySection } from "@/lib/domain/sections";
+import type { RecipeIngredientDetail } from "@/lib/db/recipes";
+
+function toFileIngredient(ri: RecipeIngredientDetail): FileIngredient {
+  return {
+    name: ri.ingredient.name,
+    amount: ri.amount ?? null,
+    amountMax: ri.amountMax ?? null,
+    unit: ri.unit ?? null,
+    raw: ri.raw ?? null,
+    prep: ri.prep ?? null,
+    optional: ri.optional,
+  };
+}
+
+/** Emit a flat array when ungrouped, or labeled sections when any row has one. */
+function toFileIngredients(rows: RecipeIngredientDetail[]): FileIngredients {
+  const groups = groupRowsBySection(rows, (ri) => ri.sectionTitle);
+  if (groups.length === 1 && groups[0].title == null) {
+    return rows.map(toFileIngredient);
+  }
+  return groups.map((g) => ({
+    title: g.title ?? "",
+    ingredients: g.items.map(({ row }) => toFileIngredient(row)),
+  }));
+}
 
 export const dynamic = "force-dynamic";
 
@@ -28,15 +54,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     notes: recipe.notes ?? null,
     isFavorite: recipe.isFavorite,
     tags: tags.map((t) => t.name),
-    ingredients: ingredients.map((ri) => ({
-      name: ri.ingredient.name,
-      amount: ri.amount ?? null,
-      amountMax: ri.amountMax ?? null,
-      unit: ri.unit ?? null,
-      raw: ri.raw ?? null,
-      prep: ri.prep ?? null,
-      optional: ri.optional,
-    })),
+    ingredients: toFileIngredients(ingredients),
     steps: recipe.steps.map((s) => {
       const quantities = s.quantities
         ? Object.fromEntries(

@@ -10,6 +10,7 @@ import { scaleFactor, displayQuantity, renderStep, type DisplaySystem } from "@/
 import { formatNumber } from "@/lib/domain/format";
 import type { RoundingMode } from "@/lib/domain/quantity";
 import { planCook, type CookIngredientInput, type CookStockRow } from "@/lib/domain/cook";
+import { groupRowsBySection } from "@/lib/domain/sections";
 import { CookButton } from "./cook-button";
 
 export type ScalerIngredient = {
@@ -23,6 +24,7 @@ export type ScalerIngredient = {
   prep: string | null;
   optional: boolean;
   density: number | null;
+  sectionTitle: string | null;
 };
 
 export type ScalerStep = {
@@ -177,33 +179,45 @@ export function RecipeScaler({
         {ingredients.length === 0 ? (
           <p className="text-sm text-muted-foreground">No ingredients listed.</p>
         ) : (
-          <ul className="space-y-1.5">
-            {ingredients.map((ing, i) => {
-              const qty = displayQuantity(
-                { amount: ing.amount, amountMax: ing.amountMax, unit: ing.unit, raw: ing.raw },
-                { ...opts, density: ing.density ?? undefined },
-              );
-              const status = plan.lines[i]?.status;
-              return (
-                <li key={ing.id} className="flex flex-wrap items-baseline gap-x-2 text-sm">
-                  {status === "ok" && <span aria-label="In stock" title="In stock">✅</span>}
-                  {(status === "partial" || status === "missing") && (
-                    <span aria-label="Not enough in stock" title="Not enough in stock">
-                      ❌
-                    </span>
-                  )}
-                  {qty && <span className="tabular-nums text-foreground">{qty}</span>}
-                  <span className="font-medium">{ing.name}</span>
-                  {ing.prep && <span className="text-muted-foreground">— {ing.prep}</span>}
-                  {ing.optional && (
-                    <Badge variant="outline" className="text-[10px]">
-                      optional
-                    </Badge>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
+          // Group into sections for multi-part recipes; a flat list collapses to a
+          // single untitled group. `index` stays aligned with plan.lines (the
+          // inventory-match status is computed over the full flat list).
+          <div className="space-y-4">
+            {groupRowsBySection(ingredients, (ing) => ing.sectionTitle).map((group, gi) => (
+              <div key={group.title ?? `__flat-${gi}`}>
+                {group.title && (
+                  <h3 className="mb-1.5 text-sm font-semibold text-muted-foreground">{group.title}</h3>
+                )}
+                <ul className="space-y-1.5">
+                  {group.items.map(({ row: ing, index: i }) => {
+                    const qty = displayQuantity(
+                      { amount: ing.amount, amountMax: ing.amountMax, unit: ing.unit, raw: ing.raw },
+                      { ...opts, density: ing.density ?? undefined },
+                    );
+                    const status = plan.lines[i]?.status;
+                    return (
+                      <li key={ing.id} className="flex flex-wrap items-baseline gap-x-2 text-sm">
+                        {status === "ok" && <span aria-label="In stock" title="In stock">✅</span>}
+                        {(status === "partial" || status === "missing") && (
+                          <span aria-label="Not enough in stock" title="Not enough in stock">
+                            ❌
+                          </span>
+                        )}
+                        {qty && <span className="tabular-nums text-foreground">{qty}</span>}
+                        <span className="font-medium">{ing.name}</span>
+                        {ing.prep && <span className="text-muted-foreground">— {ing.prep}</span>}
+                        {ing.optional && (
+                          <Badge variant="outline" className="text-[10px]">
+                            optional
+                          </Badge>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ))}
+          </div>
         )}
       </section>
 

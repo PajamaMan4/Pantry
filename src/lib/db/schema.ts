@@ -72,6 +72,11 @@ export const recipeIngredients = sqliteTable(
     raw: text("raw"), // non-numeric descriptor
     prep: text("prep"), // "finely diced", optional
     optional: integer("optional", { mode: "boolean" }).notNull().default(false),
+    // Optional grouping label for multi-part recipes ("For the crust", ...).
+    // null on every row => a flat, unlabeled ingredient list (§2.4). Rows keep
+    // their section via displayOrder, so the same ingredient can appear in more
+    // than one section.
+    sectionTitle: text("section_title"),
     displayOrder: integer("display_order").notNull().default(0),
   },
   (t) => [index("ri_recipe_idx").on(t.recipeId), index("ri_ingredient_idx").on(t.ingredientId)],

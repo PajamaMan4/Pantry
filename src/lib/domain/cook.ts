@@ -113,13 +113,76 @@ function planOne(ing: CookIngredientInput, rows: CookStockRow[], factor: number)
   return { ...base, requiredAmount: required, deductions, status: "ok" };
 }
 
+/**
+ * Combine every occurrence of one ingredient (e.g. butter appearing in both
+ * "For the crust" and "For the filling") into a single requirement, summing the
+ * numeric amounts after reconciling units. Non-numeric occurrences ("to taste")
+ * contribute nothing to the total. The summed requirement is what we compare to
+ * stock, so availability reflects the *combined* need, not any one line (§3.3).
+ */
+function combineOccurrences(members: CookIngredientInput[]): CookIngredientInput {
+  const first = members[0];
+  const numeric = members.filter((m) => m.amount != null && m.unit != null);
+  if (numeric.length === 0) return { ...first, amount: null, unit: null };
+
+  const repUnit = numeric[0].unit!;
+  let total = 0;
+  for (const m of numeric) {
+    try {
+      total += convert(m.amount!, m.unit!, repUnit, first.density ?? undefined);
+    } catch {
+      // Same ingredient stocked in an unreconcilable unit — best-effort raw add.
+      total += m.amount!;
+    }
+  }
+  // Optional only if *every* occurrence is optional; staple is ingredient-level.
+  return { ...first, amount: total, unit: repUnit, optional: members.every((m) => m.optional) };
+}
+
 export function planCook(
   ingredients: CookIngredientInput[],
   stockByIngredient: Map<number, CookStockRow[]>,
   factor: number,
 ): CookPlan {
-  const lines = ingredients.map((ing) => planOne(ing, stockByIngredient.get(ing.ingredientId) ?? [], factor));
-  const deductions = lines.flatMap((l) => l.deductions);
-  const warnings = lines.filter((l) => l.note != null).map((l) => l.note!);
+  // Group line positions by ingredient so duplicates across sections are summed
+  // and checked against stock once (and deducted once — never double-counted).
+  const groups = new Map<number, number[]>();
+  for (let i = 0; i < ingredients.length; i++) {
+    const id = ingredients[i].ingredientId;
+    const idxs = groups.get(id);
+    if (idxs) idxs.push(i);
+    else groups.set(id, [i]);
+  }
+
+  const lines: CookLine[] = new Array(ingredients.length);
+  const deductions: CookDeduction[] = [];
+  const warnings: string[] = [];
+
+  for (const [ingredientId, idxs] of groups) {
+    const members = idxs.map((i) => ingredients[i]);
+    const combined = combineOccurrences(members);
+    const group = planOne(combined, stockByIngredient.get(ingredientId) ?? [], factor);
+
+    idxs.forEach((lineIndex, k) => {
+      const member = ingredients[lineIndex];
+      // A non-numeric occurrence is nothing to check on its own line; every other
+      // occurrence reflects the combined availability status.
+      const nonNumeric = member.amount == null || member.unit == null;
+      lines[lineIndex] = {
+        ingredientId,
+        name: member.name,
+        requiredUnit: member.unit,
+        requiredAmount: member.amount == null ? null : member.amount * factor,
+        // Emit the group's deductions/warning once, on its first occurrence.
+        deductions: k === 0 ? group.deductions : [],
+        status: nonNumeric ? "skipped" : group.status,
+        note: k === 0 ? group.note : undefined,
+      };
+    });
+
+    deductions.push(...group.deductions);
+    if (group.note != null) warnings.push(group.note);
+  }
+
   return { lines, deductions, warnings };
 }

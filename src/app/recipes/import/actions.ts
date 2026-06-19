@@ -8,6 +8,7 @@ import { extractRecipe } from "@/lib/import/extract-recipe";
 import { createRecipe, type RecipeIngredientInput, type RecipeWriteInput } from "@/lib/db/recipes";
 import type { Step } from "@/lib/db/schema";
 import { pantryFileSchema } from "@/lib/pantry-file";
+import { toSections } from "@/lib/domain/sections";
 
 export type ImportResult = { ok: false; error: string; needsKey?: boolean };
 
@@ -96,16 +97,21 @@ export async function importPantryFileAction(json: unknown): Promise<ImportResul
 
   const f = parsed.data;
 
-  const ingredients: RecipeIngredientInput[] = f.ingredients.map((ing) => ({
-    ingredientId: null,
-    name: ing.name,
-    amount: ing.amount,
-    amountMax: ing.amountMax,
-    unit: ing.unit,
-    raw: ing.raw,
-    prep: ing.prep,
-    optional: ing.optional,
-  }));
+  // Flatten flat-or-sectioned ingredients into rows, tagging each with its
+  // section title (null for a flat list) so the grouping round-trips.
+  const ingredients: RecipeIngredientInput[] = toSections(f.ingredients).flatMap((section) =>
+    section.ingredients.map((ing) => ({
+      ingredientId: null,
+      name: ing.name,
+      amount: ing.amount,
+      amountMax: ing.amountMax,
+      unit: ing.unit,
+      raw: ing.raw,
+      prep: ing.prep,
+      optional: ing.optional,
+      sectionTitle: section.title,
+    })),
+  );
 
   const steps: Step[] = f.steps.map((s) => ({
     id: s.id,

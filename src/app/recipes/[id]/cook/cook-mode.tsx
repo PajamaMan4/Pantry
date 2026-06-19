@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { scaleFactor, displayQuantity, renderStep, type DisplaySystem } from "@/lib/domain/scaling";
 import { formatNumber } from "@/lib/domain/format";
 import type { RoundingMode } from "@/lib/domain/quantity";
+import { groupRowsBySection } from "@/lib/domain/sections";
 import type { ScalerIngredient, ScalerStep } from "../../recipe-scaler";
 
 const SYSTEMS: { value: DisplaySystem; label: string }[] = [
@@ -132,21 +133,30 @@ export function CookMode({
       </div>
 
       {showIngredients && (
-        <ul className="mb-4 grid gap-1 rounded-lg border p-3 text-base sm:grid-cols-2">
-          {ingredients.map((ing) => {
-            const qty = displayQuantity(
-              { amount: ing.amount, amountMax: ing.amountMax, unit: ing.unit, raw: ing.raw },
-              { ...opts, density: ing.density ?? undefined },
-            );
-            return (
-              <li key={ing.id}>
-                {qty && <span className="tabular-nums">{qty} </span>}
-                <span className="font-medium">{ing.name}</span>
-                {ing.prep && <span className="text-muted-foreground"> — {ing.prep}</span>}
-              </li>
-            );
-          })}
-        </ul>
+        <div className="mb-4 space-y-3 rounded-lg border p-3 text-base">
+          {groupRowsBySection(ingredients, (ing) => ing.sectionTitle).map((group, gi) => (
+            <div key={group.title ?? `__flat-${gi}`}>
+              {group.title && (
+                <h3 className="mb-1 text-sm font-semibold text-muted-foreground">{group.title}</h3>
+              )}
+              <ul className="grid gap-1 sm:grid-cols-2">
+                {group.items.map(({ row: ing }) => {
+                  const qty = displayQuantity(
+                    { amount: ing.amount, amountMax: ing.amountMax, unit: ing.unit, raw: ing.raw },
+                    { ...opts, density: ing.density ?? undefined },
+                  );
+                  return (
+                    <li key={ing.id}>
+                      {qty && <span className="tabular-nums">{qty} </span>}
+                      <span className="font-medium">{ing.name}</span>
+                      {ing.prep && <span className="text-muted-foreground"> — {ing.prep}</span>}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
+        </div>
       )}
 
       {/* Current step — large */}

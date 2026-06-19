@@ -163,30 +163,60 @@ export function recipeCost(
   priceByIngredient: Map<number, number | null>,
   servings: number,
 ): RecipeCost {
+  // Combine duplicate ingredients (e.g. butter in both "the crust" and "the
+  // filling") into a single line, summing the amounts used. Each ingredient is
+  // then counted, priced, and listed once (§3.7).
+  const order: number[] = [];
+  const groups = new Map<number, CostIngredient[]>();
+  for (const r of ingredients) {
+    if (r.optional) continue;
+    const existing = groups.get(r.ingredientId);
+    if (existing) existing.push(r);
+    else {
+      groups.set(r.ingredientId, [r]);
+      order.push(r.ingredientId);
+    }
+  }
+
   let total = 0;
   const lines: LineCost[] = [];
   const unknown: number[] = [];
-  let countedCount = 0;
 
-  for (const r of ingredients) {
-    if (r.optional) continue;
-    countedCount += 1;
-    const price = priceByIngredient.get(r.ingredientId) ?? null;
+  for (const ingredientId of order) {
+    const rows = groups.get(ingredientId)!;
+    const price = priceByIngredient.get(ingredientId) ?? null;
+    const defaultUnit = rows[0].defaultUnit;
 
-    if (price == null || r.amount == null || r.unit == null || r.defaultUnit == null) {
-      unknown.push(r.ingredientId);
-      lines.push({ ingredientId: r.ingredientId, cost: null, reason: "no-price" });
+    if (price == null || defaultUnit == null) {
+      unknown.push(ingredientId);
+      lines.push({ ingredientId, cost: null, reason: "no-price" });
       continue;
     }
-    try {
-      const amtInDefault = convert(r.amount, r.unit, r.defaultUnit, r.density ?? undefined);
-      const cost = amtInDefault * price;
-      total += cost;
-      lines.push({ ingredientId: r.ingredientId, cost });
-    } catch {
-      unknown.push(r.ingredientId);
-      lines.push({ ingredientId: r.ingredientId, cost: null, reason: "unconvertible" });
+
+    // Sum every occurrence's amount in the default unit; "to taste" rows (no
+    // amount/unit) contribute nothing, an unconvertible unit flags the line.
+    let amountInDefault = 0;
+    let usable = false;
+    let unconvertible = false;
+    for (const r of rows) {
+      if (r.amount == null || r.unit == null) continue;
+      try {
+        amountInDefault += convert(r.amount, r.unit, defaultUnit, r.density ?? undefined);
+        usable = true;
+      } catch {
+        unconvertible = true;
+      }
     }
+
+    if (!usable) {
+      unknown.push(ingredientId);
+      lines.push({ ingredientId, cost: null, reason: unconvertible ? "unconvertible" : "no-price" });
+      continue;
+    }
+
+    const cost = amountInDefault * price;
+    total += cost;
+    lines.push({ ingredientId, cost });
   }
 
   return {
@@ -194,7 +224,7 @@ export function recipeCost(
     perServing: servings > 0 ? total / servings : total,
     lines,
     unknownIngredientIds: unknown,
-    knownCount: countedCount - unknown.length,
-    countedCount,
+    knownCount: order.length - unknown.length,
+    countedCount: order.length,
   };
 }

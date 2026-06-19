@@ -152,4 +152,15 @@ describe("recipeCost", () => {
     expect(c.total).toBeCloseTo(1.0, 6);
     expect(c.countedCount).toBe(1);
   });
+
+  it("combines a duplicated ingredient (e.g. butter in two sections) into one line", () => {
+    const butterCrust: CostIngredient = { ingredientId: 3, amount: 125, unit: "g", optional: false, defaultUnit: "g", density: 0.96 };
+    const butterFilling: CostIngredient = { ...butterCrust, amount: 100 };
+    const c = recipeCost([butterCrust, butterFilling], new Map([[3, 0.01]]), 1);
+    // 225 g × $0.01/g = $2.25, and butter appears once.
+    expect(c.total).toBeCloseTo(2.25, 6);
+    expect(c.countedCount).toBe(1);
+    expect(c.lines).toHaveLength(1);
+    expect(c.lines[0].ingredientId).toBe(3);
+  });
 });
