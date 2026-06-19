@@ -52,10 +52,15 @@ export default async function RecipesPage({
     .map(Number)
     .filter((n) => Number.isFinite(n) && n > 0);
 
+  const rawIngredients = sp["ingredient"];
+  const ingredientIds = (Array.isArray(rawIngredients) ? rawIngredients : rawIngredients ? [rawIngredients] : [])
+    .map(Number)
+    .filter((n) => Number.isFinite(n) && n > 0);
+
   const filters: RecipeListFilters = {
     search: str("q"),
     tagIds,
-    ingredientId: toInt(str("ingredient")),
+    ingredientIds,
     maxTotalTimeMin: toInt(str("maxTime")),
     favoritesOnly: str("fav") === "1",
   };
@@ -81,7 +86,7 @@ export default async function RecipesPage({
     if (s !== "alpha") next.set("sort", s);
     if (filters.search) next.set("q", filters.search);
     for (const id of tagIds) next.append("tag", String(id));
-    if (filters.ingredientId != null) next.set("ingredient", String(filters.ingredientId));
+    for (const id of ingredientIds) next.append("ingredient", String(id));
     if (filters.maxTotalTimeMin != null) next.set("maxTime", String(filters.maxTotalTimeMin));
     if (filters.favoritesOnly) next.set("fav", "1");
     const qs = next.toString();

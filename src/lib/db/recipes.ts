@@ -72,7 +72,7 @@ export type RecipeDetail = {
 export type RecipeListFilters = {
   search?: string;
   tagIds?: number[];
-  ingredientId?: number;
+  ingredientIds?: number[];
   maxTotalTimeMin?: number;
   favoritesOnly?: boolean;
 };
@@ -97,10 +97,12 @@ export function listRecipes(filters: RecipeListFilters = {}): RecipeListItem[] {
       );
     }
   }
-  if (filters.ingredientId != null) {
-    conds.push(
-      sql`EXISTS (SELECT 1 FROM ${recipeIngredients} ri WHERE ri.recipe_id = ${recipes.id} AND ri.ingredient_id = ${filters.ingredientId})`,
-    );
+  if (filters.ingredientIds && filters.ingredientIds.length > 0) {
+    for (const id of filters.ingredientIds) {
+      conds.push(
+        sql`EXISTS (SELECT 1 FROM ${recipeIngredients} ri WHERE ri.recipe_id = ${recipes.id} AND ri.ingredient_id = ${id})`,
+      );
+    }
   }
 
   const where = conds.length ? and(...conds) : undefined;

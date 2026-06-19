@@ -54,7 +54,34 @@ export function RecipeFilters({
     return q ? available.filter((t) => t.name.toLowerCase().includes(q)) : available;
   }, [tags, selectedTagIds, tagQuery]);
 
-  function buildUrl(updates: { tags?: number[]; q?: string | null; ingredient?: string | null; maxTime?: string | null; fav?: string | null }) {
+  // Multi-ingredient state
+  const selectedIngredientIds = React.useMemo(
+    () =>
+      params
+        .getAll("ingredient")
+        .map(Number)
+        .filter((n) => Number.isFinite(n) && n > 0),
+    [params],
+  );
+  const [ingredientOpen, setIngredientOpen] = React.useState(false);
+  const [ingredientQuery, setIngredientQuery] = React.useState("");
+  const ingredientRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    function onDown(e: MouseEvent) {
+      if (ingredientRef.current && !ingredientRef.current.contains(e.target as Node)) setIngredientOpen(false);
+    }
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, []);
+
+  const filteredIngredients = React.useMemo(() => {
+    const q = ingredientQuery.trim().toLowerCase();
+    const available = ingredients.filter((i) => !selectedIngredientIds.includes(i.id));
+    return q ? available.filter((i) => i.name.toLowerCase().includes(q)) : available;
+  }, [ingredients, selectedIngredientIds, ingredientQuery]);
+
+  function buildUrl(updates: { tags?: number[]; ingredients?: number[]; q?: string | null; maxTime?: string | null; fav?: string | null }) {
     const next = new URLSearchParams();
     if (sort !== "alpha") next.set("sort", sort);
 
@@ -64,8 +91,8 @@ export function RecipeFilters({
     const newTagIds = updates.tags ?? selectedTagIds;
     for (const id of newTagIds) next.append("tag", String(id));
 
-    const newIngredient = "ingredient" in updates ? updates.ingredient : params.get("ingredient");
-    if (newIngredient) next.set("ingredient", newIngredient);
+    const newIngredientIds = updates.ingredients ?? selectedIngredientIds;
+    for (const id of newIngredientIds) next.append("ingredient", String(id));
 
     const newMaxTime = "maxTime" in updates ? updates.maxTime : params.get("maxTime");
     if (newMaxTime) next.set("maxTime", newMaxTime);
@@ -87,7 +114,17 @@ export function RecipeFilters({
     router.push(buildUrl({ tags: selectedTagIds.filter((t) => t !== id) }));
   }
 
-  const hasFilters = params.get("q") || selectedTagIds.length > 0 || params.get("ingredient") || params.get("maxTime") || params.get("fav");
+  function addIngredient(id: number) {
+    setIngredientQuery("");
+    setIngredientOpen(false);
+    router.push(buildUrl({ ingredients: [...selectedIngredientIds, id] }));
+  }
+
+  function removeIngredient(id: number) {
+    router.push(buildUrl({ ingredients: selectedIngredientIds.filter((i) => i !== id) }));
+  }
+
+  const hasFilters = params.get("q") || selectedTagIds.length > 0 || selectedIngredientIds.length > 0 || params.get("maxTime") || params.get("fav");
   const selectClass = "h-9 rounded-md border border-input bg-transparent px-2 text-sm";
 
   return (
@@ -179,19 +216,74 @@ export function RecipeFilters({
         )}
       </div>
 
-      <select
-        className={selectClass}
-        value={params.get("ingredient") ?? ""}
-        onChange={(e) => router.push(buildUrl({ ingredient: e.target.value || null }))}
-        aria-label="Filter by ingredient"
-      >
-        <option value="">Any ingredient</option>
-        {ingredients.map((i) => (
-          <option key={i.id} value={String(i.id)}>
-            {i.name}
-          </option>
-        ))}
-      </select>
+      {/* Multi-ingredient combobox */}
+      <div ref={ingredientRef} className="relative">
+        <div
+          className={cn(
+            "flex min-h-9 min-w-[8rem] flex-wrap items-center gap-1 rounded-md border border-input bg-transparent px-2 py-1 text-sm cursor-pointer",
+          )}
+          onClick={() => {
+            setIngredientOpen((o) => !o);
+            setIngredientQuery("");
+          }}
+        >
+          {selectedIngredientIds.length === 0 && !ingredientOpen && (
+            <span className="text-muted-foreground">All ingredients</span>
+          )}
+          {selectedIngredientIds.map((id) => {
+            const ingredient = ingredients.find((i) => i.id === id);
+            if (!ingredient) return null;
+            return (
+              <Badge key={id} variant="secondary" className="gap-1 pr-1 text-xs">
+                {ingredient.name}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeIngredient(id);
+                  }}
+                  className="rounded-sm hover:bg-muted-foreground/20"
+                  aria-label={`Remove ${ingredient.name}`}
+                >
+                  <XIcon className="size-3" />
+                </button>
+              </Badge>
+            );
+          })}
+          {ingredientOpen ? (
+            <input
+              autoFocus
+              value={ingredientQuery}
+              onChange={(e) => setIngredientQuery(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+              placeholder="Filter ingredients…"
+              className="min-w-[5rem] flex-1 bg-transparent outline-none placeholder:text-muted-foreground"
+            />
+          ) : (
+            <ChevronDownIcon className="ml-auto size-3.5 text-muted-foreground" />
+          )}
+        </div>
+
+        {ingredientOpen && (
+          <ul className="absolute z-50 mt-1 max-h-48 w-full min-w-[10rem] overflow-auto rounded-md border bg-popover p-1 text-sm text-popover-foreground shadow-md">
+            {filteredIngredients.length === 0 ? (
+              <li className="px-2 py-1.5 text-muted-foreground">No ingredients</li>
+            ) : (
+              filteredIngredients.map((i) => (
+                <li key={i.id}>
+                  <button
+                    type="button"
+                    onClick={() => addIngredient(i.id)}
+                    className="w-full rounded-sm px-2 py-1.5 text-left hover:bg-muted"
+                  >
+                    {i.name}
+                  </button>
+                </li>
+              ))
+            )}
+          </ul>
+        )}
+      </div>
 
       <select
         className={selectClass}

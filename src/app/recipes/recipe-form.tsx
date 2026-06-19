@@ -198,6 +198,15 @@ export function RecipeForm({ ingredientOptions, tagSuggestions, groupSuggestions
   function patchRow(sectionKey: string, rowKey: string, patch: Partial<IngredientRow>) {
     mapRows(sectionKey, (rows) => rows.map((r) => (r.key === rowKey ? { ...r, ...patch } : r)));
   }
+  function moveRow(sectionKey: string, index: number, dir: -1 | 1) {
+    mapRows(sectionKey, (rows) => {
+      const target = index + dir;
+      if (target < 0 || target >= rows.length) return rows;
+      const next = [...rows];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+  }
 
   async function createIngredientForRow(sectionKey: string, rowKey: string, ingName: string) {
     const res = await createIngredientAction({ name: ingName });
@@ -393,7 +402,7 @@ export function RecipeForm({ ingredientOptions, tagSuggestions, groupSuggestions
 
               {/* Ingredient rows for this section */}
               <div className="space-y-3">
-                {section.rows.map((row) => (
+                {section.rows.map((row, i) => (
                   <div key={row.key} className="rounded-md border bg-background p-3">
                     <div className="flex flex-wrap items-start gap-2">
                       <div className="min-w-56 flex-1">
@@ -443,15 +452,35 @@ export function RecipeForm({ ingredientOptions, tagSuggestions, groupSuggestions
                           </option>
                         ))}
                       </select>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        aria-label="Remove ingredient"
-                        onClick={() => removeRow(section.key, row.key)}
-                      >
-                        <TrashIcon className="size-4" />
-                      </Button>
+                      <div className="flex items-center">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          aria-label="Move ingredient up"
+                          onClick={() => moveRow(section.key, i, -1)}
+                        >
+                          <ArrowUpIcon className="size-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          aria-label="Move ingredient down"
+                          onClick={() => moveRow(section.key, i, 1)}
+                        >
+                          <ArrowDownIcon className="size-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          aria-label="Remove ingredient"
+                          onClick={() => removeRow(section.key, row.key)}
+                        >
+                          <TrashIcon className="size-4" />
+                        </Button>
+                      </div>
                     </div>
 
                     <div className="mt-2 flex flex-wrap items-center gap-2">
