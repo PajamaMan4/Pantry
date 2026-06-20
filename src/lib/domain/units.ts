@@ -33,6 +33,8 @@ export const UNITS: Record<string, UnitDef> = {
   tbsp: { id: "tbsp", label: "tbsp", category: "volume", system: "imperial", toBase: 14.78676 },
   fl_oz: { id: "fl_oz", label: "fl oz", category: "volume", system: "imperial", toBase: 29.57353 },
   cup: { id: "cup", label: "cup", category: "volume", system: "imperial", toBase: 236.5882 },
+  qt: { id: "qt", label: "qt", category: "volume", system: "imperial", toBase: 946.353 },
+  gal: { id: "gal", label: "gal", category: "volume", system: "imperial", toBase: 3785.41 },
   ml: { id: "ml", label: "ml", category: "volume", system: "metric", toBase: 1 },
   l: { id: "l", label: "L", category: "volume", system: "metric", toBase: 1000 },
   oz: { id: "oz", label: "oz", category: "mass", system: "imperial", toBase: 28.34952 },
@@ -123,7 +125,9 @@ function pickTargetUnit(category: UnitCategory, system: UnitSystem, baseAmount: 
     if (system === "metric") return a >= 1000 ? "l" : "ml";
     if (a < UNITS.tbsp.toBase) return "tsp"; // < ~14.8 ml
     if (a < UNITS.cup.toBase / 4) return "tbsp"; // < ~59 ml (quarter cup)
-    return "cup";
+    if (a < UNITS.qt.toBase) return "cup"; // < ~946 ml
+    if (a < UNITS.gal.toBase) return "qt"; // < ~3785 ml
+    return "gal";
   }
   if (category === "mass") {
     if (system === "metric") return a >= 1000 ? "kg" : "g";
@@ -162,6 +166,8 @@ export const UNIT_OPTIONS: { value: string; label: string }[] = [
   { value: "tbsp", label: "tbsp" },
   { value: "fl_oz", label: "fl oz" },
   { value: "cup", label: "cup" },
+  { value: "qt", label: "qt" },
+  { value: "gal", label: "gal" },
   { value: "ml", label: "ml" },
   { value: "l", label: "L" },
   { value: "oz", label: "oz" },

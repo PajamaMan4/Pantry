@@ -107,4 +107,39 @@ describe("toSystem", () => {
     const r = toSystem({ amount: 1, amountMax: 2, unit: "cup" }, "metric");
     expect(r.amountMax).toBeCloseTo(473.18, 1);
   });
+
+  it("promotes large metric volumes to qt then gal when converting to imperial", () => {
+    // ~1892.7 ml → 2 qt
+    const qt = toSystem({ amount: 1892.706, unit: "ml" }, "imperial");
+    expect(qt.unit).toBe("qt");
+    expect(qt.amount).toBeCloseTo(2, 3);
+
+    // ~7570.8 ml → 2 gal
+    const gal = toSystem({ amount: 7570.82, unit: "ml" }, "imperial");
+    expect(gal.unit).toBe("gal");
+    expect(gal.amount).toBeCloseTo(2, 3);
+  });
+});
+
+describe("qt and gal conversions", () => {
+  it("converts quart to cups and ml", () => {
+    expect(convert(1, "qt", "cup")).toBeCloseTo(4, 4);
+    expect(convert(1, "qt", "ml")).toBeCloseTo(946.353, 3);
+  });
+
+  it("converts gallon to quarts, cups, and ml", () => {
+    expect(convert(1, "gal", "qt")).toBeCloseTo(4, 4);
+    expect(convert(1, "gal", "cup")).toBeCloseTo(16, 4);
+    expect(convert(1, "gal", "ml")).toBeCloseTo(3785.41, 2);
+  });
+
+  it("round-trips qt and gal", () => {
+    expect(convert(convert(3, "qt", "ml"), "ml", "qt")).toBeCloseTo(3, 5);
+    expect(convert(convert(1, "gal", "l"), "l", "gal")).toBeCloseTo(1, 5);
+  });
+
+  it("has correct base factors", () => {
+    expect(UNITS.qt.toBase).toBeCloseTo(946.353, 3);
+    expect(UNITS.gal.toBase).toBeCloseTo(3785.41, 2);
+  });
 });
