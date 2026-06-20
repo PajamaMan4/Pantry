@@ -227,6 +227,37 @@ export function mergeIngredients(sourceId: number, targetId: number): MergeResul
       }
     }
 
+    // Transfer source aliases to target, skipping any that conflict.
+    const sourceAliases = tx
+      .select()
+      .from(ingredientAliases)
+      .where(eq(ingredientAliases.ingredientId, sourceId))
+      .all();
+    const targetAliases = tx
+      .select()
+      .from(ingredientAliases)
+      .where(eq(ingredientAliases.ingredientId, targetId))
+      .all();
+    const targetAliasSet = new Set(targetAliases.map((a) => a.alias.toLowerCase()));
+
+    for (const sa of sourceAliases) {
+      if (!targetAliasSet.has(sa.alias.toLowerCase())) {
+        tx.update(ingredientAliases)
+          .set({ ingredientId: targetId })
+          .where(eq(ingredientAliases.id, sa.id))
+          .run();
+      }
+    }
+
+    // Add the source's canonical name as an alias for the target.
+    if (
+      source.name.toLowerCase() !== target.name.toLowerCase() &&
+      !targetAliasSet.has(source.name.toLowerCase()) &&
+      !sourceAliases.some((a) => a.alias.toLowerCase() === source.name.toLowerCase())
+    ) {
+      tx.insert(ingredientAliases).values({ ingredientId: targetId, alias: source.name }).run();
+    }
+
     tx.delete(ingredients).where(eq(ingredients.id, sourceId)).run();
     return { movedRecipeRows, movedInventory, movedPrices };
   });

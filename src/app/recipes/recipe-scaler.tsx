@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { MinusIcon, PlusIcon, RotateCcwIcon, CheckIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -214,7 +215,9 @@ export function RecipeScaler({
                             <span aria-label="Not in stock" title="Not in stock">❌</span>
                           )
                         )}
-                        <span className="font-medium">{ing.name}</span>
+                        <Link href={`/ingredients/${ing.ingredientId}`} className="font-medium hover:underline">
+                          {ing.name}
+                        </Link>
                         {qty && <span className="tabular-nums text-foreground">{qty}</span>}
                         {ing.prep && <span className="text-muted-foreground">— {ing.prep}</span>}
                         {ing.optional && (
