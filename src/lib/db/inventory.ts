@@ -3,6 +3,7 @@ import { db } from "./client";
 import {
   inventoryItems,
   ingredients,
+  ingredientAliases,
   storageLocations,
   priceEntries,
   type InventoryItem,
@@ -45,12 +46,21 @@ function resolveIngredientId(tx: Tx, ref: IngredientRef, defaultUnit?: string | 
   if (ref.ingredientId != null) return ref.ingredientId;
   const name = (ref.name ?? "").trim();
   if (!name) throw new Error("Inventory item is missing both an ingredient id and a name.");
-  const existing = tx
+  // 1. Exact canonical name match (case-insensitive)
+  const byName = tx
     .select({ id: ingredients.id })
     .from(ingredients)
     .where(sql`lower(${ingredients.name}) = lower(${name})`)
     .get();
-  if (existing) return existing.id;
+  if (byName) return byName.id;
+  // 2. Alias match (case-insensitive)
+  const byAlias = tx
+    .select({ ingredientId: ingredientAliases.ingredientId })
+    .from(ingredientAliases)
+    .where(sql`lower(${ingredientAliases.alias}) = lower(${name})`)
+    .get();
+  if (byAlias) return byAlias.ingredientId;
+  // 3. Create new ingredient
   return tx
     .insert(ingredients)
     .values({ name, defaultUnit: defaultUnit ?? null })
@@ -240,5 +250,114 @@ export function logPurchase(input: LogPurchaseInput): { inventoryItemId: number;
       .get().id;
 
     return { inventoryItemId, priceEntryId };
+  });
+}
+
+export type BulkImportItem = {
+  name: string;
+  // Price fields (at least one of price/addQuantity must be present)
+  cost?: number | null;
+  costUnit?: string | null;
+  store?: string | null;
+  purchasedAt?: Date | null;
+  // Inventory fields
+  addQuantity?: number | null;
+  addUnit?: string | null;
+  location?: string | null;
+};
+
+export type BulkImportSummary = {
+  itemsProcessed: number;
+  pricesUpdated: number;
+  inventoryAdded: number;
+  ingredientsCreated: number;
+};
+
+/**
+ * Bulk-import prices and/or inventory from a validated item list. Runs in a
+ * single transaction so a failure leaves data untouched.
+ * - Price: stored as a price entry with quantity=1 (unit price model).
+ * - Inventory: merged into an existing row with the same ingredient+location+unit,
+ *   or a new row is created (same behaviour as logPurchase).
+ */
+export function importPricesAndInventory(items: BulkImportItem[]): BulkImportSummary {
+  return db.transaction((tx) => {
+    let pricesUpdated = 0;
+    let inventoryAdded = 0;
+    let ingredientsCreated = 0;
+
+    for (const item of items) {
+      const defaultUnit = item.costUnit ?? item.addUnit ?? null;
+
+      // Track whether this name resolved to a pre-existing ingredient.
+      const beforeCount = tx
+        .select({ id: ingredients.id })
+        .from(ingredients)
+        .where(sql`lower(${ingredients.name}) = lower(${item.name.trim()})`)
+        .get();
+      const aliasBefore = beforeCount
+        ? null
+        : tx
+            .select({ ingredientId: ingredientAliases.ingredientId })
+            .from(ingredientAliases)
+            .where(sql`lower(${ingredientAliases.alias}) = lower(${item.name.trim()})`)
+            .get();
+      const isNew = !beforeCount && !aliasBefore;
+
+      const ingredientId = resolveIngredientId(
+        tx,
+        { ingredientId: null, name: item.name },
+        defaultUnit,
+      );
+
+      if (isNew) ingredientsCreated++;
+
+      if (item.cost != null && item.costUnit) {
+        tx.insert(priceEntries)
+          .values({
+            ingredientId,
+            price: item.cost,
+            quantity: 1,
+            unit: item.costUnit,
+            store: item.store ?? null,
+            purchasedAt: item.purchasedAt ?? new Date(),
+          })
+          .run();
+        pricesUpdated++;
+      }
+
+      if (item.addQuantity != null && item.addUnit) {
+        const locationRef: LocationRef = { locationId: null, locationName: item.location ?? null };
+        const locationId = resolveLocationId(tx, locationRef);
+
+        const existing = tx
+          .select()
+          .from(inventoryItems)
+          .where(
+            and(
+              eq(inventoryItems.ingredientId, ingredientId),
+              locationId == null
+                ? sql`${inventoryItems.locationId} is null`
+                : eq(inventoryItems.locationId, locationId),
+              eq(inventoryItems.unit, item.addUnit),
+            ),
+          )
+          .get();
+
+        if (existing) {
+          tx.update(inventoryItems)
+            .set({ quantity: existing.quantity + item.addQuantity, updatedAt: new Date() })
+            .where(eq(inventoryItems.id, existing.id))
+            .run();
+        } else {
+          tx.insert(inventoryItems)
+            .values({ ingredientId, locationId, quantity: item.addQuantity, unit: item.addUnit })
+            .run();
+        }
+        inventoryAdded++;
+      }
+    }
+
+    return { itemsProcessed: items.length, pricesUpdated, inventoryAdded, ingredientsCreated };
   });
 }

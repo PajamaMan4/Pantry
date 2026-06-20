@@ -11,8 +11,13 @@ import {
   receiveCheckedShoppingItems,
   addMissingForRecipe,
 } from "@/lib/db/shopping";
+import { importPricesAndInventory, type BulkImportSummary } from "@/lib/db/inventory";
+import { inventoryImportSchema, normalizeImportItems } from "@/lib/inventory-import";
 
 export type ShoppingActionResult = { ok: true } | { ok: false; error: string };
+export type ImportInventoryResult =
+  | { ok: true; summary: BulkImportSummary }
+  | { ok: false; error: string };
 
 function firstError(issues: { message: string }[]): string {
   return issues[0]?.message ?? "Please check the form and try again.";
@@ -64,4 +69,18 @@ export async function addMissingForRecipeAction(recipeId: number): Promise<{ ok:
   const added = addMissingForRecipe(recipeId);
   revalidatePath("/shopping");
   return { ok: true, added };
+}
+
+export async function importInventoryFileAction(json: unknown): Promise<ImportInventoryResult> {
+  const parsed = inventoryImportSchema.safeParse(json);
+  if (!parsed.success) {
+    const msg = parsed.error.issues[0]?.message ?? "unknown error";
+    return { ok: false, error: `Invalid file: ${msg}` };
+  }
+  const items = normalizeImportItems(parsed.data);
+  const summary = importPricesAndInventory(items);
+  revalidatePath("/shopping");
+  revalidatePath("/ingredients");
+  revalidatePath("/ingredients/[id]", "page");
+  return { ok: true, summary };
 }

@@ -5,6 +5,7 @@ import { getSettings } from "@/lib/db/settings";
 import { ShoppingAddForm } from "./shopping-add-form";
 import { ShoppingItemRow, type SerialShoppingItem } from "./shopping-item-row";
 import { ShoppingBar } from "./shopping-bar";
+import { ImportInventoryDialog } from "./import-inventory-dialog";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Shopping list · Pantry" };
@@ -29,11 +30,16 @@ export default function ShoppingPage() {
 
   return (
     <div className="mx-auto w-full max-w-2xl px-4 py-8">
-      <h1 className="mb-1 text-2xl font-semibold tracking-tight">Shopping list</h1>
-      <p className="mb-4 text-sm text-muted-foreground">
-        Check items off as you shop, fill in the price you paid, then add what you bought straight to
-        your inventory.
-      </p>
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <h1 className="mb-1 text-2xl font-semibold tracking-tight">Shopping list</h1>
+          <p className="text-sm text-muted-foreground">
+            Check items off as you shop, fill in the price you paid, then add what you bought straight to
+            your inventory.
+          </p>
+        </div>
+        <ImportInventoryDialog />
+      </div>
 
       <div className="mb-4">
         <ShoppingAddForm

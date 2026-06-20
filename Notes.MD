@@ -9,9 +9,9 @@
 5. Should recipe page perhaps have different sub pages for breakfast, lunch, dinner, dessert, like a real recipe book has chapters?
 6. Add a mass recipe export button.
 7. Definitely need to update the layout/visuals.
+8. Should add a way to mass import purchase information for inventory, so adding new inventory and updating prices
 
 **Changes to make**
-
+1. Want the merge selector to be a combo box. Maybe even able to select multiple ingredients at once.
 
 **Bugs**
-

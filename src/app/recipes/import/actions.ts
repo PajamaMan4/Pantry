@@ -9,31 +9,9 @@ import { createRecipe, type RecipeIngredientInput, type RecipeWriteInput } from 
 import type { Step } from "@/lib/db/schema";
 import { pantryFileSchema } from "@/lib/pantry-file";
 import { toSections } from "@/lib/domain/sections";
+import { normalizeUnit } from "@/lib/import/normalize-unit";
 
 export type ImportResult = { ok: false; error: string; needsKey?: boolean };
-
-// Maps common unit words the model emits onto our canonical unit ids. Anything
-// not recognized stays as null (and is preserved in the row's `raw` text so the
-// original wording isn't lost when the user reviews the draft).
-const UNIT_ALIASES: Record<string, string> = {
-  tsp: "tsp", teaspoon: "tsp", teaspoons: "tsp",
-  tbsp: "tbsp", tbs: "tbsp", tbl: "tbsp", tablespoon: "tbsp", tablespoons: "tbsp",
-  "fl oz": "fl_oz", floz: "fl_oz", fl_oz: "fl_oz", "fluid ounce": "fl_oz", "fluid ounces": "fl_oz",
-  cup: "cup", cups: "cup", c: "cup",
-  ml: "ml", milliliter: "ml", millilitre: "ml", milliliters: "ml", millilitres: "ml",
-  l: "l", liter: "l", litre: "l", liters: "l", litres: "l",
-  oz: "oz", ounce: "oz", ounces: "oz",
-  lb: "lb", lbs: "lb", pound: "lb", pounds: "lb",
-  g: "g", gram: "g", grams: "g", gramme: "g", grammes: "g",
-  kg: "kg", kilogram: "kg", kilograms: "kg", kilo: "kg", kilos: "kg",
-  each: "each", whole: "each",
-  pinch: "pinch", pinches: "pinch",
-};
-
-function normalizeUnit(unit: string | null): string | null {
-  if (!unit) return null;
-  return UNIT_ALIASES[unit.trim().toLowerCase()] ?? null;
-}
 
 export async function importRecipeAction(rawText: string): Promise<ImportResult> {
   const apiKey = resolveAnthropicApiKey();
