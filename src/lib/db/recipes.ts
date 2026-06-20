@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, inArray, like, ne, or, sql } from "drizzle-orm";
 import { db } from "./client";
 import {
+  ingredientAliases,
   ingredients,
   recipeGroups,
   recipeIngredients,
@@ -226,6 +227,16 @@ function resolveIngredientId(tx: Tx, row: RecipeIngredientInput): number {
     .where(sql`lower(${ingredients.name}) = lower(${name})`)
     .get();
   if (existing) return existing.id;
+
+  // Match against aliases (e.g. "egg" -> existing "eggs") so imports reuse the
+  // canonical ingredient instead of creating near-duplicates. Mirrors
+  // getOrCreateIngredient() but runs on the transaction handle.
+  const byAlias = tx
+    .select({ ingredientId: ingredientAliases.ingredientId })
+    .from(ingredientAliases)
+    .where(sql`lower(${ingredientAliases.alias}) = lower(${name})`)
+    .get();
+  if (byAlias) return byAlias.ingredientId;
 
   return tx
     .insert(ingredients)
