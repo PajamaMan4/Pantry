@@ -110,8 +110,8 @@ describe("unitPrice", () => {
 });
 
 describe("recipeCost", () => {
-  const FLOUR: CostIngredient = { ingredientId: 1, amount: 200, unit: "g", optional: false, defaultUnit: "g", density: 0.53 };
-  const SUGAR: CostIngredient = { ingredientId: 2, amount: 50, unit: "g", optional: false, defaultUnit: "g", density: null };
+  const FLOUR: CostIngredient = { ingredientId: 1, amount: 200, unit: "g", optional: false, defaultUnit: "g", density: 0.53, gramsPerEach: null };
+  const SUGAR: CostIngredient = { ingredientId: 2, amount: 50, unit: "g", optional: false, defaultUnit: "g", density: null, gramsPerEach: null };
 
   it("sums amount × price-per-unit and derives per-serving", () => {
     const c = recipeCost([FLOUR, SUGAR], new Map([[1, 0.005], [2, 0.004]]), 4);
@@ -123,7 +123,7 @@ describe("recipeCost", () => {
   });
 
   it("converts the recipe unit to the default unit via density", () => {
-    const cupFlour: CostIngredient = { ingredientId: 1, amount: 1, unit: "cup", optional: false, defaultUnit: "g", density: 0.53 };
+    const cupFlour: CostIngredient = { ingredientId: 1, amount: 1, unit: "cup", optional: false, defaultUnit: "g", density: 0.53, gramsPerEach: null };
     const c = recipeCost([cupFlour], new Map([[1, 0.01]]), 1);
     // 1 cup flour ≈ 125.39 g × $0.01/g ≈ $1.25
     expect(c.total).toBeCloseTo(1.2539, 3);
@@ -139,7 +139,7 @@ describe("recipeCost", () => {
   });
 
   it("flags unconvertible units", () => {
-    const cupNoDensity: CostIngredient = { ingredientId: 2, amount: 1, unit: "cup", optional: false, defaultUnit: "g", density: null };
+    const cupNoDensity: CostIngredient = { ingredientId: 2, amount: 1, unit: "cup", optional: false, defaultUnit: "g", density: null, gramsPerEach: null };
     const c = recipeCost([cupNoDensity], new Map([[2, 0.01]]), 1);
     expect(c.total).toBe(0);
     expect(c.lines[0].reason).toBe("unconvertible");
@@ -154,7 +154,7 @@ describe("recipeCost", () => {
   });
 
   it("combines a duplicated ingredient (e.g. butter in two sections) into one line", () => {
-    const butterCrust: CostIngredient = { ingredientId: 3, amount: 125, unit: "g", optional: false, defaultUnit: "g", density: 0.96 };
+    const butterCrust: CostIngredient = { ingredientId: 3, amount: 125, unit: "g", optional: false, defaultUnit: "g", density: 0.96, gramsPerEach: null };
     const butterFilling: CostIngredient = { ...butterCrust, amount: 100 };
     const c = recipeCost([butterCrust, butterFilling], new Map([[3, 0.01]]), 1);
     // 225 g × $0.01/g = $2.25, and butter appears once.
@@ -162,5 +162,16 @@ describe("recipeCost", () => {
     expect(c.countedCount).toBe(1);
     expect(c.lines).toHaveLength(1);
     expect(c.lines[0].ingredientId).toBe(3);
+  });
+
+  it("bridges count→mass via gramsPerEach for cost calculation", () => {
+    // recipe: 2 tomatoes, defaultUnit lb, gramsPerEach 150 → 2×150=300g → ~0.661 lb
+    // price: $1.99/lb → cost ≈ 0.661 × 1.99 ≈ $1.316
+    const tomato: CostIngredient = { ingredientId: 4, amount: 2, unit: "each", optional: false, defaultUnit: "lb", density: null, gramsPerEach: 150 };
+    const pricePerLb = 1.99;
+    const c = recipeCost([tomato], new Map([[4, pricePerLb]]), 1);
+    // 2 × 150 g = 300 g → convert to lb: 300 / 453.59237 ≈ 0.6614 lb
+    expect(c.total).toBeCloseTo((300 / 453.59237) * pricePerLb, 3);
+    expect(c.knownCount).toBe(1);
   });
 });

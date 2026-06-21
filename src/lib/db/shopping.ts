@@ -76,6 +76,7 @@ export function addMissingForRecipe(recipeId: number): number {
       optional: recipeIngredients.optional,
       isStaple: ingredients.isStaple,
       density: ingredients.density,
+      gramsPerEach: ingredients.gramsPerEach,
     })
     .from(recipeIngredients)
     .innerJoin(ingredients, eq(recipeIngredients.ingredientId, ingredients.id))
@@ -90,7 +91,7 @@ export function addMissingForRecipe(recipeId: number): number {
     .map((r) => ({ ingredientId: r.ingredientId, quantity: r.quantity, unit: r.unit, expiryMs: r.expiryDate?.getTime() ?? null }));
 
   const [result] = recommendRecipes(
-    [{ id: recipeId, name: "", ingredients: ri.map((r) => ({ ingredientId: r.ingredientId, amount: r.amount, unit: r.unit, optional: r.optional, isStaple: r.isStaple, density: r.density })) }],
+    [{ id: recipeId, name: "", ingredients: ri.map((r) => ({ ingredientId: r.ingredientId, amount: r.amount, unit: r.unit, optional: r.optional, isStaple: r.isStaple, density: r.density, gramsPerEach: r.gramsPerEach })) }],
     inventory,
     "available",
     new Map(),

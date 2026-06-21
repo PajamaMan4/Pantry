@@ -56,7 +56,7 @@ export default async function IngredientDetailPage({
 
   const summary = priceSummary(
     priceEntries,
-    { defaultUnit: ingredient.defaultUnit, density: ingredient.density },
+    { defaultUnit: ingredient.defaultUnit, density: ingredient.density, gramsPerEach: ingredient.gramsPerEach },
     settings.averageWindowMonths,
     now,
   );
@@ -210,6 +210,7 @@ export default async function IngredientDetailPage({
                 category: ingredient.category ?? "",
                 defaultUnit: ingredient.defaultUnit ?? "",
                 density: ingredient.density == null ? "" : String(ingredient.density),
+                gramsPerEach: ingredient.gramsPerEach == null ? "" : String(ingredient.gramsPerEach),
                 isStaple: ingredient.isStaple,
               }}
             />

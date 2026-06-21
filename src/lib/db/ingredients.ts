@@ -65,6 +65,7 @@ export type CreateIngredientInput = {
   category?: string | null;
   defaultUnit?: string | null;
   density?: number | null;
+  gramsPerEach?: number | null;
   isStaple?: boolean;
 };
 
@@ -102,6 +103,7 @@ export function getOrCreateIngredient(input: CreateIngredientInput): Ingredient 
       category: input.category ?? null,
       defaultUnit: input.defaultUnit ?? null,
       density: input.density ?? null,
+      gramsPerEach: input.gramsPerEach ?? null,
       isStaple: input.isStaple ?? false,
     })
     .returning()
@@ -113,6 +115,7 @@ export type IngredientEditInput = {
   category: string | null;
   defaultUnit: string | null;
   density: number | null;
+  gramsPerEach: number | null;
   isStaple: boolean;
 };
 

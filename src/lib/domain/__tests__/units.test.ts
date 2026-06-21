@@ -71,6 +71,29 @@ describe("convert (§5.2)", () => {
     expect(() => convert(1, "cup", "g")).toThrow(UnconvertibleError);
     expect(() => convert(1, "nope", "g")).toThrow(UnconvertibleError);
   });
+
+  it("bridges count<->mass with gramsPerEach", () => {
+    // 2 tomatoes × 150 g/each = 300 g
+    expect(convert(2, "each", "g", undefined, 150)).toBeCloseTo(300, 6);
+    // inverse: 300 g / 150 g/each = 2 each
+    expect(convert(300, "g", "each", undefined, 150)).toBeCloseTo(2, 6);
+    // to imperial mass: 2 × 150 g / 28.34952 g/oz ≈ 10.58 oz
+    expect(convert(2, "each", "oz", undefined, 150)).toBeCloseTo(300 / 28.34952, 3);
+  });
+
+  it("bridges count<->volume with both gramsPerEach and density", () => {
+    // 2 tomatoes × 150 g/each, density 0.8 g/ml → in cups: 300/0.8/236.5882 ≈ 1.583 cups
+    const gpe = 150;
+    const density = 0.8;
+    expect(convert(2, "each", "cup", density, gpe)).toBeCloseTo(300 / density / 236.5882, 3);
+    // inverse
+    expect(convert(300 / density / 236.5882, "cup", "each", density, gpe)).toBeCloseTo(2, 3);
+  });
+
+  it("throws when missing gramsPerEach for count<->mass conversion", () => {
+    expect(() => convert(2, "each", "g")).toThrow(UnconvertibleError);
+    expect(() => convert(2, "each", "cup", 0.8)).toThrow(UnconvertibleError); // gpe missing
+  });
 });
 
 describe("toSystem", () => {

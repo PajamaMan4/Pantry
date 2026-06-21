@@ -9,7 +9,7 @@ import {
 const now = new Date("2026-06-13T12:00:00");
 
 function ing(ingredientId: number, p: Partial<RecommendIngredient> = {}): RecommendIngredient {
-  return { ingredientId, amount: 100, unit: "g", optional: false, isStaple: false, density: null, ...p };
+  return { ingredientId, amount: 100, unit: "g", optional: false, isStaple: false, density: null, gramsPerEach: null, ...p };
 }
 function recipe(id: number, name: string, ingredients: RecommendIngredient[]): RecommendRecipe {
   return { id, name, ingredients };
@@ -78,6 +78,27 @@ describe("recommendRecipes — unit reconciliation", () => {
     const r = recipe(1, "A", [ing(1, { amount: null, unit: null })]);
     const [res] = recommendRecipes([r], [{ ingredientId: 1, quantity: 1, unit: "g", expiryMs: null }], "available", noCost, now);
     expect(res.makeable).toBe(true);
+  });
+
+  it("bridges count↔mass with gramsPerEach (recipe each, stock lb)", () => {
+    // recipe: 2 tomatoes × 150 g/each = 300 g; stock: 1 lb ≈ 453.59 g → have
+    const r = recipe(1, "A", [ing(1, { amount: 2, unit: "each", gramsPerEach: 150 })]);
+    const [res] = recommendRecipes([r], [{ ingredientId: 1, quantity: 1, unit: "lb", expiryMs: null }], "available", noCost, now);
+    expect(res.makeable).toBe(true);
+  });
+
+  it("bridges count↔mass with gramsPerEach — not enough stock", () => {
+    // recipe: 5 tomatoes × 150 g/each = 750 g; stock: 1 lb ≈ 453.59 g → missing
+    const r = recipe(1, "A", [ing(1, { amount: 5, unit: "each", gramsPerEach: 150 })]);
+    const [res] = recommendRecipes([r], [{ ingredientId: 1, quantity: 1, unit: "lb", expiryMs: null }], "available", noCost, now);
+    expect(res.makeable).toBe(false);
+    expect(res.missing).toContain(1);
+  });
+
+  it("count↔mass without gramsPerEach → unknown", () => {
+    const r = recipe(1, "A", [ing(1, { amount: 2, unit: "each", gramsPerEach: null })]);
+    const [res] = recommendRecipes([r], [{ ingredientId: 1, quantity: 500, unit: "g", expiryMs: null }], "available", noCost, now);
+    expect(res.unknownUnits).toBe(1);
   });
 });
 

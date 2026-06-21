@@ -9,6 +9,7 @@ function ing(p: Partial<CookIngredientInput> & { ingredientId: number }): CookIn
     optional: false,
     isStaple: false,
     density: null,
+    gramsPerEach: null,
     ...p,
   };
 }

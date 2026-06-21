@@ -17,6 +17,7 @@ export type IngredientEditInitial = {
   category: string;
   defaultUnit: string;
   density: string;
+  gramsPerEach: string;
   isStaple: boolean;
 };
 
@@ -26,11 +27,12 @@ export function IngredientEditForm({ initial }: { initial: IngredientEditInitial
   const [category, setCategory] = React.useState(initial.category);
   const [defaultUnit, setDefaultUnit] = React.useState(initial.defaultUnit);
   const [density, setDensity] = React.useState(initial.density);
+  const [gramsPerEach, setGramsPerEach] = React.useState(initial.gramsPerEach);
   const [isStaple, setIsStaple] = React.useState(initial.isStaple);
   const [pending, startTransition] = React.useTransition();
 
   function save() {
-    const input = { name, category, defaultUnit, density, isStaple };
+    const input = { name, category, defaultUnit, density, gramsPerEach, isStaple };
     startTransition(async () => {
       if (isCreate) {
         // On success this redirects to the new ingredient; only errors return.
@@ -83,6 +85,23 @@ export function IngredientEditForm({ initial }: { initial: IngredientEditInitial
         />
         <p className="text-xs text-muted-foreground">
           Enables volume↔weight conversion (e.g. cups of flour → grams).
+        </p>
+      </div>
+
+      <div className="grid gap-2">
+        <Label htmlFor="gramsPerEach">Grams per each (count)</Label>
+        <Input
+          id="gramsPerEach"
+          type="number"
+          min={0}
+          step="0.1"
+          value={gramsPerEach}
+          onChange={(e) => setGramsPerEach(e.target.value)}
+          className="w-40"
+          placeholder="optional"
+        />
+        <p className="text-xs text-muted-foreground">
+          Enables count↔weight conversion (e.g. 2 tomatoes → grams).
         </p>
       </div>
 

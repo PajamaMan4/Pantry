@@ -16,6 +16,7 @@ export interface PriceEntryLike {
 export interface IngredientPricing {
   defaultUnit: string | null;
   density?: number | null;
+  gramsPerEach?: number | null;
 }
 
 export interface NormalizedPrice {
@@ -45,7 +46,7 @@ export function normalizePrices(
     if (!(e.quantity > 0)) continue;
     try {
       const perUnit = e.price / e.quantity; // per 1 of e.unit
-      const factor = convert(1, e.unit, ingredient.defaultUnit, ingredient.density ?? undefined);
+      const factor = convert(1, e.unit, ingredient.defaultUnit, ingredient.density ?? undefined, ingredient.gramsPerEach ?? undefined);
       out.push({ date: e.purchasedAt, perDefaultUnit: perUnit / factor, store: e.store ?? null });
     } catch {
       // unconvertible price unit → drop from the summary
@@ -132,6 +133,7 @@ export interface CostIngredient {
   optional: boolean;
   defaultUnit: string | null;
   density: number | null;
+  gramsPerEach: number | null;
 }
 
 export interface LineCost {
@@ -201,7 +203,7 @@ export function recipeCost(
     for (const r of rows) {
       if (r.amount == null || r.unit == null) continue;
       try {
-        amountInDefault += convert(r.amount, r.unit, defaultUnit, r.density ?? undefined);
+        amountInDefault += convert(r.amount, r.unit, defaultUnit, r.density ?? undefined, r.gramsPerEach ?? undefined);
         usable = true;
       } catch {
         unconvertible = true;

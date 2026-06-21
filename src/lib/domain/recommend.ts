@@ -1,7 +1,7 @@
 // Recipe recommendations (§3.8 / §5.5). Pure + tested. Given current inventory,
 // score each recipe by ingredient coverage, surface near-misses, and sort by
 // availability / soonest-expiring / lowest cost.
-import { UNITS, type UnitCategory } from "./units";
+import { UNITS, convert, type UnitCategory } from "./units";
 import { daysUntil } from "./expiry";
 
 export interface RecommendIngredient {
@@ -11,6 +11,7 @@ export interface RecommendIngredient {
   optional: boolean;
   isStaple: boolean;
   density: number | null;
+  gramsPerEach: number | null;
 }
 
 export interface RecommendRecipe {
@@ -67,6 +68,8 @@ function aggregateStock(inventory: InventoryStock[]): Map<number, IngredientStoc
 
 type Avail = "have" | "missing" | "unknown";
 
+const BASE_UNIT_FOR: Record<UnitCategory, string> = { mass: "g", volume: "ml", count: "each" };
+
 function availability(req: RecommendIngredient, stock: IngredientStock | undefined): Avail {
   if (!stock) return "missing"; // not in inventory at all
   if (req.amount == null || req.unit == null) return "have"; // non-numeric required → assume on hand
@@ -77,13 +80,14 @@ function availability(req: RecommendIngredient, stock: IngredientStock | undefin
   const same = stock.byCategory.get(def.category);
   if (same != null) return reqBase <= same + EPS ? "have" : "missing";
 
-  // bridge volume <-> mass with density when categories differ
-  if (req.density) {
-    if (def.category === "volume" && stock.byCategory.has("mass")) {
-      return reqBase * req.density <= stock.byCategory.get("mass")! + EPS ? "have" : "missing";
-    }
-    if (def.category === "mass" && stock.byCategory.has("volume")) {
-      return reqBase / req.density <= stock.byCategory.get("volume")! + EPS ? "have" : "missing";
+  // Bridge across categories using convert(); try each stocked category.
+  for (const [cat, stockBase] of stock.byCategory) {
+    if (cat === def.category) continue;
+    try {
+      const reqConverted = convert(req.amount, req.unit, BASE_UNIT_FOR[cat], req.density ?? undefined, req.gramsPerEach ?? undefined);
+      return reqConverted <= stockBase + EPS ? "have" : "missing";
+    } catch {
+      // can't bridge to this category — try others
     }
   }
   return "unknown"; // stocked, but in a category we can't reconcile

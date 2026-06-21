@@ -38,6 +38,7 @@ export function recipeCostSummaries(recipeIds: number[]): Map<number, RecipeCost
       optional: recipeIngredients.optional,
       defaultUnit: ingredients.defaultUnit,
       density: ingredients.density,
+      gramsPerEach: ingredients.gramsPerEach,
     })
     .from(recipeIngredients)
     .innerJoin(ingredients, eq(recipeIngredients.ingredientId, ingredients.id))
@@ -50,23 +51,23 @@ export function recipeCostSummaries(recipeIds: number[]): Map<number, RecipeCost
   const now = new Date();
   const ingIds = [...new Set(riRows.map((r) => r.ingredientId))];
   const entriesByIng = listPriceEntriesFor(ingIds);
-  const ingInfo = new Map<number, { defaultUnit: string | null; density: number | null }>();
+  const ingInfo = new Map<number, { defaultUnit: string | null; density: number | null; gramsPerEach: number | null }>();
   for (const r of riRows) {
-    if (!ingInfo.has(r.ingredientId)) ingInfo.set(r.ingredientId, { defaultUnit: r.defaultUnit, density: r.density });
+    if (!ingInfo.has(r.ingredientId)) ingInfo.set(r.ingredientId, { defaultUnit: r.defaultUnit, density: r.density, gramsPerEach: r.gramsPerEach });
   }
   const priceByIng = new Map<number, number | null>();
   for (const id of ingIds) {
     const info = ingInfo.get(id)!;
     priceByIng.set(
       id,
-      unitPrice(entriesByIng.get(id) ?? [], { defaultUnit: info.defaultUnit, density: info.density }, mode, settings.averageWindowMonths, now),
+      unitPrice(entriesByIng.get(id) ?? [], { defaultUnit: info.defaultUnit, density: info.density, gramsPerEach: info.gramsPerEach }, mode, settings.averageWindowMonths, now),
     );
   }
 
   const byRecipe = new Map<number, CostIngredient[]>();
   for (const r of riRows) {
     const arr = byRecipe.get(r.recipeId) ?? [];
-    arr.push({ ingredientId: r.ingredientId, amount: r.amount, unit: r.unit, optional: r.optional, defaultUnit: r.defaultUnit, density: r.density });
+    arr.push({ ingredientId: r.ingredientId, amount: r.amount, unit: r.unit, optional: r.optional, defaultUnit: r.defaultUnit, density: r.density, gramsPerEach: r.gramsPerEach });
     byRecipe.set(r.recipeId, arr);
   }
 

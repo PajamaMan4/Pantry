@@ -177,7 +177,7 @@ function AlphabeticalView({
     <ul className="divide-y rounded-lg border px-3">
       {ingredients.map((ing) => {
         const items = invByIng.get(ing.id) ?? [];
-        const summary = priceSummary(priceMap.get(ing.id) ?? [], { defaultUnit: ing.defaultUnit, density: ing.density }, windowMonths, now);
+        const summary = priceSummary(priceMap.get(ing.id) ?? [], { defaultUnit: ing.defaultUnit, density: ing.density, gramsPerEach: ing.gramsPerEach }, windowMonths, now);
         const stock = aggregateStock(items, system, rounding, ing.density);
         return (
           <li key={ing.id} className="flex items-center justify-between gap-3 py-2.5">
@@ -235,7 +235,7 @@ function LocationView({
 
   const priceMap = listPriceEntriesFor([...new Set(rows.map((r) => r.ingredient.id))]);
   const priceTextFor = (r: InventoryRow) => {
-    const summary = priceSummary(priceMap.get(r.ingredient.id) ?? [], { defaultUnit: r.ingredient.defaultUnit, density: r.ingredient.density }, windowMonths, now);
+    const summary = priceSummary(priceMap.get(r.ingredient.id) ?? [], { defaultUnit: r.ingredient.defaultUnit, density: r.ingredient.density, gramsPerEach: r.ingredient.gramsPerEach }, windowMonths, now);
     return priceText(summary, currency, system);
   };
 

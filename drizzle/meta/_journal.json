@@ -50,6 +50,13 @@
       "when": 1781878162048,
       "tag": "0006_sticky_longshot",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1782001542437,
+      "tag": "0007_sticky_luminals",
+      "breakpoints": true
     }
   ]
 }

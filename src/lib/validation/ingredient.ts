@@ -13,6 +13,7 @@ export const ingredientInputSchema = z.object({
   category: nullableText,
   defaultUnit: unitEnum,
   density: nullableNumber,
+  gramsPerEach: nullableNumber,
   isStaple: z.boolean().default(false),
 });
 
@@ -25,6 +26,7 @@ export const ingredientEditSchema = z.object({
   category: nullableText,
   defaultUnit: unitEnum,
   density: nullableNumber,
+  gramsPerEach: nullableNumber,
   isStaple: z.boolean().default(false),
 });
 

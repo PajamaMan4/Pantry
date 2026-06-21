@@ -60,7 +60,7 @@ export type RecipeListItem = {
 };
 
 export type RecipeIngredientDetail = RecipeIngredient & {
-  ingredient: Pick<Ingredient, "id" | "name" | "defaultUnit" | "category" | "density" | "isStaple">;
+  ingredient: Pick<Ingredient, "id" | "name" | "defaultUnit" | "category" | "density" | "gramsPerEach" | "isStaple">;
 };
 
 export type RecipeDetail = {
@@ -182,6 +182,7 @@ export function getRecipeDetail(id: number): RecipeDetail | undefined {
       defaultUnit: ing.defaultUnit,
       category: ing.category,
       density: ing.density,
+      gramsPerEach: ing.gramsPerEach,
       isStaple: ing.isStaple,
     },
   }));

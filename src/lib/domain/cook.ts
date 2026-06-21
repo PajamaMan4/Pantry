@@ -11,6 +11,7 @@ export interface CookIngredientInput {
   optional: boolean;
   isStaple: boolean;
   density: number | null;
+  gramsPerEach: number | null;
 }
 
 export interface CookStockRow {
@@ -84,7 +85,7 @@ function planOne(ing: CookIngredientInput, rows: CookStockRow[], factor: number)
     if (remaining <= EPS) break;
     let neededInRowUnit: number;
     try {
-      neededInRowUnit = convert(remaining, ing.unit, row.unit, ing.density ?? undefined);
+      neededInRowUnit = convert(remaining, ing.unit, row.unit, ing.density ?? undefined, ing.gramsPerEach ?? undefined);
     } catch {
       continue; // this row's unit can't be reconciled with the recipe unit
     }
@@ -92,7 +93,7 @@ function planOne(ing: CookIngredientInput, rows: CookStockRow[], factor: number)
     const deduct = Math.min(row.quantity, neededInRowUnit);
     if (deduct <= EPS) continue;
     deductions.push({ inventoryItemId: row.inventoryItemId, ingredientId: ing.ingredientId, amount: deduct, unit: row.unit });
-    remaining -= convert(deduct, row.unit, ing.unit, ing.density ?? undefined);
+    remaining -= convert(deduct, row.unit, ing.unit, ing.density ?? undefined, ing.gramsPerEach ?? undefined);
   }
 
   if (!anyConvertible) {
@@ -129,7 +130,7 @@ function combineOccurrences(members: CookIngredientInput[]): CookIngredientInput
   let total = 0;
   for (const m of numeric) {
     try {
-      total += convert(m.amount!, m.unit!, repUnit, first.density ?? undefined);
+      total += convert(m.amount!, m.unit!, repUnit, first.density ?? undefined, first.gramsPerEach ?? undefined);
     } catch {
       // Same ingredient stocked in an unreconcilable unit — best-effort raw add.
       total += m.amount!;

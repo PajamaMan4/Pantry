@@ -52,6 +52,7 @@ export function getCookData(recipeId: number): CookData | undefined {
     optional: ri.optional,
     isStaple: ing.isStaple,
     density: ing.density,
+    gramsPerEach: ing.gramsPerEach,
   }));
 
   const ids = [...new Set(cookIngredients.map((i) => i.ingredientId))];
@@ -85,7 +86,7 @@ function snapshotCost(
   const priceByIng = listPriceEntriesFor(ids);
   const ingById = new Map(
     db
-      .select({ id: ingredients.id, defaultUnit: ingredients.defaultUnit, density: ingredients.density })
+      .select({ id: ingredients.id, defaultUnit: ingredients.defaultUnit, density: ingredients.density, gramsPerEach: ingredients.gramsPerEach })
       .from(ingredients)
       .where(inArray(ingredients.id, ids))
       .all()
@@ -97,10 +98,10 @@ function snapshotCost(
   for (const d of deductions) {
     const ing = ingById.get(d.ingredientId);
     if (!ing?.defaultUnit) continue;
-    const up = unitPrice(priceByIng.get(d.ingredientId) ?? [], { defaultUnit: ing.defaultUnit, density: ing.density }, mode, windowMonths, now);
+    const up = unitPrice(priceByIng.get(d.ingredientId) ?? [], { defaultUnit: ing.defaultUnit, density: ing.density, gramsPerEach: ing.gramsPerEach }, mode, windowMonths, now);
     if (up == null) continue;
     try {
-      total += convert(d.amount, d.unit, ing.defaultUnit, ing.density ?? undefined) * up;
+      total += convert(d.amount, d.unit, ing.defaultUnit, ing.density ?? undefined, ing.gramsPerEach ?? undefined) * up;
       priced = true;
     } catch {
       /* unconvertible to default unit → exclude from cost */

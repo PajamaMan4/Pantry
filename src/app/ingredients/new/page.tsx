@@ -16,7 +16,7 @@ export default function NewIngredientPage() {
         Create an ingredient so you can track its price even before it&apos;s used in a recipe.
       </p>
       <IngredientEditForm
-        initial={{ name: "", category: "", defaultUnit: "", density: "", isStaple: false }}
+        initial={{ name: "", category: "", defaultUnit: "", density: "", gramsPerEach: "", isStaple: false }}
       />
     </div>
   );

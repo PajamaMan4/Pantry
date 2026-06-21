@@ -15,7 +15,7 @@ type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 export type InventoryRow = {
   item: InventoryItem;
-  ingredient: Pick<Ingredient, "id" | "name" | "defaultUnit" | "category" | "density">;
+  ingredient: Pick<Ingredient, "id" | "name" | "defaultUnit" | "category" | "density" | "gramsPerEach">;
   location: StorageLocation | null;
 };
 
@@ -99,6 +99,7 @@ function toRow(r: { item: InventoryItem; ing: Ingredient; loc: StorageLocation |
       defaultUnit: r.ing.defaultUnit,
       category: r.ing.category,
       density: r.ing.density,
+      gramsPerEach: r.ing.gramsPerEach,
     },
     location: r.loc ?? null,
   };

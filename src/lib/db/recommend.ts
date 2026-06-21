@@ -28,6 +28,7 @@ export function getRecommendations(
       optional: recipeIngredients.optional,
       isStaple: ingredients.isStaple,
       density: ingredients.density,
+      gramsPerEach: ingredients.gramsPerEach,
     })
     .from(recipeIngredients)
     .innerJoin(ingredients, eq(recipeIngredients.ingredientId, ingredients.id))
@@ -45,6 +46,7 @@ export function getRecommendations(
       optional: r.optional,
       isStaple: r.isStaple,
       density: r.density,
+      gramsPerEach: r.gramsPerEach,
     });
     byRecipe.set(r.recipeId, arr);
   }

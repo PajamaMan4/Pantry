@@ -81,31 +81,55 @@ export class UnconvertibleError extends Error {
     public from: string | null,
     public to: string | null,
   ) {
-    super(`Cannot convert ${from} → ${to} (different categories and no density).`);
+    super(`Cannot convert ${from} → ${to} (missing conversion factor).`);
     this.name = "UnconvertibleError";
   }
 }
 
 /**
  * Convert `value` from one unit to another. Same-category conversions are exact
- * and density-free (cup↔ml, oz↔g, lb↔kg). Cross-category (volume↔mass) requires
- * the ingredient density in g/ml; without it, throws UnconvertibleError.
+ * (cup↔ml, oz↔g). Cross-category conversions pivot through grams:
+ *   volume↔mass requires densityGperMl; count↔mass requires gramsPerEach;
+ *   count↔volume requires both. Missing factors throw UnconvertibleError.
  * NOTE: mass `oz` and volume `fl_oz` are distinct units and never conflated.
  */
-export function convert(value: number, from: string, to: string, densityGperMl?: number): number {
+export function convert(
+  value: number,
+  from: string,
+  to: string,
+  densityGperMl?: number,
+  gramsPerEach?: number,
+): number {
   const f = UNITS[from];
   const t = UNITS[to];
   if (!f || !t) throw new UnconvertibleError(from, to);
-  if (f.category === t.category) {
-    return (value * f.toBase) / t.toBase; // same category → exact
+  if (f.category === t.category) return (value * f.toBase) / t.toBase;
+
+  // Pivot through grams: fromBase → g → toBase
+  const baseAmount = value * f.toBase;
+  let grams: number;
+  if (f.category === "mass") {
+    grams = baseAmount;
+  } else if (f.category === "volume") {
+    if (!densityGperMl) throw new UnconvertibleError(from, to);
+    grams = baseAmount * densityGperMl;
+  } else {
+    if (!gramsPerEach) throw new UnconvertibleError(from, to);
+    grams = baseAmount * gramsPerEach;
   }
-  if (densityGperMl) {
-    if (f.category === "volume" && t.category === "mass")
-      return (value * f.toBase * densityGperMl) / t.toBase; // ml → g → target mass
-    if (f.category === "mass" && t.category === "volume")
-      return (value * f.toBase) / densityGperMl / t.toBase; // g → ml → target volume
+
+  let targetBase: number;
+  if (t.category === "mass") {
+    targetBase = grams;
+  } else if (t.category === "volume") {
+    if (!densityGperMl) throw new UnconvertibleError(from, to);
+    targetBase = grams / densityGperMl;
+  } else {
+    if (!gramsPerEach) throw new UnconvertibleError(from, to);
+    targetBase = grams / gramsPerEach;
   }
-  throw new UnconvertibleError(from, to);
+
+  return targetBase / t.toBase;
 }
 
 export interface ConvertedQuantity {
@@ -146,6 +170,7 @@ export function toSystem(
   q: { amount: number; amountMax?: number | null; unit: string | null },
   system: UnitSystem,
   density?: number,
+  gramsPerEach?: number,
 ): ConvertedQuantity {
   const def = q.unit ? UNITS[q.unit] : undefined;
   if (!def || def.category === "count" || def.approximate || def.system === system) {
@@ -153,8 +178,8 @@ export function toSystem(
   }
   const target = pickTargetUnit(def.category, system, q.amount * def.toBase);
   return {
-    amount: convert(q.amount, q.unit!, target, density),
-    amountMax: q.amountMax != null ? convert(q.amountMax, q.unit!, target, density) : null,
+    amount: convert(q.amount, q.unit!, target, density, gramsPerEach),
+    amountMax: q.amountMax != null ? convert(q.amountMax, q.unit!, target, density, gramsPerEach) : null,
     unit: target,
   };
 }

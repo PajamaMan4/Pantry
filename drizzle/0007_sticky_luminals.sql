@@ -1,0 +1,1 @@
+ALTER TABLE `ingredients` ADD `grams_per_each` real;

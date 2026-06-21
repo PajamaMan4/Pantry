@@ -28,6 +28,7 @@ export const ingredients = sqliteTable("ingredients", {
   category: text("category"), // 'produce' | 'dairy' | 'meat' | 'pantry' | 'spice' | ...
   defaultUnit: text("default_unit"), // canonical unit used when normalizing prices/inventory
   density: real("density"), // grams per millilitre; optional, enables volume<->weight
+  gramsPerEach: real("grams_per_each"), // grams per count; optional, enables count<->weight
   isStaple: integer("is_staple", { mode: "boolean" }).notNull().default(false),
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
