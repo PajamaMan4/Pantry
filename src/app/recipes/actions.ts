@@ -13,6 +13,7 @@ import {
   type RecipeWriteInput,
 } from "@/lib/db/recipes";
 import { getOrCreateIngredient } from "@/lib/db/ingredients";
+import { getSubstituteInfo, type SubstituteInfo } from "@/lib/db/cook";
 import type { Ingredient } from "@/lib/db/schema";
 
 export type RecipeFormError = { ok: false; error: string };
@@ -71,4 +72,16 @@ export async function createIngredientAction(input: unknown): Promise<CreateIngr
   const ingredient = getOrCreateIngredient(parsed.data);
   revalidatePath("/recipes");
   return { ok: true, ingredient };
+}
+
+export type SubstituteInfoResult =
+  | { ok: true; info: SubstituteInfo }
+  | { ok: false; error: string };
+
+/** Look up a substitute ingredient's conversion + stock data for a temporary swap. */
+export async function getSubstituteInfoAction(ingredientId: number): Promise<SubstituteInfoResult> {
+  if (!Number.isInteger(ingredientId)) return { ok: false, error: "Invalid ingredient." };
+  const info = getSubstituteInfo(ingredientId);
+  if (!info) return { ok: false, error: "Ingredient not found." };
+  return { ok: true, info };
 }

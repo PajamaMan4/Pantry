@@ -12,6 +12,7 @@ import { RecipeCostSummary } from "../recipe-cost-summary";
 import { RatingStars } from "@/components/rating-stars";
 import { AddMissingButton } from "@/components/add-missing-button";
 import { getRecipeDetail, getVariantsInGroup } from "@/lib/db/recipes";
+import { listIngredientsWithAliases } from "@/lib/db/ingredients";
 import { getSettings } from "@/lib/db/settings";
 import { getCookData, cookStats, listCookLogsForRecipe } from "@/lib/db/cook";
 import { recipeCostFor } from "@/lib/db/recipe-cost";
@@ -38,6 +39,12 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ i
   const ingredientNames: Record<number, string> = Object.fromEntries(
     ingredients.map((ri) => [ri.ingredientId, ri.ingredient.name]),
   );
+  const ingredientOptions = listIngredientsWithAliases().map((i) => ({
+    id: i.id,
+    name: i.name,
+    defaultUnit: i.defaultUnit,
+    aliases: i.aliases,
+  }));
 
   return (
     <div className="mx-auto w-full max-w-2xl px-4 py-8">
@@ -158,6 +165,7 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ i
         steps={recipe.steps}
         cookIngredients={cookData.ingredients}
         cookStock={cookData.stock}
+        ingredientOptions={ingredientOptions}
       />
 
       {recipe.notes && (

@@ -74,6 +74,52 @@ export function getCookData(recipeId: number): CookData | undefined {
   };
 }
 
+export type SubstituteInfo = {
+  id: number;
+  name: string;
+  defaultUnit: string | null;
+  density: number | null;
+  gramsPerEach: number | null;
+  isStaple: boolean;
+  stock: CookStockRow[];
+};
+
+/**
+ * Everything a temporary in-view ingredient swap needs to behave like a
+ * first-class line: the substitute's conversion factors (density/gramsPerEach)
+ * and its current inventory rows, so scaling + stock status keep working.
+ * Read-only — substitutions are never persisted.
+ */
+export function getSubstituteInfo(ingredientId: number): SubstituteInfo | undefined {
+  const ing = db
+    .select({
+      id: ingredients.id,
+      name: ingredients.name,
+      defaultUnit: ingredients.defaultUnit,
+      density: ingredients.density,
+      gramsPerEach: ingredients.gramsPerEach,
+      isStaple: ingredients.isStaple,
+    })
+    .from(ingredients)
+    .where(eq(ingredients.id, ingredientId))
+    .get();
+  if (!ing) return undefined;
+
+  const invRows = db
+    .select()
+    .from(inventoryItems)
+    .where(eq(inventoryItems.ingredientId, ingredientId))
+    .all();
+  const stock: CookStockRow[] = invRows.map((r) => ({
+    inventoryItemId: r.id,
+    quantity: r.quantity,
+    unit: r.unit,
+    expiryMs: r.expiryDate?.getTime() ?? null,
+  }));
+
+  return { ...ing, stock };
+}
+
 /** Best-effort cost of what was actually deducted, snapshotted onto the log. */
 function snapshotCost(
   deductions: CookDeduction[],

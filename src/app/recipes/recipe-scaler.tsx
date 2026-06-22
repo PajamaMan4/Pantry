@@ -2,17 +2,31 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { MinusIcon, PlusIcon, RotateCcwIcon, CheckIcon } from "lucide-react";
+import { toast } from "sonner";
+import {
+  MinusIcon,
+  PlusIcon,
+  RotateCcwIcon,
+  CheckIcon,
+  ArrowLeftRightIcon,
+  ArrowRightIcon,
+  XIcon,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { scaleFactor, displayQuantity, renderStep, type DisplaySystem } from "@/lib/domain/scaling";
 import { formatNumber } from "@/lib/domain/format";
+import { UNIT_OPTIONS } from "@/lib/domain/units";
 import type { RoundingMode } from "@/lib/domain/quantity";
 import { planCook, type CookIngredientInput, type CookStockRow } from "@/lib/domain/cook";
 import { groupRowsBySection } from "@/lib/domain/sections";
+import { IngredientPicker } from "@/components/ingredient-picker";
+import type { IngredientOption } from "@/components/ingredient-combobox";
 import { CookButton } from "./cook-button";
+import { getSubstituteInfoAction } from "./actions";
 
 export type ScalerIngredient = {
   id: number; // recipe_ingredients row id (React key)
@@ -38,6 +52,23 @@ export type ScalerStep = {
   >;
 };
 
+/**
+ * A temporary, in-view ingredient swap keyed by the original recipe_ingredients
+ * row id. Never persisted — it just overrides that line's inputs to the existing
+ * scaling + cook-plan pipelines. `amountText` defaults to the original line's
+ * amount and is user-editable.
+ */
+type Substitution = {
+  ingredientId: number;
+  name: string;
+  amountText: string;
+  unit: string | null;
+  density: number | null;
+  gramsPerEach: number | null;
+  isStaple: boolean;
+  stock: CookStockRow[];
+};
+
 type Props = {
   recipeId: number;
   baseServings: number;
@@ -47,6 +78,7 @@ type Props = {
   rounding: RoundingMode;
   cookIngredients: CookIngredientInput[];
   cookStock: { ingredientId: number; rows: CookStockRow[] }[];
+  ingredientOptions: IngredientOption[];
 };
 
 const SYSTEMS: { value: DisplaySystem; label: string }[] = [
@@ -64,15 +96,68 @@ export function RecipeScaler({
   rounding,
   cookIngredients,
   cookStock,
+  ingredientOptions,
 }: Props) {
   const [target, setTarget] = React.useState(baseServings);
   const [system, setSystem] = React.useState<DisplaySystem>(defaultSystem);
   const [checkedSteps, setCheckedSteps] = React.useState<Set<string>>(new Set());
+  const [subMode, setSubMode] = React.useState(false);
+  // keyed by the original recipe_ingredients row id (ScalerIngredient.id)
+  const [subs, setSubs] = React.useState<Map<number, Substitution>>(new Map());
+  const [loadingRow, setLoadingRow] = React.useState<number | null>(null);
 
   const toggleStep = (id: string) =>
     setCheckedSteps((prev) => {
       const next = new Set(prev);
       next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+
+  // --- Substitution handlers -------------------------------------------------
+  async function pickSubstitute(row: ScalerIngredient, ingredientId: number) {
+    setLoadingRow(row.id);
+    try {
+      const res = await getSubstituteInfoAction(ingredientId);
+      if (!res.ok) {
+        toast.error(res.error);
+        return;
+      }
+      const info = res.info;
+      setSubs((prev) => {
+        const next = new Map(prev);
+        const existing = next.get(row.id);
+        next.set(row.id, {
+          ingredientId: info.id,
+          name: info.name,
+          // Keep amount/unit overrides across a re-pick; otherwise inherit the
+          // original line's amount/unit so only the name changes by default.
+          amountText: existing?.amountText ?? (row.amount == null ? "" : String(row.amount)),
+          unit: existing?.unit ?? row.unit ?? info.defaultUnit,
+          density: info.density,
+          gramsPerEach: info.gramsPerEach,
+          isStaple: info.isStaple,
+          stock: info.stock,
+        });
+        return next;
+      });
+    } finally {
+      setLoadingRow(null);
+    }
+  }
+
+  const patchSub = (rowId: number, patch: Partial<Substitution>) =>
+    setSubs((prev) => {
+      const cur = prev.get(rowId);
+      if (!cur) return prev;
+      const next = new Map(prev);
+      next.set(rowId, { ...cur, ...patch });
+      return next;
+    });
+
+  const clearSub = (rowId: number) =>
+    setSubs((prev) => {
+      const next = new Map(prev);
+      next.delete(rowId);
       return next;
     });
 
@@ -91,9 +176,59 @@ export function RecipeScaler({
   const opts = { factor, system, rounding };
   const setServings = (n: number) => setTarget(Math.max(0.25, Math.round(n * 100) / 100));
 
-  // Computed directly — the React Compiler memoizes these automatically.
-  const stockMap = new Map(cookStock.map((s) => [s.ingredientId, s.rows]));
-  const plan = planCook(cookIngredients, stockMap, factor);
+  // Substitution is an override applied to the inputs of the existing pipelines:
+  // the ingredients list renders over `effectiveIngredients`, and stock status
+  // comes from re-running planCook over the substituted cook inputs + stock.
+  const subAmount = (s: Substitution) => {
+    if (s.amountText.trim() === "") return null;
+    const n = Number(s.amountText);
+    return Number.isFinite(n) ? n : null;
+  };
+
+  const effectiveIngredients = React.useMemo(
+    () =>
+      ingredients.map((ing) => {
+        const s = subs.get(ing.id);
+        if (!s) return ing;
+        return {
+          ...ing,
+          ingredientId: s.ingredientId,
+          name: s.name,
+          amount: subAmount(s),
+          amountMax: null,
+          unit: s.unit,
+          raw: null,
+          density: s.density,
+          isStaple: s.isStaple,
+        };
+      }),
+    [ingredients, subs],
+  );
+
+  const { effectiveCookIngredients, effectiveStockMap } = React.useMemo(() => {
+    const stock = new Map(cookStock.map((s) => [s.ingredientId, [...s.rows]]));
+    const cooks = cookIngredients.map((ci, i) => {
+      const row = ingredients[i];
+      const s = row ? subs.get(row.id) : undefined;
+      if (!s) return ci;
+      return {
+        ...ci,
+        ingredientId: s.ingredientId,
+        name: s.name,
+        amount: subAmount(s),
+        unit: s.unit,
+        isStaple: s.isStaple,
+        density: s.density,
+        gramsPerEach: s.gramsPerEach,
+      };
+    });
+    for (const s of subs.values()) {
+      if (!stock.has(s.ingredientId)) stock.set(s.ingredientId, s.stock);
+    }
+    return { effectiveCookIngredients: cooks, effectiveStockMap: stock };
+  }, [cookIngredients, ingredients, cookStock, subs]);
+
+  const plan = planCook(effectiveCookIngredients, effectiveStockMap, factor);
 
   return (
     <div>
@@ -174,18 +309,114 @@ export function RecipeScaler({
         </p>
       )}
 
+      <div className="mt-3 flex items-center gap-2">
+        <Button
+          variant={subMode ? "default" : "outline"}
+          size="sm"
+          onClick={() => setSubMode((v) => !v)}
+        >
+          <ArrowLeftRightIcon className="size-4" /> {subMode ? "Done" : "Substitute"}
+        </Button>
+        {subs.size > 0 && (
+          <>
+            <span className="text-xs text-muted-foreground">
+              {subs.size} swap{subs.size === 1 ? "" : "s"}
+            </span>
+            <Button variant="ghost" size="sm" onClick={() => setSubs(new Map())}>
+              Clear swaps
+            </Button>
+          </>
+        )}
+      </div>
+
       <Separator className="my-6" />
 
       <section>
         <h2 className="mb-3 text-lg font-medium">Ingredients</h2>
         {ingredients.length === 0 ? (
           <p className="text-sm text-muted-foreground">No ingredients listed.</p>
-        ) : (
-          // Group into sections for multi-part recipes; a flat list collapses to a
-          // single untitled group. `index` stays aligned with plan.lines (the
-          // inventory-match status is computed over the full flat list).
+        ) : subMode ? (
+          // Edit mode: pick a replacement (from the catalog) and tweak its
+          // amount/unit per line. Iterates the *original* rows so each shows its
+          // original name as the label for the swap.
           <div className="space-y-4">
+            <p className="text-xs text-muted-foreground">
+              Swap an ingredient for tonight — these changes aren’t saved to the recipe.
+            </p>
             {groupRowsBySection(ingredients, (ing) => ing.sectionTitle).map((group, gi) => (
+              <div key={group.title ?? `__flat-${gi}`}>
+                {group.title && (
+                  <h3 className="mb-1.5 text-sm font-semibold text-muted-foreground">{group.title}</h3>
+                )}
+                <ul className="space-y-2">
+                  {group.items.map(({ row: ing }) => {
+                    const sub = subs.get(ing.id);
+                    return (
+                      <li key={ing.id} className="flex flex-wrap items-center gap-2 text-sm">
+                        <span className={cn("font-medium", sub && "text-muted-foreground line-through")}>
+                          {ing.name}
+                        </span>
+                        <ArrowRightIcon className="size-3.5 shrink-0 text-muted-foreground" />
+                        <div className="min-w-48 flex-1">
+                          <IngredientPicker
+                            initialOptions={ingredientOptions}
+                            selectedName={sub?.name ?? ""}
+                            placeholder="Keep original — or search a swap…"
+                            onType={() => {}}
+                            onPick={(p) => {
+                              if (p.id != null) void pickSubstitute(ing, p.id);
+                            }}
+                          />
+                        </div>
+                        {loadingRow === ing.id && (
+                          <span className="text-xs text-muted-foreground">…</span>
+                        )}
+                        {sub && (
+                          <>
+                            <Input
+                              type="number"
+                              inputMode="decimal"
+                              className="h-9 w-20"
+                              value={sub.amountText}
+                              onChange={(e) => patchSub(ing.id, { amountText: e.target.value })}
+                              aria-label={`Amount for ${sub.name}`}
+                            />
+                            <select
+                              value={sub.unit ?? ""}
+                              onChange={(e) => patchSub(ing.id, { unit: e.target.value || null })}
+                              aria-label={`Unit for ${sub.name}`}
+                              className="h-9 rounded-md border bg-transparent px-2 text-sm"
+                            >
+                              <option value="">—</option>
+                              {UNIT_OPTIONS.map((u) => (
+                                <option key={u.value} value={u.value}>
+                                  {u.label}
+                                </option>
+                              ))}
+                            </select>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              aria-label={`Remove substitution for ${ing.name}`}
+                              onClick={() => clearSub(ing.id)}
+                            >
+                              <XIcon className="size-4" />
+                            </Button>
+                          </>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ))}
+          </div>
+        ) : (
+          // Applied view: render over `effectiveIngredients` (swaps applied). The
+          // `index` stays aligned with plan.lines (status computed over the same
+          // effective flat list), and the original name is recovered by index.
+          <div className="space-y-4">
+            {groupRowsBySection(effectiveIngredients, (ing) => ing.sectionTitle).map((group, gi) => (
               <div key={group.title ?? `__flat-${gi}`}>
                 {group.title && (
                   <h3 className="mb-1.5 text-sm font-semibold text-muted-foreground">{group.title}</h3>
@@ -197,7 +428,9 @@ export function RecipeScaler({
                       { ...opts, density: ing.density ?? undefined },
                     );
                     const status = plan.lines[i]?.status;
-                    const hasStock = (stockMap.get(ing.ingredientId) ?? []).some((r) => r.quantity > 0);
+                    const hasStock = (effectiveStockMap.get(ing.ingredientId) ?? []).some((r) => r.quantity > 0);
+                    const sub = subs.get(ing.id);
+                    const original = sub ? ingredients[i] : null;
                     return (
                       <li key={ing.id} className="flex flex-wrap items-baseline gap-x-2 text-sm">
                         {status === "ok" && <span aria-label="In stock" title="In stock">✅</span>}
@@ -219,6 +452,14 @@ export function RecipeScaler({
                           {ing.name}
                         </Link>
                         {qty && <span className="tabular-nums text-foreground">{qty}</span>}
+                        {sub && original && (
+                          <>
+                            <Badge variant="secondary" className="text-[10px]">
+                              swap
+                            </Badge>
+                            <span className="text-xs text-muted-foreground line-through">{original.name}</span>
+                          </>
+                        )}
                         {ing.prep && <span className="text-muted-foreground">— {ing.prep}</span>}
                         {ing.optional && (
                           <Badge variant="outline" className="text-[10px]">
