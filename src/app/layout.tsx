@@ -36,6 +36,10 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        {/* Prevent Brave browser crypto wallet injection from throwing on pages where window.ethereum is undefined */}
+        <script dangerouslySetInnerHTML={{ __html: "window.ethereum = window.ethereum || {};" }} />
+      </head>
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <header className="border-b">
           <nav className="mx-auto flex w-full max-w-3xl items-center gap-6 px-4 py-3 text-sm">

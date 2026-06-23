@@ -47,3 +47,7 @@ next-env.d.ts
 
 # Claude Code personal/local settings (machine-specific permissions, etc.)
 .claude/settings.local.json
+
+# Personal reference docs (not part of the codebase)
+UI_COMMUNICATION_GUIDE.md
+Notes.MD

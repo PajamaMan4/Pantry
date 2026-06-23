@@ -1,16 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ClockIcon, PencilIcon, ChefHatIcon, DownloadIcon, LayersIcon } from "lucide-react";
+import { ClockIcon, ChefHatIcon, LayersIcon } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { FavoriteButton } from "../favorite-button";
-import { DeleteRecipe } from "../delete-recipe";
+import { RecipeActionsMenu } from "../recipe-actions-menu";
 import { RecipeScaler } from "../recipe-scaler";
 import { UndoCookButton } from "../undo-cook-button";
 import { RecipeCostSummary } from "../recipe-cost-summary";
 import { RatingStars } from "@/components/rating-stars";
-import { AddMissingButton } from "@/components/add-missing-button";
 import { getRecipeDetail, getVariantsInGroup } from "@/lib/db/recipes";
 import { listIngredientsWithAliases } from "@/lib/db/ingredients";
 import { getSettings } from "@/lib/db/settings";
@@ -61,21 +60,7 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ i
           <Link href={`/recipes/${recipe.id}/cook`} className={buttonVariants({ size: "sm" })}>
             <ChefHatIcon className="size-4" /> Cook mode
           </Link>
-          <Link
-            href={`/recipes/${recipe.id}/edit`}
-            className={buttonVariants({ variant: "outline", size: "sm" })}
-          >
-            <PencilIcon className="size-4" /> Edit
-          </Link>
-          <a
-            href={`/api/recipes/${recipe.id}/export`}
-            download
-            className={buttonVariants({ variant: "outline", size: "sm" })}
-          >
-            <DownloadIcon className="size-4" /> Export
-          </a>
-          <AddMissingButton recipeId={recipe.id} />
-          <DeleteRecipe id={recipe.id} />
+          <RecipeActionsMenu recipeId={recipe.id} />
         </div>
       </div>
 
