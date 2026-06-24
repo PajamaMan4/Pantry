@@ -31,8 +31,12 @@ export function AliasesSection({
         toast.error(res.error);
         return;
       }
-      // Optimistically append; the page revalidates in the background.
-      setAliases((prev) => [...prev, { id: Date.now(), ingredientId, alias: trimmed }]);
+      // Optimistically append a temporary row; the page revalidates in the
+      // background and replaces it with the persisted alias (real id + publicId).
+      setAliases((prev) => [
+        ...prev,
+        { id: Date.now(), publicId: `tmp-${Date.now()}`, ingredientId, alias: trimmed },
+      ]);
       setInput("");
     } finally {
       setAdding(false);

@@ -1,6 +1,7 @@
 import { asc, eq, sql } from "drizzle-orm";
 import { db } from "./client";
 import { storageLocations, inventoryItems, type StorageLocation } from "./schema";
+import { recordTombstone } from "./tombstones";
 
 export function listLocations(): StorageLocation[] {
   return db
@@ -17,7 +18,7 @@ export function createLocation(name: string): StorageLocation {
 export function renameLocation(id: number, name: string): StorageLocation {
   return db
     .update(storageLocations)
-    .set({ name: name.trim() })
+    .set({ name: name.trim(), updatedAt: new Date() })
     .where(eq(storageLocations.id, id))
     .returning()
     .get();
@@ -26,11 +27,17 @@ export function renameLocation(id: number, name: string): StorageLocation {
 /** Delete a location, first disassociating it from any inventory items (§ settings). */
 export function deleteLocation(id: number): void {
   db.transaction((tx) => {
+    const row = tx
+      .select({ publicId: storageLocations.publicId })
+      .from(storageLocations)
+      .where(eq(storageLocations.id, id))
+      .get();
     tx.update(inventoryItems)
       .set({ locationId: null, updatedAt: new Date() })
       .where(eq(inventoryItems.locationId, id))
       .run();
     tx.delete(storageLocations).where(eq(storageLocations.id, id)).run();
+    if (row) recordTombstone(tx, "storage_location", row.publicId);
   });
 }
 

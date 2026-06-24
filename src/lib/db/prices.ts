@@ -1,6 +1,7 @@
 import { asc, desc, eq, inArray } from "drizzle-orm";
 import { db } from "./client";
 import { priceEntries, type PriceEntry } from "./schema";
+import { recordTombstone } from "./tombstones";
 
 export type PriceEntryInput = {
   ingredientId: number;
@@ -47,5 +48,13 @@ export function createPriceEntry(input: PriceEntryInput): number {
 }
 
 export function deletePriceEntry(id: number): void {
-  db.delete(priceEntries).where(eq(priceEntries.id, id)).run();
+  db.transaction((tx) => {
+    const row = tx
+      .select({ publicId: priceEntries.publicId })
+      .from(priceEntries)
+      .where(eq(priceEntries.id, id))
+      .get();
+    tx.delete(priceEntries).where(eq(priceEntries.id, id)).run();
+    if (row) recordTombstone(tx, "price_entry", row.publicId);
+  });
 }

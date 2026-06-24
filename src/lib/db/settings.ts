@@ -20,7 +20,7 @@ export function getSettings(): Settings {
 export function updateSettings(values: SettingsUpdate): Settings {
   return db
     .update(settings)
-    .set(values)
+    .set({ ...values, updatedAt: new Date() })
     .where(eq(settings.id, SETTINGS_ID))
     .returning()
     .get();
@@ -30,12 +30,18 @@ export type InventoryView = "alphabetical" | "location";
 
 export function setInventoryView(view: InventoryView): void {
   getSettings(); // ensure the row exists
-  db.update(settings).set({ inventoryView: view }).where(eq(settings.id, SETTINGS_ID)).run();
+  db.update(settings)
+    .set({ inventoryView: view, updatedAt: new Date() })
+    .where(eq(settings.id, SETTINGS_ID))
+    .run();
 }
 
 export function setAnthropicApiKey(key: string | null): void {
   getSettings(); // ensure the row exists
-  db.update(settings).set({ anthropicApiKey: key }).where(eq(settings.id, SETTINGS_ID)).run();
+  db.update(settings)
+    .set({ anthropicApiKey: key, updatedAt: new Date() })
+    .where(eq(settings.id, SETTINGS_ID))
+    .run();
 }
 
 /**

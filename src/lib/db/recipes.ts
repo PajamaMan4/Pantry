@@ -17,6 +17,7 @@ import {
 } from "./schema";
 import { lastCookedByRecipe } from "./cook";
 import { recipeCostSummaries } from "./recipe-cost";
+import { recordTombstone } from "./tombstones";
 import type { RecipeCost } from "../domain/cost";
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -353,7 +354,16 @@ export function updateRecipe(id: number, input: RecipeWriteInput): void {
 
 export function deleteRecipe(id: number): void {
   // recipe_ingredients / recipe_tags cascade via FK (foreign_keys pragma is ON).
-  db.delete(recipes).where(eq(recipes.id, id)).run();
+  // Those are aggregate children of the recipe, so only the recipe is tombstoned.
+  db.transaction((tx) => {
+    const row = tx
+      .select({ publicId: recipes.publicId })
+      .from(recipes)
+      .where(eq(recipes.id, id))
+      .get();
+    tx.delete(recipes).where(eq(recipes.id, id)).run();
+    if (row) recordTombstone(tx, "recipe", row.publicId);
+  });
 }
 
 export function setFavorite(id: number, value: boolean): void {

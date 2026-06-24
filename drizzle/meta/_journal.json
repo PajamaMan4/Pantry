@@ -57,6 +57,13 @@
       "when": 1782001542437,
       "tag": "0007_sticky_luminals",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1782260000269,
+      "tag": "0008_parched_hannibal_king",
+      "breakpoints": true
     }
   ]
 }

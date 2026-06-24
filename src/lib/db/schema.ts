@@ -7,6 +7,14 @@
 //  - Inline step quantities are structured ({qN} placeholders + a quantities map),
 //    which is what makes safe scaling/conversion possible (§3.2, §5.1).
 import { sqliteTable, text, integer, real, index } from "drizzle-orm/sqlite-core";
+import { newPublicId } from "./ids";
+
+// `publicId` is a sync-stable, globally-unique id that travels with a row across
+// databases (local autoincrement `id` stays for joins). Added to every entity that
+// syncs independently; aggregate children (recipe_ingredients, recipe_tags,
+// cook_log_lines) and the settings singleton are intentionally excluded. See the
+// sync-enabler plan / pantry-mobile-sync-feasibility.md §7.
+const publicId = () => text("public_id").notNull().unique().$defaultFn(newPublicId);
 
 // ---- Step type embedded as JSON on the recipe (see modeling note 2.4.a) ----
 export interface StepQuantity {
@@ -24,6 +32,7 @@ export interface Step {
 
 export const ingredients = sqliteTable("ingredients", {
   id: integer("id").primaryKey({ autoIncrement: true }),
+  publicId: publicId(),
   name: text("name").notNull().unique(),
   category: text("category"), // 'produce' | 'dairy' | 'meat' | 'pantry' | 'spice' | ...
   defaultUnit: text("default_unit"), // canonical unit used when normalizing prices/inventory
@@ -40,6 +49,7 @@ export const ingredients = sqliteTable("ingredients", {
 
 export const recipes = sqliteTable("recipes", {
   id: integer("id").primaryKey({ autoIncrement: true }),
+  publicId: publicId(),
   name: text("name").notNull(),
   description: text("description"),
   steps: text("steps", { mode: "json" }).$type<Step[]>().notNull().default([]),
@@ -65,7 +75,11 @@ export const recipes = sqliteTable("recipes", {
 // it stores no recipe data itself.
 export const recipeGroups = sqliteTable("recipe_groups", {
   id: integer("id").primaryKey({ autoIncrement: true }),
+  publicId: publicId(),
   name: text("name").notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .notNull()
+    .$defaultFn(() => new Date()),
 });
 
 export const recipeIngredients = sqliteTable(
@@ -96,7 +110,11 @@ export const recipeIngredients = sqliteTable(
 
 export const tags = sqliteTable("tags", {
   id: integer("id").primaryKey({ autoIncrement: true }),
+  publicId: publicId(),
   name: text("name").notNull().unique(),
+  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .notNull()
+    .$defaultFn(() => new Date()),
 });
 
 export const recipeTags = sqliteTable(
@@ -114,14 +132,19 @@ export const recipeTags = sqliteTable(
 
 export const storageLocations = sqliteTable("storage_locations", {
   id: integer("id").primaryKey({ autoIncrement: true }),
+  publicId: publicId(),
   name: text("name").notNull().unique(), // 'Fridge', 'Freezer', 'Pantry', ...
   sortOrder: integer("sort_order").notNull().default(0),
+  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .notNull()
+    .$defaultFn(() => new Date()),
 });
 
 export const inventoryItems = sqliteTable(
   "inventory_items",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
+    publicId: publicId(),
     ingredientId: integer("ingredient_id")
       .notNull()
       .references(() => ingredients.id),
@@ -142,6 +165,7 @@ export const priceEntries = sqliteTable(
   "price_entries",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
+    publicId: publicId(),
     ingredientId: integer("ingredient_id")
       .notNull()
       .references(() => ingredients.id),
@@ -159,6 +183,7 @@ export const priceEntries = sqliteTable(
 
 export const cookLogs = sqliteTable("cook_logs", {
   id: integer("id").primaryKey({ autoIncrement: true }),
+  publicId: publicId(),
   recipeId: integer("recipe_id").references(() => recipes.id, { onDelete: "set null" }),
   recipeName: text("recipe_name"), // snapshot, survives recipe deletion
   servingsMade: real("servings_made").notNull(),
@@ -189,12 +214,17 @@ export const settings = sqliteTable("settings", {
   roundingMode: text("rounding_mode").notNull().default("cooking"), // 'cooking' | 'exact'
   inventoryView: text("inventory_view").notNull().default("alphabetical"), // 'alphabetical' | 'location'
   anthropicApiKey: text("anthropic_api_key"), // optional, enables Claude recipe import
+  // Singleton row (id=1) — no publicId; a future sync LWW-merges it by updatedAt.
+  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .notNull()
+    .$defaultFn(() => new Date()),
 });
 
 export const ingredientAliases = sqliteTable(
   "ingredient_aliases",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
+    publicId: publicId(),
     ingredientId: integer("ingredient_id")
       .notNull()
       .references(() => ingredients.id, { onDelete: "cascade" }),
@@ -205,6 +235,7 @@ export const ingredientAliases = sqliteTable(
 
 export const shoppingListItems = sqliteTable("shopping_list_items", {
   id: integer("id").primaryKey({ autoIncrement: true }),
+  publicId: publicId(),
   ingredientId: integer("ingredient_id").references(() => ingredients.id, { onDelete: "set null" }),
   name: text("name").notNull(), // free text or ingredient-name snapshot
   quantity: real("quantity"),
@@ -214,7 +245,27 @@ export const shoppingListItems = sqliteTable("shopping_list_items", {
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
     .$defaultFn(() => new Date()),
+  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .notNull()
+    .$defaultFn(() => new Date()),
 });
+
+// Deletion log: a hard delete leaves no trace, so a future phone↔PC sync can't tell
+// a peer "this row was removed" and the row reappears on the next sync. Each user
+// delete records (entity, the row's publicId, when) here. Only entities that carry a
+// publicId are tombstoned; aggregate children and the settings singleton are not.
+export const tombstones = sqliteTable(
+  "tombstones",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    entity: text("entity").notNull(), // 'recipe' | 'ingredient' | 'inventory_item' | ...
+    publicId: text("public_id").notNull(), // the deleted row's publicId
+    deletedAt: integer("deleted_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (t) => [index("tombstone_entity_idx").on(t.entity, t.publicId)],
+);
 
 // Convenience inferred types for the rest of the app.
 export type Ingredient = typeof ingredients.$inferSelect;
@@ -237,3 +288,5 @@ export type NewSettings = typeof settings.$inferInsert;
 export type ShoppingListItem = typeof shoppingListItems.$inferSelect;
 export type NewShoppingListItem = typeof shoppingListItems.$inferInsert;
 export type IngredientAlias = typeof ingredientAliases.$inferSelect;
+export type Tombstone = typeof tombstones.$inferSelect;
+export type NewTombstone = typeof tombstones.$inferInsert;

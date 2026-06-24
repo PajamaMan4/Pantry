@@ -15,6 +15,7 @@ import {
 } from "./schema";
 import { listInventoryForIngredient } from "./inventory";
 import { listPriceEntries } from "./prices";
+import { recordTombstone, recordTombstones } from "./tombstones";
 import { repointStepIngredient } from "../domain/merge";
 
 export function listIngredients(): Ingredient[] {
@@ -171,7 +172,15 @@ export function addAlias(ingredientId: number, alias: string): IngredientAlias {
 }
 
 export function removeAlias(id: number): void {
-  db.delete(ingredientAliases).where(eq(ingredientAliases.id, id)).run();
+  db.transaction((tx) => {
+    const row = tx
+      .select({ publicId: ingredientAliases.publicId })
+      .from(ingredientAliases)
+      .where(eq(ingredientAliases.id, id))
+      .get();
+    tx.delete(ingredientAliases).where(eq(ingredientAliases.id, id)).run();
+    if (row) recordTombstone(tx, "ingredient_alias", row.publicId);
+  });
 }
 
 // ---- Merge ----
@@ -204,7 +213,8 @@ export function mergeIngredients(sourceId: number, targetId: number): MergeResul
       .run().changes;
     const movedInventory = tx
       .update(inventoryItems)
-      .set({ ingredientId: targetId })
+      // bump updatedAt so the reassignment propagates to a future sync (LWW).
+      .set({ ingredientId: targetId, updatedAt: new Date() })
       .where(eq(inventoryItems.ingredientId, sourceId))
       .run().changes;
     const movedPrices = tx
@@ -262,6 +272,7 @@ export function mergeIngredients(sourceId: number, targetId: number): MergeResul
     }
 
     tx.delete(ingredients).where(eq(ingredients.id, sourceId)).run();
+    recordTombstone(tx, "ingredient", source.publicId);
     return { movedRecipeRows, movedInventory, movedPrices };
   });
 }
@@ -269,10 +280,42 @@ export function mergeIngredients(sourceId: number, targetId: number): MergeResul
 /** Permanently delete an ingredient and everything that references it. */
 export function deleteIngredient(id: number): void {
   db.transaction((tx) => {
+    // Collect publicIds before deleting so each removed row leaves a tombstone.
+    // recipe_ingredients are aggregate children (no tombstone); ingredient_aliases
+    // are removed by FK cascade when the ingredient goes, so tombstone them here.
+    const ing = tx
+      .select({ publicId: ingredients.publicId })
+      .from(ingredients)
+      .where(eq(ingredients.id, id))
+      .get();
+    const invIds = tx
+      .select({ publicId: inventoryItems.publicId })
+      .from(inventoryItems)
+      .where(eq(inventoryItems.ingredientId, id))
+      .all()
+      .map((r) => r.publicId);
+    const priceIds = tx
+      .select({ publicId: priceEntries.publicId })
+      .from(priceEntries)
+      .where(eq(priceEntries.ingredientId, id))
+      .all()
+      .map((r) => r.publicId);
+    const aliasIds = tx
+      .select({ publicId: ingredientAliases.publicId })
+      .from(ingredientAliases)
+      .where(eq(ingredientAliases.ingredientId, id))
+      .all()
+      .map((r) => r.publicId);
+
     tx.delete(recipeIngredients).where(eq(recipeIngredients.ingredientId, id)).run();
     tx.delete(inventoryItems).where(eq(inventoryItems.ingredientId, id)).run();
     tx.delete(priceEntries).where(eq(priceEntries.ingredientId, id)).run();
-    tx.delete(ingredients).where(eq(ingredients.id, id)).run();
+    tx.delete(ingredients).where(eq(ingredients.id, id)).run(); // cascades ingredient_aliases
+
+    recordTombstones(tx, "inventory_item", invIds);
+    recordTombstones(tx, "price_entry", priceIds);
+    recordTombstones(tx, "ingredient_alias", aliasIds);
+    if (ing) recordTombstone(tx, "ingredient", ing.publicId);
   });
 }
 

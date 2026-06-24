@@ -10,6 +10,7 @@ import {
   type Ingredient,
   type StorageLocation,
 } from "./schema";
+import { recordTombstone, recordTombstones } from "./tombstones";
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -169,12 +170,29 @@ export function updateInventoryItem(id: number, input: InventoryItemInput): void
 }
 
 export function deleteInventoryItem(id: number): void {
-  db.delete(inventoryItems).where(eq(inventoryItems.id, id)).run();
+  db.transaction((tx) => {
+    const row = tx
+      .select({ publicId: inventoryItems.publicId })
+      .from(inventoryItems)
+      .where(eq(inventoryItems.id, id))
+      .get();
+    tx.delete(inventoryItems).where(eq(inventoryItems.id, id)).run();
+    if (row) recordTombstone(tx, "inventory_item", row.publicId);
+  });
 }
 
 /** Clear all stored stock for an ingredient (alphabetical-view "remove from stock"). */
 export function clearInventoryForIngredient(ingredientId: number): void {
-  db.delete(inventoryItems).where(eq(inventoryItems.ingredientId, ingredientId)).run();
+  db.transaction((tx) => {
+    const ids = tx
+      .select({ publicId: inventoryItems.publicId })
+      .from(inventoryItems)
+      .where(eq(inventoryItems.ingredientId, ingredientId))
+      .all()
+      .map((r) => r.publicId);
+    tx.delete(inventoryItems).where(eq(inventoryItems.ingredientId, ingredientId)).run();
+    recordTombstones(tx, "inventory_item", ids);
+  });
 }
 
 /** All inventory rows grouped by ingredient id (for the alphabetical list view). */

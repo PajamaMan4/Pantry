@@ -11,6 +11,7 @@ import {
 } from "./schema";
 import { getSettings } from "./settings";
 import { listPriceEntriesFor } from "./prices";
+import { recordTombstone } from "./tombstones";
 import {
   planCook,
   type CookIngredientInput,
@@ -229,7 +230,13 @@ export function undoCook(cookLogId: number): { ok: boolean } {
         .where(eq(inventoryItems.id, line.inventoryItemId))
         .run();
     }
+    const log = tx
+      .select({ publicId: cookLogs.publicId })
+      .from(cookLogs)
+      .where(eq(cookLogs.id, cookLogId))
+      .get();
     tx.delete(cookLogs).where(eq(cookLogs.id, cookLogId)).run(); // cascades lines
+    if (log) recordTombstone(tx, "cook_log", log.publicId);
   });
   return { ok: true };
 }

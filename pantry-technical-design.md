@@ -438,6 +438,34 @@ Unit-test the **domain layer** with Vitest: conversion correctness (round-trips,
 - **Automated backups:** a `scripts/backup.ts` (run on app start and/or daily) copies `pantry.db` to `data/backups/pantry-YYYYMMDD-HHmm.db`, keeping the last N.
 - **Export/Import:** Settings offers "Export all data" → a single human-readable JSON file (recipes, ingredients, inventory, prices, logs), and "Import" to restore. This is your portable, inspectable backup and your migration path.
 
+### 4.6 Sync-enabler invariants (forward-looking, P3)
+
+These exist so a future iPhone companion/sync feature stays cheap; see
+[pantry-mobile-sync-feasibility.md](pantry-mobile-sync-feasibility.md) §7. **No sync is
+built** — these are just invariants new data-layer code must preserve:
+
+- **`publicId` (sync identity).** Every independently-syncable entity carries a
+  `publicId` (`text`, unique, `$defaultFn(newPublicId)` from `lib/db/ids.ts`) alongside its
+  local integer `id`. Local `id` is for joins within one database; `publicId` is the stable
+  id that travels across databases. Aggregate children (`recipe_ingredients`,
+  `recipe_tags`, `cook_log_lines`) and the `settings` singleton intentionally have none —
+  they travel with their parent / are special-cased.
+- **Tombstones (deletion log).** A hard delete leaves no trace for a peer to replay, so
+  **every user-facing delete records a row in `tombstones`** via `recordTombstone(tx, …)` /
+  `recordTombstones(tx, …)` (`lib/db/tombstones.ts`), inside the same transaction as the
+  delete. Two rules: (a) cascade-deleted children that have their own `publicId` must be
+  tombstoned explicitly (SQLite FK cascade won't do it); (b) **wholesale-replace deletes are
+  NOT deletions** — e.g. `updateRecipe` deletes & re-inserts `recipe_ingredients`/`recipe_tags`
+  as an edit mechanism and must never tombstone them, or every edit churns the log.
+- **`updatedAt` everywhere syncable.** Mutable syncable tables carry a maintained
+  `updatedAt` (for a future last-write-wins merge). Bump it manually in update paths, as the
+  existing code already does (`updatedAt: new Date()`).
+- **Connection injection (convention, not yet done).** New data-access code should be
+  written so it can later accept an injected connection rather than hard-importing the `db`
+  singleton from `lib/db/client.ts` — a standalone phone app has no server and must run the
+  data layer against an on-device handle. Existing `lib/db/*.ts` are intentionally left
+  as-is until the mobile effort starts; just don't add *new* hard singleton dependencies.
+
 ---
 
 ## 5. Key Algorithms

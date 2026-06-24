@@ -8,6 +8,7 @@ import {
   type ShoppingListItem,
 } from "./schema";
 import { createInventoryItem, logPurchase } from "./inventory";
+import { recordTombstone, recordTombstones } from "./tombstones";
 import { recommendRecipes, type InventoryStock } from "../domain/recommend";
 
 export function listShoppingItems(): ShoppingListItem[] {
@@ -48,21 +49,42 @@ export function updateShoppingItem(id: number, input: ShoppingItemInput): void {
       quantity: input.quantity,
       unit: input.unit,
       price: input.price,
+      updatedAt: new Date(),
     })
     .where(eq(shoppingListItems.id, id))
     .run();
 }
 
 export function setShoppingChecked(id: number, checked: boolean): void {
-  db.update(shoppingListItems).set({ checked }).where(eq(shoppingListItems.id, id)).run();
+  db.update(shoppingListItems)
+    .set({ checked, updatedAt: new Date() })
+    .where(eq(shoppingListItems.id, id))
+    .run();
 }
 
 export function deleteShoppingItem(id: number): void {
-  db.delete(shoppingListItems).where(eq(shoppingListItems.id, id)).run();
+  db.transaction((tx) => {
+    const row = tx
+      .select({ publicId: shoppingListItems.publicId })
+      .from(shoppingListItems)
+      .where(eq(shoppingListItems.id, id))
+      .get();
+    tx.delete(shoppingListItems).where(eq(shoppingListItems.id, id)).run();
+    if (row) recordTombstone(tx, "shopping_list_item", row.publicId);
+  });
 }
 
 export function clearCheckedShoppingItems(): void {
-  db.delete(shoppingListItems).where(eq(shoppingListItems.checked, true)).run();
+  db.transaction((tx) => {
+    const ids = tx
+      .select({ publicId: shoppingListItems.publicId })
+      .from(shoppingListItems)
+      .where(eq(shoppingListItems.checked, true))
+      .all()
+      .map((r) => r.publicId);
+    tx.delete(shoppingListItems).where(eq(shoppingListItems.checked, true)).run();
+    recordTombstones(tx, "shopping_list_item", ids);
+  });
 }
 
 /** Add a recipe's currently-missing required ingredients to the list (deduped). */
@@ -151,7 +173,10 @@ export function receiveCheckedShoppingItems(): { added: number } {
         notes: null,
       });
     }
-    db.delete(shoppingListItems).where(eq(shoppingListItems.id, item.id)).run();
+    db.transaction((tx) => {
+      tx.delete(shoppingListItems).where(eq(shoppingListItems.id, item.id)).run();
+      recordTombstone(tx, "shopping_list_item", item.publicId);
+    });
     added += 1;
   }
   return { added };
