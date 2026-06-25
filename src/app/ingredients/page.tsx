@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { PlusIcon } from "lucide-react";
-import { buttonVariants } from "@/components/ui/button";
+import { ChevronDownIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { PriceSummaryInline } from "@/components/price-summary-inline";
 import { ViewToggle } from "./view-toggle";
+import { IngredientsActionsMenu } from "./ingredients-actions-menu";
 import { UnitSystemToggle } from "@/components/unit-system-toggle";
 import { ClearStockButton } from "./clear-stock-button";
 import { InventoryItemRow, type SerialInventoryItem } from "./inventory-item-row";
@@ -105,9 +106,7 @@ export default async function IngredientsPage({
     <div className="mx-auto w-full max-w-3xl px-4 py-8">
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">Ingredients</h1>
-        <Link href="/ingredients/new" className={buttonVariants()}>
-          <PlusIcon className="size-4" /> New ingredient
-        </Link>
+        <IngredientsActionsMenu />
       </div>
 
       <form action="/ingredients" className="mb-3">
@@ -252,25 +251,40 @@ function LocationView({
   return (
     <div className="space-y-6">
       {ordered.map(([name, g]) => (
-        <section key={name}>
-          <h2 className="mb-2 text-sm font-medium text-muted-foreground">{name}</h2>
-          <div className="divide-y rounded-lg border px-3">
-            {g.rows.map((r) => (
-              <InventoryItemRow
-                key={r.item.id}
-                item={serialItem(r, system, rounding)}
-                ingredientId={r.ingredient.id}
-                locations={locations}
-                defaultUnit={r.ingredient.defaultUnit}
-                nowMs={nowMs}
-                name={r.ingredient.name}
-                href={`/ingredients/${r.ingredient.id}`}
-                priceText={priceTextFor(r)}
-                showLocation={false}
+        <Collapsible key={name} defaultOpen={false} render={<section />}>
+          <CollapsibleTrigger
+            render={
+              <button
+                type="button"
+                className="group mb-2 flex w-full items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
               />
-            ))}
-          </div>
-        </section>
+            }
+          >
+            <ChevronDownIcon className="size-4 transition-transform group-data-[panel-open]:rotate-180" />
+            <span>{name}</span>
+            <Badge variant="secondary" className="ml-1">
+              {g.rows.length}
+            </Badge>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="divide-y rounded-lg border px-3">
+              {g.rows.map((r) => (
+                <InventoryItemRow
+                  key={r.item.id}
+                  item={serialItem(r, system, rounding)}
+                  ingredientId={r.ingredient.id}
+                  locations={locations}
+                  defaultUnit={r.ingredient.defaultUnit}
+                  nowMs={nowMs}
+                  name={r.ingredient.name}
+                  href={`/ingredients/${r.ingredient.id}`}
+                  priceText={priceTextFor(r)}
+                  showLocation={false}
+                />
+              ))}
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
       ))}
     </div>
   );

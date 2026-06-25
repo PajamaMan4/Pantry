@@ -74,7 +74,9 @@ export function CookButton({
     });
   }
 
-  const shown = plan.lines.filter((l) => l.status !== "skipped" || l.deductions.length > 0);
+  const shown = plan.lines
+    .filter((l) => l.status !== "skipped" || l.deductions.length > 0)
+    .filter((l, i, arr) => arr.findIndex((x) => x.ingredientId === l.ingredientId) === i);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

@@ -1,15 +1,15 @@
 "use client";
 
 import * as React from "react";
-import { ListIcon, MapPinIcon } from "lucide-react";
+import { ListIcon, ShelvingUnitIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { setInventoryViewAction } from "./actions";
 
 type View = "alphabetical" | "location";
 
 const OPTIONS: { value: View; label: string; icon: typeof ListIcon }[] = [
-  { value: "alphabetical", label: "Alphabetical", icon: ListIcon },
-  { value: "location", label: "By location", icon: MapPinIcon },
+  { value: "location", label: "Inventory", icon: ShelvingUnitIcon },
+  { value: "alphabetical", label: "Dictionary", icon: ListIcon },
 ];
 
 export function ViewToggle({ current }: { current: View }) {
