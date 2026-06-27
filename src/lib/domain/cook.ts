@@ -1,7 +1,7 @@
 // "I made this" deduction planning (§3.6). Pure + heavily tested — this decides
 // exactly what to deduct from which inventory rows, with full unit reconciliation
 // and all the edge cases. The DB service just applies the plan in a transaction.
-import { convert } from "./units";
+import { convert, combineAmounts } from "./units";
 
 export interface CookIngredientInput {
   ingredientId: number;
@@ -123,21 +123,9 @@ function planOne(ing: CookIngredientInput, rows: CookStockRow[], factor: number)
  */
 function combineOccurrences(members: CookIngredientInput[]): CookIngredientInput {
   const first = members[0];
-  const numeric = members.filter((m) => m.amount != null && m.unit != null);
-  if (numeric.length === 0) return { ...first, amount: null, unit: null };
-
-  const repUnit = numeric[0].unit!;
-  let total = 0;
-  for (const m of numeric) {
-    try {
-      total += convert(m.amount!, m.unit!, repUnit, first.density ?? undefined, first.gramsPerEach ?? undefined);
-    } catch {
-      // Same ingredient stocked in an unreconcilable unit — best-effort raw add.
-      total += m.amount!;
-    }
-  }
+  const { amount, unit } = combineAmounts(members, first.density, first.gramsPerEach);
   // Optional only if *every* occurrence is optional; staple is ingredient-level.
-  return { ...first, amount: total, unit: repUnit, optional: members.every((m) => m.optional) };
+  return { ...first, amount, unit, optional: members.every((m) => m.optional) };
 }
 
 export function planCook(

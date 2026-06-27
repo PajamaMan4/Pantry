@@ -100,6 +100,22 @@ describe("recommendRecipes — unit reconciliation", () => {
     const [res] = recommendRecipes([r], [{ ingredientId: 1, quantity: 500, unit: "g", expiryMs: null }], "available", noCost, now);
     expect(res.unknownUnits).toBe(1);
   });
+
+  it("same ingredient appearing in two lines with incompatible units is treated as one requirement", () => {
+    // Green Onions scenario: primary line is 6 each, secondary line is 1 tbsp (garnish).
+    // No density/gramsPerEach, so count↔volume can't convert. The secondary line's
+    // incompatibility must NOT drag the ingredient into missing/unknownUnits.
+    // Stock: 10 each → fully satisfies the 6 each primary requirement.
+    const r = recipe(1, "Dish", [
+      ing(1, { amount: 6, unit: "each", density: null, gramsPerEach: null }),
+      ing(1, { amount: 1, unit: "tbsp", density: null, gramsPerEach: null }),
+    ]);
+    const [res] = recommendRecipes([r], [{ ingredientId: 1, quantity: 10, unit: "each", expiryMs: null }], "available", noCost, now);
+    expect(res.makeable).toBe(true);
+    expect(res.missing).not.toContain(1);
+    expect(res.unknownUnits).toBe(0);
+    expect(res.requiredCount).toBe(1); // counted once, not twice
+  });
 });
 
 describe("recommendRecipes — sorting", () => {

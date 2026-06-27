@@ -132,6 +132,32 @@ export function convert(
   return targetBase / t.toBase;
 }
 
+/**
+ * Sum multiple occurrences of the same ingredient into one {amount, unit}.
+ * Uses the first numeric occurrence's unit as the representative; converts
+ * others via convert(), raw-adding when unconvertible (same ingredient in an
+ * irreconcilable unit). Non-numeric occurrences contribute nothing.
+ * Returns {amount: null, unit: null} when no numeric occurrence exists.
+ */
+export function combineAmounts(
+  occ: { amount: number | null; unit: string | null }[],
+  density?: number | null,
+  gramsPerEach?: number | null,
+): { amount: number | null; unit: string | null } {
+  const numeric = occ.filter((o) => o.amount != null && o.unit != null);
+  if (numeric.length === 0) return { amount: null, unit: null };
+  const repUnit = numeric[0].unit!;
+  let total = 0;
+  for (const o of numeric) {
+    try {
+      total += convert(o.amount!, o.unit!, repUnit, density ?? undefined, gramsPerEach ?? undefined);
+    } catch {
+      total += o.amount!;
+    }
+  }
+  return { amount: total, unit: repUnit };
+}
+
 export interface ConvertedQuantity {
   amount: number;
   amountMax: number | null;

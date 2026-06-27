@@ -1,7 +1,7 @@
 // Recipe recommendations (§3.8 / §5.5). Pure + tested. Given current inventory,
 // score each recipe by ingredient coverage, surface near-misses, and sort by
 // availability / soonest-expiring / lowest cost.
-import { UNITS, convert, type UnitCategory } from "./units";
+import { UNITS, convert, combineAmounts, type UnitCategory } from "./units";
 import { daysUntil } from "./expiry";
 
 export interface RecommendIngredient {
@@ -114,19 +114,39 @@ export function recommendRecipes(
   const stockMap = aggregateStock(inventory);
 
   const scored: RecommendResult[] = recipes.map((recipe) => {
-    // Staples are assumed available; optionals don't count against makeability.
-    const required = recipe.ingredients.filter((i) => !i.optional && !i.isStaple);
+    // Group by ingredient so duplicates (same ingredient in multiple lines/sections)
+    // are combined into one requirement — mirroring what planCook does — before
+    // checking availability. Without this, a secondary line in an incompatible unit
+    // (e.g. "1 tbsp" when the ingredient is stocked as "each") incorrectly adds the
+    // ingredient to the missing list even when the primary quantity is satisfied.
+    const byIngredient = new Map<number, RecommendIngredient[]>();
+    for (const i of recipe.ingredients) {
+      const arr = byIngredient.get(i.ingredientId) ?? [];
+      arr.push(i);
+      byIngredient.set(i.ingredientId, arr);
+    }
+
     const missing: number[] = [];
     let unknownUnits = 0;
-    for (const req of required) {
-      const a = availability(req, stockMap.get(req.ingredientId));
-      if (a === "missing") missing.push(req.ingredientId);
+
+    for (const [ingredientId, members] of byIngredient) {
+      const first = members[0];
+      // Staples are assumed available; optionals don't count against makeability.
+      // Skip the group if every member is a staple or optional.
+      if (members.every((m) => m.isStaple || m.optional)) continue;
+
+      const { amount, unit } = combineAmounts(members, first.density, first.gramsPerEach);
+      const combined: RecommendIngredient = { ...first, amount, unit, optional: false };
+      const a = availability(combined, stockMap.get(ingredientId));
+      if (a === "missing") missing.push(ingredientId);
       else if (a === "unknown") {
         unknownUnits += 1;
-        missing.push(req.ingredientId);
+        missing.push(ingredientId);
       }
     }
-    const requiredCount = required.length;
+    const requiredCount = [...byIngredient.values()].filter(
+      (members) => !members.every((m) => m.isStaple || m.optional),
+    ).length;
     const haveCount = requiredCount - missing.length;
     return {
       recipe,
@@ -138,7 +158,7 @@ export function recommendRecipes(
       makeable: missing.length === 0,
       unknownUnits,
       cost: costByRecipe.get(recipe.id) ?? null,
-      expiryUrgency: expiryScore(required, stockMap, now),
+      expiryUrgency: expiryScore(recipe.ingredients, stockMap, now),
     };
   });
 

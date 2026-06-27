@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { StarIcon } from "lucide-react";
+import { HeartIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toggleFavoriteAction } from "./actions";
 
@@ -32,9 +32,9 @@ export function FavoriteButton({
       disabled={pending}
       aria-pressed={fav}
       aria-label={fav ? "Unfavorite" : "Favorite"}
-      className={cn("text-muted-foreground transition-colors hover:text-amber-500", className)}
+      className={cn("text-muted-foreground transition-colors hover:text-red-500", className)}
     >
-      <StarIcon className={cn("size-5", fav && "fill-amber-400 text-amber-400")} />
+      <HeartIcon className={cn("size-5", fav && "fill-red-500 text-red-500")} />
     </button>
   );
 }
