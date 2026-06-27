@@ -54,3 +54,16 @@ export const priceEntrySchema = z.object({
 });
 
 export type PriceEntryValues = z.infer<typeof priceEntrySchema>;
+
+// Bulk draw-down from the Remove Inventory page: each line targets an exact
+// inventory row and removes an amount in that row's own unit.
+export const inventoryRemoveSchema = z
+  .array(
+    z.object({
+      inventoryItemId: z.coerce.number().int().positive(),
+      amount: z.coerce.number().positive("Amount must be greater than 0"),
+    }),
+  )
+  .min(1, "Add at least one item to remove.");
+
+export type InventoryRemoveValues = z.infer<typeof inventoryRemoveSchema>;

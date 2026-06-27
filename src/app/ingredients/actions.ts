@@ -3,11 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { ingredientEditSchema, ingredientInputSchema } from "@/lib/validation/ingredient";
+import { z } from "zod";
 import {
   priceEntrySchema,
   inventoryItemSchema,
+  inventoryRemoveSchema,
   logPurchaseSchema,
 } from "@/lib/validation/inventory";
+import { importItemSchema, normalizeImportItemList } from "@/lib/inventory-import";
 import { inventoryViewSchema } from "@/lib/validation/settings";
 import {
   updateIngredient,
@@ -23,6 +26,8 @@ import {
   updateInventoryItem,
   deleteInventoryItem,
   clearInventoryForIngredient,
+  decrementInventoryItems,
+  importPricesAndInventory,
   logPurchase,
   type InventoryItemInput,
   type LogPurchaseInput,
@@ -72,6 +77,24 @@ export async function mergeIngredientAction(
     mergeIngredients(sourceId, targetId);
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Couldn't merge ingredients." };
+  }
+  revalidatePath("/ingredients");
+  revalidatePath("/recipes");
+  revalidatePath("/recipes/[id]", "page");
+  redirect(`/ingredients/${targetId}`);
+}
+
+// Merge multiple sourceIds into targetId; on success redirect to the kept ingredient.
+export async function mergeManyIngredientsAction(
+  sourceIds: number[],
+  targetId: number,
+): Promise<IngredientActionResult> {
+  for (const sourceId of sourceIds) {
+    try {
+      mergeIngredients(sourceId, targetId);
+    } catch (e) {
+      return { ok: false, error: e instanceof Error ? e.message : "Couldn't merge ingredients." };
+    }
   }
   revalidatePath("/ingredients");
   revalidatePath("/recipes");
@@ -147,6 +170,25 @@ export async function logPurchaseAction(input: unknown): Promise<IngredientActio
   const parsed = logPurchaseSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: firstError(parsed.error.issues) };
   logPurchase(parsed.data as LogPurchaseInput);
+  revalidateIngredients();
+  return { ok: true };
+}
+
+// ---- bulk add / remove ----
+const bulkAddSchema = z.array(importItemSchema).min(1, "Add at least one item.");
+
+export async function addInventoryBulkAction(rows: unknown): Promise<IngredientActionResult> {
+  const parsed = bulkAddSchema.safeParse(rows);
+  if (!parsed.success) return { ok: false, error: firstError(parsed.error.issues) };
+  importPricesAndInventory(normalizeImportItemList(parsed.data));
+  revalidateIngredients();
+  return { ok: true };
+}
+
+export async function removeInventoryBulkAction(lines: unknown): Promise<IngredientActionResult> {
+  const parsed = inventoryRemoveSchema.safeParse(lines);
+  if (!parsed.success) return { ok: false, error: firstError(parsed.error.issues) };
+  decrementInventoryItems(parsed.data);
   revalidateIngredients();
   return { ok: true };
 }

@@ -2,8 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
-import { MoreHorizontalIcon, PencilIcon, DownloadIcon, ListPlusIcon, TrashIcon } from "lucide-react";
+import { MoreHorizontalIcon, PencilIcon, DownloadIcon, TrashIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -23,13 +22,11 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { deleteRecipeAction } from "./actions";
-import { addMissingForRecipeAction } from "@/app/shopping/actions";
 
 export function RecipeActionsMenu({ recipeId }: { recipeId: number }) {
   const router = useRouter();
   const [deleteOpen, setDeleteOpen] = React.useState(false);
   const [deletePending, startDeleteTransition] = React.useTransition();
-  const [addPending, startAddTransition] = React.useTransition();
 
   function handleExport() {
     const a = document.createElement("a");
@@ -54,19 +51,6 @@ export function RecipeActionsMenu({ recipeId }: { recipeId: number }) {
           </DropdownMenuItem>
           <DropdownMenuItem onClick={handleExport}>
             <DownloadIcon className="size-4" /> Export
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            disabled={addPending}
-            onClick={() =>
-              startAddTransition(async () => {
-                const r = await addMissingForRecipeAction(recipeId);
-                toast.success(
-                  r.added > 0 ? `Added ${r.added} to shopping list` : "Nothing new to add",
-                );
-              })
-            }
-          >
-            <ListPlusIcon className="size-4" /> Add missing to list
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem variant="destructive" onClick={() => setDeleteOpen(true)}>

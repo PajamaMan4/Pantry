@@ -3,7 +3,7 @@ import { normalizeUnit } from "@/lib/import/normalize-unit";
 
 export const INVENTORY_IMPORT_VERSION = 1;
 
-const importItemSchema = z
+export const importItemSchema = z
   .object({
     name: z.string().min(1, "name is required"),
     cost: z.number().nonnegative().nullable().optional(),
@@ -63,11 +63,11 @@ export const inventoryImportSchema = z.object({
 export type InventoryImportFile = z.infer<typeof inventoryImportSchema>;
 export type InventoryImportItem = z.infer<typeof importItemSchema>;
 
-/** Parse and normalize a validated file into DB-ready items. */
-export function normalizeImportItems(
-  file: InventoryImportFile,
+/** Normalize a list of validated items into DB-ready items. */
+export function normalizeImportItemList(
+  items: InventoryImportItem[],
 ): import("@/lib/db/inventory").BulkImportItem[] {
-  return file.items.map((item) => ({
+  return items.map((item) => ({
     name: item.name,
     cost: item.cost ?? null,
     costUnit: item.costUnit ? (normalizeUnit(item.costUnit) ?? null) : null,
@@ -77,4 +77,11 @@ export function normalizeImportItems(
     addUnit: item.addUnit ? (normalizeUnit(item.addUnit) ?? null) : null,
     location: item.location ?? null,
   }));
+}
+
+/** Parse and normalize a validated file into DB-ready items. */
+export function normalizeImportItems(
+  file: InventoryImportFile,
+): import("@/lib/db/inventory").BulkImportItem[] {
+  return normalizeImportItemList(file.items);
 }

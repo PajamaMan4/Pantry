@@ -292,7 +292,8 @@ export function RecipeForm({ ingredientOptions, tagSuggestions, groupSuggestions
   }
 
   return (
-    <div className="space-y-8">
+    <>
+    <div className="space-y-8 pb-24">
       {/* Metadata */}
       <section className="space-y-4">
         <div className="grid gap-2">
@@ -573,8 +574,9 @@ export function RecipeForm({ ingredientOptions, tagSuggestions, groupSuggestions
         />
       </section>
 
-      {error && <p className="text-sm text-destructive">{error}</p>}
-
+    </div>
+    <div className="sticky bottom-0 z-10 bg-background border-t py-3 -mx-4 px-4 sm:-mx-6 sm:px-6">
+      {error && <p className="mb-2 text-sm text-destructive">{error}</p>}
       <div className="flex items-center gap-3">
         <Button onClick={submit} disabled={pending}>
           {pending ? "Saving…" : isEdit ? "Save changes" : "Create recipe"}
@@ -584,5 +586,6 @@ export function RecipeForm({ ingredientOptions, tagSuggestions, groupSuggestions
         </Button>
       </div>
     </div>
+    </>
   );
 }

@@ -98,15 +98,6 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ i
         </div>
       )}
 
-      {cost && (
-        <RecipeCostSummary
-          cost={cost}
-          currency={settings.currency}
-          baseServings={recipe.baseServings}
-          names={ingredientNames}
-        />
-      )}
-
       {group && variants.length > 0 && (
         <div className="mt-4 rounded-lg border bg-muted/30 p-3">
           <div className="mb-2 inline-flex items-center gap-2 text-sm font-medium">
@@ -161,6 +152,15 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ i
             <p className="text-sm whitespace-pre-wrap text-muted-foreground">{recipe.notes}</p>
           </section>
         </>
+      )}
+
+      {cost && (
+        <RecipeCostSummary
+          cost={cost}
+          currency={settings.currency}
+          baseServings={recipe.baseServings}
+          names={ingredientNames}
+        />
       )}
 
       {history.length > 0 && (

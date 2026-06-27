@@ -21,6 +21,8 @@ type Props = {
   onSelect: (opt: IngredientOption) => void;
   /** Create-on-the-fly: resolves once the master ingredient exists. */
   onCreate: (name: string) => Promise<void>;
+  /** When false, the "Create …" affordance is never shown (pick existing only). */
+  allowCreate?: boolean;
 };
 
 export function IngredientCombobox({
@@ -30,6 +32,7 @@ export function IngredientCombobox({
   onType,
   onSelect,
   onCreate,
+  allowCreate = true,
 }: Props) {
   const [query, setQuery] = React.useState(selectedName);
   const [open, setOpen] = React.useState(false);
@@ -56,7 +59,7 @@ export function IngredientCombobox({
       o.name.toLowerCase() === trimmed.toLowerCase() ||
       (o.aliases ?? []).some((a) => a.toLowerCase() === trimmed.toLowerCase()),
   );
-  const showCreate = trimmed.length > 0 && !exactMatch;
+  const showCreate = allowCreate && trimmed.length > 0 && !exactMatch;
   const itemCount = filtered.length + (showCreate ? 1 : 0);
 
   // Close on outside click.

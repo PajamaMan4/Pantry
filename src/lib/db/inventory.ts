@@ -181,6 +181,36 @@ export function deleteInventoryItem(id: number): void {
   });
 }
 
+/**
+ * Bulk draw-down: decrement specific inventory rows by an amount (in each row's
+ * own unit). A row that reaches zero or below is deleted (and tombstoned).
+ * Rows that no longer exist are skipped. Runs in one transaction.
+ */
+export function decrementInventoryItems(
+  items: { inventoryItemId: number; amount: number }[],
+): void {
+  db.transaction((tx) => {
+    for (const { inventoryItemId, amount } of items) {
+      const row = tx
+        .select({ id: inventoryItems.id, quantity: inventoryItems.quantity, publicId: inventoryItems.publicId })
+        .from(inventoryItems)
+        .where(eq(inventoryItems.id, inventoryItemId))
+        .get();
+      if (!row) continue;
+      const remaining = row.quantity - amount;
+      if (remaining <= 0) {
+        tx.delete(inventoryItems).where(eq(inventoryItems.id, row.id)).run();
+        recordTombstone(tx, "inventory_item", row.publicId);
+      } else {
+        tx.update(inventoryItems)
+          .set({ quantity: remaining, updatedAt: new Date() })
+          .where(eq(inventoryItems.id, row.id))
+          .run();
+      }
+    }
+  });
+}
+
 /** Clear all stored stock for an ingredient (alphabetical-view "remove from stock"). */
 export function clearInventoryForIngredient(ingredientId: number): void {
   db.transaction((tx) => {

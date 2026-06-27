@@ -25,6 +25,7 @@ import { planCook, type CookIngredientInput, type CookStockRow } from "@/lib/dom
 import { groupRowsBySection } from "@/lib/domain/sections";
 import { IngredientPicker } from "@/components/ingredient-picker";
 import type { IngredientOption } from "@/components/ingredient-combobox";
+import { AddMissingButton } from "@/components/add-missing-button";
 import { CookButton } from "./cook-button";
 import { getSubstituteInfoAction } from "./actions";
 
@@ -232,16 +233,6 @@ export function RecipeScaler({
 
   return (
     <div>
-      <div className="mb-3">
-        <CookButton
-          recipeId={recipeId}
-          baseServings={baseServings}
-          servings={target}
-          ingredients={cookIngredients}
-          stock={cookStock}
-        />
-      </div>
-
       <div className="flex flex-wrap items-center justify-between gap-3">
         {/* Servings stepper */}
         <div className="flex items-center gap-2">
@@ -309,30 +300,32 @@ export function RecipeScaler({
         </p>
       )}
 
-      <div className="mt-3 flex items-center gap-2">
-        <Button
-          variant={subMode ? "default" : "outline"}
-          size="sm"
-          onClick={() => setSubMode((v) => !v)}
-        >
-          <ArrowLeftRightIcon className="size-4" /> {subMode ? "Done" : "Substitute"}
-        </Button>
-        {subs.size > 0 && (
-          <>
-            <span className="text-xs text-muted-foreground">
-              {subs.size} swap{subs.size === 1 ? "" : "s"}
-            </span>
-            <Button variant="ghost" size="sm" onClick={() => setSubs(new Map())}>
-              Clear swaps
-            </Button>
-          </>
-        )}
-      </div>
-
       <Separator className="my-6" />
 
       <section>
-        <h2 className="mb-3 text-lg font-medium">Ingredients</h2>
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-lg font-medium">Ingredients</h2>
+            <Button
+              variant={subMode ? "default" : "outline"}
+              size="sm"
+              onClick={() => setSubMode((v) => !v)}
+            >
+              <ArrowLeftRightIcon className="size-4" /> {subMode ? "Done" : "Substitute"}
+            </Button>
+            {subs.size > 0 && (
+              <>
+                <span className="text-xs text-muted-foreground">
+                  {subs.size} swap{subs.size === 1 ? "" : "s"}
+                </span>
+                <Button variant="ghost" size="sm" onClick={() => setSubs(new Map())}>
+                  Clear swaps
+                </Button>
+              </>
+            )}
+          </div>
+          <AddMissingButton recipeId={recipeId} />
+        </div>
         {ingredients.length === 0 ? (
           <p className="text-sm text-muted-foreground">No ingredients listed.</p>
         ) : subMode ? (
@@ -514,6 +507,16 @@ export function RecipeScaler({
             })}
           </ol>
         )}
+
+        <div className="mt-4">
+          <CookButton
+            recipeId={recipeId}
+            baseServings={baseServings}
+            servings={target}
+            ingredients={cookIngredients}
+            stock={cookStock}
+          />
+        </div>
       </section>
     </div>
   );
