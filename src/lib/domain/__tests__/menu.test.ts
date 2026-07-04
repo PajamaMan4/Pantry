@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { summarizeMenuIngredients, type MenuIngredientRow } from "@/lib/domain/menu";
+import {
+  summarizeMenuIngredients,
+  scaleMenuRows,
+  type MenuIngredientRow,
+  type MenuRecipeIngredientRow,
+} from "@/lib/domain/menu";
 import type { InventoryStock } from "@/lib/domain/recommend";
 
 const now = new Date("2026-06-13T12:00:00");
@@ -66,5 +71,58 @@ describe("summarizeMenuIngredients", () => {
     ];
     const { lines } = summarizeMenuIngredients(rows, [], now);
     expect(lines.map((l) => l.name)).toEqual(["Apple", "Zucchini"]);
+  });
+});
+
+describe("scaleMenuRows", () => {
+  function menuRow(p: Partial<MenuRecipeIngredientRow> = {}): MenuRecipeIngredientRow {
+    return {
+      ingredientId: 1,
+      name: "Flour",
+      amount: 200,
+      unit: "g",
+      optional: false,
+      isStaple: false,
+      density: null,
+      gramsPerEach: null,
+      baseServings: 2,
+      menuServings: null,
+      ...p,
+    };
+  }
+
+  it("scales the amount to the chosen menu servings", () => {
+    const [scaled] = scaleMenuRows([menuRow({ baseServings: 2, menuServings: 4, amount: 200 })]);
+    expect(scaled.amount).toBe(400);
+  });
+
+  it("falls back to baseServings (no scaling) when menuServings is null", () => {
+    const [scaled] = scaleMenuRows([menuRow({ baseServings: 2, menuServings: null, amount: 200 })]);
+    expect(scaled.amount).toBe(200);
+  });
+
+  it("scales down for a smaller batch", () => {
+    const [scaled] = scaleMenuRows([menuRow({ baseServings: 4, menuServings: 2, amount: 200 })]);
+    expect(scaled.amount).toBe(100);
+  });
+
+  it("leaves non-numeric amounts untouched", () => {
+    const [scaled] = scaleMenuRows([menuRow({ baseServings: 2, menuServings: 6, amount: null })]);
+    expect(scaled.amount).toBeNull();
+  });
+
+  it("drops the servings fields, yielding a plain MenuIngredientRow", () => {
+    const [scaled] = scaleMenuRows([menuRow()]);
+    expect(scaled).not.toHaveProperty("baseServings");
+    expect(scaled).not.toHaveProperty("menuServings");
+  });
+
+  it("scaled rows sum correctly through summarizeMenuIngredients", () => {
+    const rows = scaleMenuRows([
+      menuRow({ ingredientId: 1, name: "Flour", baseServings: 2, menuServings: 4, amount: 200 }), // -> 400
+      menuRow({ ingredientId: 1, name: "Flour", baseServings: 1, menuServings: null, amount: 150 }), // -> 150
+    ]);
+    const { lines } = summarizeMenuIngredients(rows, [], now);
+    expect(lines[0]).toMatchObject({ ingredientId: 1, amount: 550, unit: "g" });
   });
 });

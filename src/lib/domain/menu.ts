@@ -3,9 +3,29 @@
 // sum each ingredient's quantity across recipes and decide whether there's enough
 // in stock — reusing the exact ✅/❌ semantics the recipe cards already use.
 import { combineAmounts } from "./units";
+import { scaleFactor, scaleIngredientAmount } from "./scaling";
 import { recommendRecipes, type RecommendIngredient, type InventoryStock } from "./recommend";
 
 export type MenuIngredientRow = RecommendIngredient & { name: string };
+
+/** A menu ingredient line still carrying its recipe's servings context. */
+export type MenuRecipeIngredientRow = MenuIngredientRow & {
+  baseServings: number;
+  menuServings: number | null;
+};
+
+/**
+ * Scale each row's amount to the recipe's chosen Menu servings
+ * (menuServings ?? baseServings), returning plain MenuIngredientRows ready for
+ * summarizeMenuIngredients. Approximate / non-numeric amounts pass through
+ * unchanged via scaleIngredientAmount.
+ */
+export function scaleMenuRows(rows: MenuRecipeIngredientRow[]): MenuIngredientRow[] {
+  return rows.map(({ baseServings, menuServings, amount, ...rest }) => {
+    const factor = scaleFactor(baseServings, menuServings ?? baseServings);
+    return { ...rest, amount: scaleIngredientAmount(amount, null, factor).amount };
+  });
+}
 
 export interface MenuIngredientLine {
   ingredientId: number;

@@ -302,28 +302,63 @@ function writeTags(tx: Tx, recipeId: number, tagNames: string[]): void {
   }
 }
 
+/** Insert a recipe row + its ingredients/tags into an already-resolved group. */
+function insertRecipeRow(tx: Tx, input: RecipeWriteInput, groupId: number | null): number {
+  const recipe = tx
+    .insert(recipes)
+    .values({
+      name: input.name,
+      description: input.description,
+      steps: input.steps,
+      prepTimeMin: input.prepTimeMin,
+      cookTimeMin: input.cookTimeMin,
+      baseServings: input.baseServings,
+      notes: input.notes,
+      isFavorite: input.isFavorite,
+      groupId,
+    })
+    .returning({ id: recipes.id })
+    .get();
+
+  writeIngredients(tx, recipe.id, input.ingredients);
+  writeTags(tx, recipe.id, input.tags);
+  return recipe.id;
+}
+
 export function createRecipe(input: RecipeWriteInput): number {
   return db.transaction((tx) => {
     const groupId = input.groupName?.trim() ? getOrCreateGroupId(tx, input.groupName) : null;
-    const recipe = tx
-      .insert(recipes)
-      .values({
-        name: input.name,
-        description: input.description,
-        steps: input.steps,
-        prepTimeMin: input.prepTimeMin,
-        cookTimeMin: input.cookTimeMin,
-        baseServings: input.baseServings,
-        notes: input.notes,
-        isFavorite: input.isFavorite,
-        groupId,
-      })
-      .returning({ id: recipes.id })
-      .get();
+    return insertRecipeRow(tx, input, groupId);
+  });
+}
 
-    writeIngredients(tx, recipe.id, input.ingredients);
-    writeTags(tx, recipe.id, input.tags);
-    return recipe.id;
+/**
+ * Fork the edited form values into a NEW recipe that shares a variant group with
+ * `originalId`. The original keeps its content and is only joined to the group.
+ * `input.groupName` must be non-empty (caller enforces).
+ */
+export function saveRecipeAsVariant(originalId: number, input: RecipeWriteInput): number {
+  const name = input.groupName?.trim();
+  if (!name) throw new Error("A variant group name is required to save a variant.");
+
+  return db.transaction((tx) => {
+    const groupId = getOrCreateGroupId(tx, name);
+
+    // Add the original to the group without touching its content. This is a
+    // wholesale edit (not a delete), so it bumps updatedAt and records no tombstone.
+    const original = tx
+      .select({ groupId: recipes.groupId })
+      .from(recipes)
+      .where(eq(recipes.id, originalId))
+      .get();
+    if (original && original.groupId !== groupId) {
+      tx.update(recipes)
+        .set({ groupId, updatedAt: new Date() })
+        .where(eq(recipes.id, originalId))
+        .run();
+    }
+
+    return insertRecipeRow(tx, input, groupId);
   });
 }
 
@@ -378,6 +413,14 @@ export function setFavorite(id: number, value: boolean): void {
 export function setOnMenu(id: number, value: boolean): void {
   db.update(recipes)
     .set({ isOnMenu: value, updatedAt: new Date() })
+    .where(eq(recipes.id, id))
+    .run();
+}
+
+/** Set the per-Menu target servings. null => fall back to baseServings. */
+export function setMenuServings(id: number, servings: number | null): void {
+  db.update(recipes)
+    .set({ menuServings: servings, updatedAt: new Date() })
     .where(eq(recipes.id, id))
     .run();
 }

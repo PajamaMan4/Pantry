@@ -1,13 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { CheckCircle2Icon, XCircleIcon } from "lucide-react";
-import { RecipeCard } from "@/components/recipe-card";
-import { RecipeGroupCard } from "@/components/recipe-group-card";
+import { MenuRecipeRow } from "./menu-recipe-row";
 import { AddMissingForMenuButton } from "@/components/add-missing-for-menu-button";
-import { collapseIntoGroups } from "@/lib/domain/variants";
 import { listRecipes } from "@/lib/db/recipes";
-import { getSettings } from "@/lib/db/settings";
-import { getRecommendations } from "@/lib/db/recommend";
 import { getMenuIngredientSummary } from "@/lib/db/menu";
 import { formatQuantityText } from "@/lib/domain/format";
 
@@ -16,9 +12,6 @@ export const metadata: Metadata = { title: "Menu · Pantry" };
 
 export default async function MenuPage() {
   const recipes = listRecipes({ menuOnly: true });
-  const settings = getSettings();
-  const { results, ingredientNames } = getRecommendations("available");
-  const recByRecipeId = new Map(results.map((r) => [r.recipe.id, r]));
   const { lines } = getMenuIngredientSummary();
 
   return (
@@ -41,31 +34,17 @@ export default async function MenuPage() {
         </p>
       ) : (
         <>
-          <div className="grid gap-4 sm:grid-cols-2">
-            {collapseIntoGroups(recipes, (item) => item.group).map((row) =>
-              row.kind === "single" ? (
-                <RecipeCard
-                  key={`r-${row.item.recipe.id}`}
-                  item={row.item}
-                  currency={settings.currency}
-                  recommend={recByRecipeId.get(row.item.recipe.id)}
-                  ingredientNames={ingredientNames}
-                />
-              ) : (
-                <RecipeGroupCard key={`g-${row.group.id}`} name={row.group.name} count={row.members.length}>
-                  {row.members.map((m) => (
-                    <RecipeCard
-                      key={m.recipe.id}
-                      item={m}
-                      currency={settings.currency}
-                      recommend={recByRecipeId.get(m.recipe.id)}
-                      ingredientNames={ingredientNames}
-                    />
-                  ))}
-                </RecipeGroupCard>
-              ),
-            )}
-          </div>
+          <ul className="divide-y rounded-lg border px-3">
+            {recipes.map(({ recipe }) => (
+              <MenuRecipeRow
+                key={recipe.id}
+                id={recipe.id}
+                name={recipe.name}
+                baseServings={recipe.baseServings}
+                menuServings={recipe.menuServings}
+              />
+            ))}
+          </ul>
 
           <section className="mt-10">
             <div className="mb-3 flex items-center justify-between gap-2">

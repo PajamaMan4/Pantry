@@ -62,6 +62,9 @@ export const recipes = sqliteTable("recipes", {
   // The "Menu": a single, persistent sublist of recipes the user plans to make
   // soon. Boolean membership flag, mirroring isFavorite.
   isOnMenu: integer("is_on_menu", { mode: "boolean" }).notNull().default(false),
+  // Target servings while on the Menu; null => fall back to baseServings.
+  // Cleared when the recipe leaves the Menu.
+  menuServings: real("menu_servings"),
   // Optional link to a variant group ("Alfredo Pasta"): recipes sharing a group
   // are variants of one another. null => standalone recipe. set-null on delete so
   // removing a recipe (or its group) never breaks the remaining members (§ variants).

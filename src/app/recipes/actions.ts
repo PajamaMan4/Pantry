@@ -7,9 +7,11 @@ import { ingredientInputSchema } from "@/lib/validation/ingredient";
 import {
   createRecipe,
   updateRecipe,
+  saveRecipeAsVariant,
   deleteRecipe,
   setFavorite,
   setOnMenu,
+  setMenuServings,
   setRating,
   type RecipeWriteInput,
 } from "@/lib/db/recipes";
@@ -43,6 +45,21 @@ export async function updateRecipeAction(id: number, input: unknown): Promise<Re
   redirect(`/recipes/${id}`);
 }
 
+/**
+ * Fork the submitted form values into a NEW recipe sharing a variant group with
+ * `originalId`. The original is only added to the group; its content is untouched.
+ */
+export async function saveAsVariantAction(originalId: number, input: unknown): Promise<RecipeFormError> {
+  const parsed = recipeInputSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: firstError(parsed.error.issues) };
+  if (!parsed.data.groupName?.trim()) return { ok: false, error: "A variant group name is required." };
+
+  const newId = saveRecipeAsVariant(originalId, parsed.data as RecipeWriteInput);
+  revalidatePath("/recipes");
+  revalidatePath(`/recipes/${originalId}`);
+  redirect(`/recipes/${newId}`);
+}
+
 export async function deleteRecipeAction(id: number): Promise<void> {
   deleteRecipe(id);
   revalidatePath("/recipes");
@@ -58,8 +75,16 @@ export async function toggleFavoriteAction(id: number, value: boolean): Promise<
 
 export async function toggleMenuAction(id: number, value: boolean): Promise<{ ok: true }> {
   setOnMenu(id, value);
+  // Leaving the Menu resets any customized servings back to the recipe default.
+  if (!value) setMenuServings(id, null);
   revalidatePath("/recipes");
   revalidatePath(`/recipes/${id}`);
+  revalidatePath("/menu");
+  return { ok: true };
+}
+
+export async function setMenuServingsAction(id: number, servings: number): Promise<{ ok: true }> {
+  setMenuServings(id, Math.max(1, Math.round(servings * 100) / 100));
   revalidatePath("/menu");
   return { ok: true };
 }

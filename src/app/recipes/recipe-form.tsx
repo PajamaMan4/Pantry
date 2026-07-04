@@ -12,6 +12,14 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   IngredientCombobox,
   type IngredientOption,
 } from "@/components/ingredient-combobox";
@@ -21,6 +29,7 @@ import { UNIT_OPTIONS } from "@/lib/domain/units";
 import {
   createRecipeAction,
   updateRecipeAction,
+  saveAsVariantAction,
   createIngredientAction,
 } from "./actions";
 
@@ -142,6 +151,10 @@ export function RecipeForm({ ingredientOptions, tagSuggestions, groupSuggestions
   const [groupName, setGroupName] = React.useState(initial?.groupName ?? "");
   const groupListId = React.useId();
 
+  // "Save as variant" naming dialog — only used when no group name is set yet.
+  const [variantDialogOpen, setVariantDialogOpen] = React.useState(false);
+  const [variantGroup, setVariantGroup] = React.useState("");
+
   const [sections, setSections] = React.useState<IngredientSection[]>(() => initialSections(initial));
 
   const [steps, setSteps] = React.useState<StepRow[]>(
@@ -244,8 +257,9 @@ export function RecipeForm({ ingredientOptions, tagSuggestions, groupSuggestions
     });
   }
 
-  function submit() {
-    setError(null);
+  // Build the validated-shape payload from current form state. Shared by the
+  // normal save path and "Save as variant".
+  function buildInput() {
     // Flatten sections in order; a blank title means "ungrouped" (null).
     const ingredients = sections.flatMap((sec) => {
       const title = sec.title.trim();
@@ -268,7 +282,7 @@ export function RecipeForm({ ingredientOptions, tagSuggestions, groupSuggestions
       .map((s) => ({ id: s.id, text: s.text.trim(), quantities: s.quantities }))
       .filter((s) => s.text !== "");
 
-    const input = {
+    return {
       name,
       description,
       prepTimeMin: prep,
@@ -281,6 +295,11 @@ export function RecipeForm({ ingredientOptions, tagSuggestions, groupSuggestions
       ingredients,
       steps: cleanedSteps,
     };
+  }
+
+  function submit() {
+    setError(null);
+    const input = buildInput();
 
     startTransition(async () => {
       const res = isEdit
@@ -288,6 +307,28 @@ export function RecipeForm({ ingredientOptions, tagSuggestions, groupSuggestions
         : await createRecipeAction(input);
       // On success the action redirects; only failures return here.
       if (res && !res.ok) setError(res.error);
+    });
+  }
+
+  // Fork the current edits into a new recipe sharing a variant group with the
+  // original. Uses the existing group when one is set; otherwise opens a dialog
+  // to name a new group (which also joins the original to it).
+  function saveAsVariant(groupNameOverride?: string) {
+    const g = (groupNameOverride ?? groupName).trim();
+    if (g === "") {
+      setVariantGroup("");
+      setVariantDialogOpen(true);
+      return;
+    }
+    setError(null);
+    const input = { ...buildInput(), groupName: g };
+    startTransition(async () => {
+      const res = await saveAsVariantAction(initial!.id, input);
+      // On success the action redirects; only failures return here.
+      if (res && !res.ok) {
+        setVariantDialogOpen(false);
+        setError(res.error);
+      }
     });
   }
 
@@ -581,11 +622,67 @@ export function RecipeForm({ ingredientOptions, tagSuggestions, groupSuggestions
         <Button onClick={submit} disabled={pending}>
           {pending ? "Saving…" : isEdit ? "Save changes" : "Create recipe"}
         </Button>
+        {isEdit && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => saveAsVariant()}
+            disabled={pending}
+          >
+            <LayersIcon className="size-4" />
+            Save as variant
+          </Button>
+        )}
         <Button type="button" variant="ghost" onClick={() => router.back()} disabled={pending}>
           Cancel
         </Button>
       </div>
     </div>
+
+    <Dialog open={variantDialogOpen} onOpenChange={setVariantDialogOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Name the variant group</DialogTitle>
+          <DialogDescription>
+            {`Both this recipe${initial ? ` (${initial.name})` : ""} and the new variant will be grouped together as variants of one another.`}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-2">
+          <Label htmlFor="variant-group">Variant group name</Label>
+          <Input
+            id="variant-group"
+            list={groupListId}
+            value={variantGroup}
+            autoFocus
+            onChange={(e) => setVariantGroup(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && variantGroup.trim() !== "" && !pending) {
+                e.preventDefault();
+                saveAsVariant(variantGroup);
+              }
+            }}
+            placeholder="e.g. Alfredo Pasta"
+          />
+        </div>
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => setVariantDialogOpen(false)}
+            disabled={pending}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            onClick={() => saveAsVariant(variantGroup)}
+            disabled={pending || variantGroup.trim() === ""}
+          >
+            {pending ? "Saving…" : "Create variant"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
     </>
   );
 }
