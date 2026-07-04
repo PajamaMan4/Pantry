@@ -5,6 +5,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { FavoriteButton } from "../favorite-button";
+import { MenuButton } from "../menu-button";
 import { RecipeActionsMenu } from "../recipe-actions-menu";
 import { RecipeScaler } from "../recipe-scaler";
 import { UndoCookButton } from "../undo-cook-button";
@@ -57,6 +58,7 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ i
           <FavoriteButton id={recipe.id} isFavorite={recipe.isFavorite} />
         </div>
         <div className="flex shrink-0 items-center gap-2">
+          <MenuButton id={recipe.id} isOnMenu={recipe.isOnMenu} withLabel />
           <Link href={`/recipes/${recipe.id}/cook`} className={buttonVariants({ size: "sm" })}>
             <ChefHatIcon className="size-4" /> Cook mode
           </Link>

@@ -9,6 +9,7 @@ import {
   updateRecipe,
   deleteRecipe,
   setFavorite,
+  setOnMenu,
   setRating,
   type RecipeWriteInput,
 } from "@/lib/db/recipes";
@@ -52,6 +53,14 @@ export async function toggleFavoriteAction(id: number, value: boolean): Promise<
   setFavorite(id, value);
   revalidatePath("/recipes");
   revalidatePath(`/recipes/${id}`);
+  return { ok: true };
+}
+
+export async function toggleMenuAction(id: number, value: boolean): Promise<{ ok: true }> {
+  setOnMenu(id, value);
+  revalidatePath("/recipes");
+  revalidatePath(`/recipes/${id}`);
+  revalidatePath("/menu");
   return { ok: true };
 }
 

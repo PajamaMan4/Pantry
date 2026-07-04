@@ -10,6 +10,7 @@ import {
   clearCheckedShoppingItems,
   receiveCheckedShoppingItems,
   addMissingForRecipe,
+  addMissingForMenu,
 } from "@/lib/db/shopping";
 import { importPricesAndInventory, type BulkImportSummary } from "@/lib/db/inventory";
 import { inventoryImportSchema, normalizeImportItems } from "@/lib/inventory-import";
@@ -68,6 +69,13 @@ export async function receiveCheckedAction(): Promise<{ ok: true; added: number 
 export async function addMissingForRecipeAction(recipeId: number): Promise<{ ok: true; added: number }> {
   const added = addMissingForRecipe(recipeId);
   revalidatePath("/shopping");
+  return { ok: true, added };
+}
+
+export async function addMissingForMenuAction(): Promise<{ ok: true; added: number }> {
+  const added = addMissingForMenu();
+  revalidatePath("/shopping");
+  revalidatePath("/menu");
   return { ok: true, added };
 }
 

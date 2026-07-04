@@ -77,6 +77,7 @@ export type RecipeListFilters = {
   ingredientIds?: number[];
   maxTotalTimeMin?: number;
   favoritesOnly?: boolean;
+  menuOnly?: boolean;
 };
 
 // ---- Queries ----------------------------------------------------------------
@@ -87,6 +88,7 @@ export function listRecipes(filters: RecipeListFilters = {}): RecipeListItem[] {
     conds.push(or(like(recipes.name, `%${q}%`), like(recipes.description, `%${q}%`)));
   }
   if (filters.favoritesOnly) conds.push(eq(recipes.isFavorite, true));
+  if (filters.menuOnly) conds.push(eq(recipes.isOnMenu, true));
   if (filters.maxTotalTimeMin != null) {
     conds.push(
       sql`(coalesce(${recipes.prepTimeMin}, 0) + coalesce(${recipes.cookTimeMin}, 0)) <= ${filters.maxTotalTimeMin}`,
@@ -369,6 +371,13 @@ export function deleteRecipe(id: number): void {
 export function setFavorite(id: number, value: boolean): void {
   db.update(recipes)
     .set({ isFavorite: value, updatedAt: new Date() })
+    .where(eq(recipes.id, id))
+    .run();
+}
+
+export function setOnMenu(id: number, value: boolean): void {
+  db.update(recipes)
+    .set({ isOnMenu: value, updatedAt: new Date() })
     .where(eq(recipes.id, id))
     .run();
 }

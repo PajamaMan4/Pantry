@@ -84,6 +84,7 @@ export function RecipeFilters({
   function buildUrl(updates: { tags?: number[]; ingredients?: number[]; q?: string | null; maxTime?: string | null; fav?: string | null }) {
     const next = new URLSearchParams();
     if (sort !== "alpha") next.set("sort", sort);
+    if (params.get("menu") === "1") next.set("menu", "1");
 
     const newQ = "q" in updates ? updates.q : params.get("q");
     if (newQ) next.set("q", newQ);
@@ -317,6 +318,7 @@ export function RecipeFilters({
             setSearch("");
             const next = new URLSearchParams();
             if (sort !== "alpha") next.set("sort", sort);
+            if (params.get("menu") === "1") next.set("menu", "1");
             const qs = next.toString();
             router.push(qs ? `${pathname}?${qs}` : pathname);
           }}

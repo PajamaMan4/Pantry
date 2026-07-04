@@ -3,6 +3,7 @@ import { ClockIcon, CoinsIcon, ClockAlertIcon, CheckCircle2Icon } from "lucide-r
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { FavoriteButton } from "@/app/recipes/favorite-button";
+import { MenuButton } from "@/app/recipes/menu-button";
 import { RatingDisplay } from "@/components/rating-stars";
 import { AddMissingButton } from "@/components/add-missing-button";
 import { formatMinutes, totalTimeMin, formatMoney } from "@/lib/domain/format";
@@ -47,6 +48,7 @@ export function RecipeCard({
                 almost there
               </Badge>
             ) : null}
+            <MenuButton id={recipe.id} isOnMenu={recipe.isOnMenu} />
             <FavoriteButton id={recipe.id} isFavorite={recipe.isFavorite} />
           </div>
         </div>

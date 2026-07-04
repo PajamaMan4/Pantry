@@ -1,0 +1,1 @@
+ALTER TABLE `recipes` ADD `is_on_menu` integer DEFAULT false NOT NULL;

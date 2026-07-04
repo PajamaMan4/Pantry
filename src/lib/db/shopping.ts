@@ -9,7 +9,10 @@ import {
 } from "./schema";
 import { createInventoryItem, logPurchase } from "./inventory";
 import { recordTombstone, recordTombstones } from "./tombstones";
+import { menuIngredientRows, loadInventoryStock } from "./menu";
 import { recommendRecipes, type InventoryStock } from "../domain/recommend";
+import { combineAmounts } from "../domain/units";
+import type { MenuIngredientRow } from "../domain/menu";
 
 export function listShoppingItems(): ShoppingListItem[] {
   return db
@@ -132,6 +135,44 @@ export function addMissingForRecipe(recipeId: number): number {
       .values({ ingredientId: r.ingredientId, name: r.name, quantity: r.amount, unit: r.unit })
       .run();
     existing.add(r.ingredientId);
+    added += 1;
+  }
+  return added;
+}
+
+/**
+ * Add the menu's currently-missing required ingredients to the list (deduped).
+ * Quantities are summed across every menu recipe so the list reflects total need.
+ */
+export function addMissingForMenu(): number {
+  const rows = menuIngredientRows();
+  if (rows.length === 0) return 0;
+
+  const inventory = loadInventoryStock();
+
+  // One synthetic recipe holding every menu line — recommendRecipes groups by
+  // ingredient and returns the missing set (incl. unconvertible "unknowns").
+  const [result] = recommendRecipes([{ id: 0, name: "", ingredients: rows }], inventory, "available", new Map(), new Date());
+  const missing = new Set(result.missing);
+
+  const existing = new Set(
+    db.select({ id: shoppingListItems.ingredientId }).from(shoppingListItems).all().map((r) => r.id).filter((x): x is number => x != null),
+  );
+
+  const byIngredient = new Map<number, MenuIngredientRow[]>();
+  for (const r of rows) {
+    const arr = byIngredient.get(r.ingredientId) ?? [];
+    arr.push(r);
+    byIngredient.set(r.ingredientId, arr);
+  }
+
+  let added = 0;
+  for (const [ingredientId, members] of byIngredient) {
+    if (!missing.has(ingredientId) || existing.has(ingredientId)) continue;
+    const first = members[0];
+    const { amount, unit } = combineAmounts(members, first.density, first.gramsPerEach);
+    db.insert(shoppingListItems).values({ ingredientId, name: first.name, quantity: amount, unit }).run();
+    existing.add(ingredientId);
     added += 1;
   }
   return added;
