@@ -17,7 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import { scaleFactor, displayQuantity, renderStep, type DisplaySystem } from "@/lib/domain/scaling";
+import { scaleFactor, displayQuantity, renderStep } from "@/lib/domain/scaling";
 import { formatNumber } from "@/lib/domain/format";
 import { UNIT_OPTIONS } from "@/lib/domain/units";
 import type { RoundingMode } from "@/lib/domain/quantity";
@@ -28,6 +28,7 @@ import type { IngredientOption } from "@/components/ingredient-combobox";
 import { AddMissingButton } from "@/components/add-missing-button";
 import { CookButton } from "./cook-button";
 import { getSubstituteInfoAction } from "./actions";
+import { useRecipeView } from "./recipe-view-context";
 
 export type ScalerIngredient = {
   id: number; // recipe_ingredients row id (React key)
@@ -75,32 +76,24 @@ type Props = {
   baseServings: number;
   ingredients: ScalerIngredient[];
   steps: ScalerStep[];
-  defaultSystem: "imperial" | "metric";
   rounding: RoundingMode;
   cookIngredients: CookIngredientInput[];
   cookStock: { ingredientId: number; rows: CookStockRow[] }[];
   ingredientOptions: IngredientOption[];
 };
 
-const SYSTEMS: { value: DisplaySystem; label: string }[] = [
-  { value: "original", label: "As written" },
-  { value: "imperial", label: "Imperial" },
-  { value: "metric", label: "Metric" },
-];
-
 export function RecipeScaler({
   recipeId,
   baseServings,
   ingredients,
   steps,
-  defaultSystem,
   rounding,
   cookIngredients,
   cookStock,
   ingredientOptions,
 }: Props) {
   const [target, setTarget] = React.useState(baseServings);
-  const [system, setSystem] = React.useState<DisplaySystem>(defaultSystem);
+  const { system } = useRecipeView();
   const [checkedSteps, setCheckedSteps] = React.useState<Set<string>>(new Set());
   const [subMode, setSubMode] = React.useState(false);
   // keyed by the original recipe_ingredients row id (ScalerIngredient.id)
@@ -233,86 +226,47 @@ export function RecipeScaler({
 
   return (
     <div>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        {/* Servings stepper */}
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Serves</span>
-          <div className="flex items-center rounded-md border">
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="Fewer servings"
-              onClick={() => setServings(target - 1)}
-            >
-              <MinusIcon className="size-4" />
-            </Button>
-            <span className="w-10 text-center text-sm font-medium tabular-nums">
-              {formatNumber(target)}
-            </span>
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="More servings"
-              onClick={() => setServings(target + 1)}
-            >
-              <PlusIcon className="size-4" />
-            </Button>
-          </div>
-          <Button variant="outline" size="sm" onClick={() => setServings(target * 2)}>
-            ×2
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setServings(target / 2)}>
-            ×½
-          </Button>
-          {target !== baseServings && (
-            <Button
-              variant="ghost"
-              size="sm"
-              aria-label="Reset servings"
-              onClick={() => setTarget(baseServings)}
-            >
-              <RotateCcwIcon className="size-4" /> Reset
-            </Button>
-          )}
-        </div>
-
-        {/* Unit-system toggle */}
-        <div className="flex items-center rounded-md border p-0.5">
-          {SYSTEMS.map((s) => (
-            <button
-              key={s.value}
-              type="button"
-              onClick={() => setSystem(s.value)}
-              className={cn(
-                "rounded-sm px-2.5 py-1 text-xs font-medium transition-colors",
-                system === s.value ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {s.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {factor !== 1 && (
-        <p className="mt-2 text-xs text-muted-foreground">
-          Scaled ×{formatNumber(Math.round(factor * 100) / 100)} from {formatNumber(baseServings)} servings.
-        </p>
-      )}
-
-      <Separator className="my-6" />
-
       <section>
-        <div className="mb-3 flex items-center justify-between gap-2">
+        <h2 className="mb-3 text-xl font-medium underline underline-offset-4">Ingredients</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          {/* Servings stepper */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Serves</span>
+            <div className="flex items-center rounded-md border">
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Fewer servings"
+                onClick={() => setServings(target - 1)}
+              >
+                <MinusIcon className="size-4" />
+              </Button>
+              <span className="w-10 text-center text-sm font-medium tabular-nums">
+                {formatNumber(target)}
+              </span>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="More servings"
+                onClick={() => setServings(target + 1)}
+              >
+                <PlusIcon className="size-4" />
+              </Button>
+            </div>
+            {target !== baseServings && (
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-label="Reset servings"
+                onClick={() => setTarget(baseServings)}
+              >
+                <RotateCcwIcon className="size-4" /> Reset
+              </Button>
+            )}
+          </div>
+
+          {/* Substitute + Add missing to list */}
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-lg font-medium">Ingredients</h2>
-            <Button
-              variant={subMode ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSubMode((v) => !v)}
-            >
-              <ArrowLeftRightIcon className="size-4" /> {subMode ? "Done" : "Substitute"}
-            </Button>
             {subs.size > 0 && (
               <>
                 <span className="text-xs text-muted-foreground">
@@ -323,9 +277,24 @@ export function RecipeScaler({
                 </Button>
               </>
             )}
+            <Button
+              variant={subMode ? "default" : "outline"}
+              size="sm"
+              onClick={() => setSubMode((v) => !v)}
+            >
+              <ArrowLeftRightIcon className="size-4" /> {subMode ? "Done" : "Substitute"}
+            </Button>
+            <AddMissingButton recipeId={recipeId} />
           </div>
-          <AddMissingButton recipeId={recipeId} />
         </div>
+
+        {factor !== 1 && (
+          <p className="mt-2 text-xs text-muted-foreground">
+            Scaled ×{formatNumber(Math.round(factor * 100) / 100)} from {formatNumber(baseServings)} servings.
+          </p>
+        )}
+
+        <div className="mt-4">
         {ingredients.length === 0 ? (
           <p className="text-sm text-muted-foreground">No ingredients listed.</p>
         ) : subMode ? (
@@ -467,12 +436,13 @@ export function RecipeScaler({
             ))}
           </div>
         )}
+        </div>
       </section>
 
       <Separator className="my-6" />
 
       <section>
-        <h2 className="mb-3 text-lg font-medium">Steps</h2>
+        <h2 className="mb-3 text-xl font-medium underline underline-offset-4">Steps</h2>
         {steps.length === 0 ? (
           <p className="text-sm text-muted-foreground">No steps yet.</p>
         ) : (

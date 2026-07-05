@@ -2,13 +2,18 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { MoreHorizontalIcon, PencilIcon, DownloadIcon, TrashIcon } from "lucide-react";
+import { MoreHorizontalIcon, PencilIcon, DownloadIcon, TrashIcon, RulerIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -22,9 +27,12 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { deleteRecipeAction } from "./actions";
+import { SYSTEMS, useRecipeView } from "./recipe-view-context";
+import type { DisplaySystem } from "@/lib/domain/scaling";
 
 export function RecipeActionsMenu({ recipeId }: { recipeId: number }) {
   const router = useRouter();
+  const { system, setSystem } = useRecipeView();
   const [deleteOpen, setDeleteOpen] = React.useState(false);
   const [deletePending, startDeleteTransition] = React.useTransition();
 
@@ -52,6 +60,23 @@ export function RecipeActionsMenu({ recipeId }: { recipeId: number }) {
           <DropdownMenuItem onClick={handleExport}>
             <DownloadIcon className="size-4" /> Export
           </DropdownMenuItem>
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              <RulerIcon className="size-4" /> Units
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent>
+              <DropdownMenuRadioGroup
+                value={system}
+                onValueChange={(v) => setSystem(v as DisplaySystem)}
+              >
+                {SYSTEMS.map((s) => (
+                  <DropdownMenuRadioItem key={s.value} value={s.value}>
+                    {s.label}
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
           <DropdownMenuSeparator />
           <DropdownMenuItem variant="destructive" onClick={() => setDeleteOpen(true)}>
             <TrashIcon className="size-4" /> Delete

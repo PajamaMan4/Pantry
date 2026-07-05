@@ -42,7 +42,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <header className="border-b">
-          <nav className="mx-auto flex w-full max-w-3xl items-center gap-6 px-4 py-3 text-sm">
+          <nav className="mx-auto flex w-full max-w-5xl items-center gap-6 px-4 py-3 text-sm">
             <Link href="/" className="font-semibold">
               Pantry
             </Link>

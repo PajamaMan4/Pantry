@@ -10,7 +10,7 @@ export function AddMissingButton({ recipeId }: { recipeId: number }) {
   const [pending, startTransition] = React.useTransition();
   return (
     <Button
-      variant="ghost"
+      variant="outline"
       size="sm"
       disabled={pending}
       onClick={() =>
@@ -20,7 +20,7 @@ export function AddMissingButton({ recipeId }: { recipeId: number }) {
         })
       }
     >
-      <ListPlusIcon className="size-4" /> Add missing to list
+      <ListPlusIcon className="size-4" /> To List
     </Button>
   );
 }
