@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   recommendRecipes,
+  buildInStockChecker,
   type RecommendIngredient,
   type RecommendRecipe,
   type InventoryStock,
@@ -74,10 +75,24 @@ describe("recommendRecipes — unit reconciliation", () => {
     expect(res.missing).toEqual([1]);
   });
 
-  it("non-numeric required amount → assumed available", () => {
+  it("non-numeric required amount, some in stock → available", () => {
     const r = recipe(1, "A", [ing(1, { amount: null, unit: null })]);
     const [res] = recommendRecipes([r], [{ ingredientId: 1, quantity: 1, unit: "g", expiryMs: null }], "available", noCost, now);
     expect(res.makeable).toBe(true);
+  });
+
+  it("non-numeric required amount, not in inventory → missing", () => {
+    const r = recipe(1, "A", [ing(1, { amount: null, unit: null })]);
+    const [res] = recommendRecipes([r], [], "available", noCost, now);
+    expect(res.makeable).toBe(false);
+    expect(res.missing).toEqual([1]);
+  });
+
+  it("non-numeric required amount, only zero-quantity stock → missing", () => {
+    const r = recipe(1, "A", [ing(1, { amount: null, unit: null })]);
+    const [res] = recommendRecipes([r], [{ ingredientId: 1, quantity: 0, unit: "g", expiryMs: null }], "available", noCost, now);
+    expect(res.makeable).toBe(false);
+    expect(res.missing).toEqual([1]);
   });
 
   it("bridges count↔mass with gramsPerEach (recipe each, stock lb)", () => {
@@ -115,6 +130,33 @@ describe("recommendRecipes — unit reconciliation", () => {
     expect(res.missing).not.toContain(1);
     expect(res.unknownUnits).toBe(0);
     expect(res.requiredCount).toBe(1); // counted once, not twice
+  });
+});
+
+describe("buildInStockChecker (menu/shopping 'should I buy this?')", () => {
+  it("staple → always on hand, even with no inventory", () => {
+    const check = buildInStockChecker([]);
+    expect(check(ing(1, { isStaple: true }))).toBe(true);
+  });
+
+  it("ignores `optional` — an optional garnish not in stock still needs buying", () => {
+    const check = buildInStockChecker([]);
+    expect(check(ing(1, { amount: null, unit: null, optional: true }))).toBe(false);
+  });
+
+  it("no listed amount → on hand iff some positive stock", () => {
+    const noStock = buildInStockChecker([]);
+    expect(noStock(ing(1, { amount: null, unit: null }))).toBe(false);
+    const zero = buildInStockChecker([{ ingredientId: 1, quantity: 0, unit: "each", expiryMs: null }]);
+    expect(zero(ing(1, { amount: null, unit: null }))).toBe(false);
+    const some = buildInStockChecker([{ ingredientId: 1, quantity: 1, unit: "each", expiryMs: null }]);
+    expect(some(ing(1, { amount: null, unit: null }))).toBe(true);
+  });
+
+  it("numeric amount → on hand iff enough stock", () => {
+    const check = buildInStockChecker([{ ingredientId: 1, quantity: 100, unit: "g", expiryMs: null }]);
+    expect(check(ing(1, { amount: 50, unit: "g" }))).toBe(true);
+    expect(check(ing(1, { amount: 200, unit: "g" }))).toBe(false);
   });
 });
 

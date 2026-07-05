@@ -10,7 +10,7 @@ import {
 import { createInventoryItem, logPurchase } from "./inventory";
 import { recordTombstone, recordTombstones } from "./tombstones";
 import { menuIngredientRows, loadInventoryStock } from "./menu";
-import { recommendRecipes, type InventoryStock } from "../domain/recommend";
+import { buildInStockChecker, type InventoryStock } from "../domain/recommend";
 import { combineAmounts } from "../domain/units";
 import type { MenuIngredientRow } from "../domain/menu";
 
@@ -115,26 +115,31 @@ export function addMissingForRecipe(recipeId: number): number {
     .all()
     .map((r) => ({ ingredientId: r.ingredientId, quantity: r.quantity, unit: r.unit, expiryMs: r.expiryDate?.getTime() ?? null }));
 
-  const [result] = recommendRecipes(
-    [{ id: recipeId, name: "", ingredients: ri.map((r) => ({ ingredientId: r.ingredientId, amount: r.amount, unit: r.unit, optional: r.optional, isStaple: r.isStaple, density: r.density, gramsPerEach: r.gramsPerEach })) }],
-    inventory,
-    "available",
-    new Map(),
-    new Date(),
-  );
-  const missing = new Set(result.missing);
+  const inStockOf = buildInStockChecker(inventory);
 
   const existing = new Set(
     db.select({ id: shoppingListItems.ingredientId }).from(shoppingListItems).all().map((r) => r.id).filter((x): x is number => x != null),
   );
 
-  let added = 0;
+  // Group duplicate lines per ingredient so the combined need is checked (and
+  // written) once — mirroring the recipe page's ✅/❌ badge.
+  const byIngredient = new Map<number, typeof ri>();
   for (const r of ri) {
-    if (!missing.has(r.ingredientId) || existing.has(r.ingredientId)) continue;
+    const arr = byIngredient.get(r.ingredientId) ?? [];
+    arr.push(r);
+    byIngredient.set(r.ingredientId, arr);
+  }
+
+  let added = 0;
+  for (const [ingredientId, members] of byIngredient) {
+    if (existing.has(ingredientId)) continue;
+    const first = members[0];
+    const { amount, unit } = combineAmounts(members, first.density, first.gramsPerEach);
+    if (inStockOf({ ...first, amount, unit })) continue;
     db.insert(shoppingListItems)
-      .values({ ingredientId: r.ingredientId, name: r.name, quantity: r.amount, unit: r.unit })
+      .values({ ingredientId, name: first.name, quantity: amount, unit })
       .run();
-    existing.add(r.ingredientId);
+    existing.add(ingredientId);
     added += 1;
   }
   return added;
@@ -149,11 +154,7 @@ export function addMissingForMenu(): number {
   if (rows.length === 0) return 0;
 
   const inventory = loadInventoryStock();
-
-  // One synthetic recipe holding every menu line — recommendRecipes groups by
-  // ingredient and returns the missing set (incl. unconvertible "unknowns").
-  const [result] = recommendRecipes([{ id: 0, name: "", ingredients: rows }], inventory, "available", new Map(), new Date());
-  const missing = new Set(result.missing);
+  const inStockOf = buildInStockChecker(inventory);
 
   const existing = new Set(
     db.select({ id: shoppingListItems.ingredientId }).from(shoppingListItems).all().map((r) => r.id).filter((x): x is number => x != null),
@@ -168,9 +169,10 @@ export function addMissingForMenu(): number {
 
   let added = 0;
   for (const [ingredientId, members] of byIngredient) {
-    if (!missing.has(ingredientId) || existing.has(ingredientId)) continue;
+    if (existing.has(ingredientId)) continue;
     const first = members[0];
     const { amount, unit } = combineAmounts(members, first.density, first.gramsPerEach);
+    if (inStockOf({ ...first, amount, unit })) continue;
     db.insert(shoppingListItems).values({ ingredientId, name: first.name, quantity: amount, unit }).run();
     existing.add(ingredientId);
     added += 1;

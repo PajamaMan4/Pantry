@@ -64,6 +64,29 @@ describe("summarizeMenuIngredients", () => {
     expect(lines[0].inStock).toBe(false);
   });
 
+  // Regression: an optional garnish with no listed amount ("to taste") that isn't
+  // in inventory must read as NOT in stock — matching the recipe detail page. It
+  // previously showed a green check because recipe-scoring skips optional groups.
+  it("optional, no-amount ingredient not in inventory → not in stock", () => {
+    const rows = [row(5, "Sesame seeds", { amount: null, unit: null, optional: true })];
+    const { lines } = summarizeMenuIngredients(rows, [], now);
+    expect(lines[0]).toMatchObject({ ingredientId: 5, inStock: false });
+  });
+
+  it("optional, no-amount ingredient with some stock → in stock", () => {
+    const rows = [row(5, "Sesame seeds", { amount: null, unit: null, optional: true })];
+    const inv: InventoryStock[] = [{ ingredientId: 5, quantity: 1, unit: "each", expiryMs: null }];
+    const { lines } = summarizeMenuIngredients(rows, inv, now);
+    expect(lines[0]).toMatchObject({ ingredientId: 5, inStock: true });
+  });
+
+  it("optional numeric ingredient short on stock → not in stock", () => {
+    const rows = [row(6, "Butter", { amount: 200, unit: "g", optional: true })];
+    const inv: InventoryStock[] = [{ ingredientId: 6, quantity: 50, unit: "g", expiryMs: null }];
+    const { lines } = summarizeMenuIngredients(rows, inv, now);
+    expect(lines[0]).toMatchObject({ ingredientId: 6, inStock: false });
+  });
+
   it("sorts lines alphabetically by name", () => {
     const rows = [
       row(1, "Zucchini", { amount: 1, unit: "each", gramsPerEach: 200 }),

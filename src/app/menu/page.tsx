@@ -65,7 +65,9 @@ export default async function MenuPage() {
                       ) : (
                         <XCircleIcon className="size-4 shrink-0 text-red-600 dark:text-red-400" aria-label="Not enough in stock" />
                       )}
-                      <span>{line.name}</span>
+                      <Link href={`/ingredients/${line.ingredientId}`} className="hover:underline">
+                      {line.name}
+                    </Link>
                     </span>
                     {line.amount != null && (
                       <span className="text-muted-foreground">

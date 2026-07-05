@@ -4,7 +4,7 @@
 // in stock — reusing the exact ✅/❌ semantics the recipe cards already use.
 import { combineAmounts } from "./units";
 import { scaleFactor, scaleIngredientAmount } from "./scaling";
-import { recommendRecipes, type RecommendIngredient, type InventoryStock } from "./recommend";
+import { buildInStockChecker, type RecommendIngredient, type InventoryStock } from "./recommend";
 
 export type MenuIngredientRow = RecommendIngredient & { name: string };
 
@@ -37,23 +37,20 @@ export interface MenuIngredientLine {
 
 /**
  * Collapse every menu recipe's ingredient lines into one row per ingredient,
- * summing quantities (via combineAmounts) and flagging in-stock status.
- * Staples and optional-only ingredients are treated as on hand, mirroring
- * recommendRecipes / the recipe-card badges. Lines are sorted by name.
+ * summing quantities (via combineAmounts) and flagging in-stock status against
+ * real inventory. Uses the same "should I buy this?" rule the recipe page's
+ * ✅/❌ badge uses (staples on hand; a non-numeric amount needs some positive
+ * stock; a numeric amount needs enough) — `optional` is irrelevant here, an
+ * optional garnish you don't own still needs buying. Lines are sorted by name.
  */
 export function summarizeMenuIngredients(
   rows: MenuIngredientRow[],
   inventory: InventoryStock[],
-  now: Date = new Date(),
+  _now: Date = new Date(),
 ): { lines: MenuIngredientLine[] } {
   if (rows.length === 0) return { lines: [] };
 
-  // One synthetic "recipe" holding every menu ingredient line. recommendRecipes
-  // groups by ingredient, sums via combineAmounts, and returns the missing set
-  // (including unconvertible "unknowns") — exactly the availability logic used
-  // elsewhere, so the Menu never diverges from the cards.
-  const [result] = recommendRecipes([{ id: 0, name: "", ingredients: rows }], inventory, "available", new Map(), now);
-  const missing = new Set(result.missing);
+  const inStockOf = buildInStockChecker(inventory);
 
   const byIngredient = new Map<number, MenuIngredientRow[]>();
   for (const row of rows) {
@@ -66,7 +63,7 @@ export function summarizeMenuIngredients(
   for (const [ingredientId, members] of byIngredient) {
     const first = members[0];
     const { amount, unit } = combineAmounts(members, first.density, first.gramsPerEach);
-    lines.push({ ingredientId, name: first.name, amount, unit, inStock: !missing.has(ingredientId) });
+    lines.push({ ingredientId, name: first.name, amount, unit, inStock: inStockOf({ ...first, amount, unit }) });
   }
   lines.sort((a, b) => a.name.localeCompare(b.name));
   return { lines };

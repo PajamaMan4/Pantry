@@ -70,9 +70,16 @@ type Avail = "have" | "missing" | "unknown";
 
 const BASE_UNIT_FOR: Record<UnitCategory, string> = { mass: "g", volume: "ml", count: "each" };
 
+function hasPositiveStock(stock: IngredientStock): boolean {
+  for (const base of stock.byCategory.values()) if (base > EPS) return true;
+  return false;
+}
+
 function availability(req: RecommendIngredient, stock: IngredientStock | undefined): Avail {
   if (!stock) return "missing"; // not in inventory at all
-  if (req.amount == null || req.unit == null) return "have"; // non-numeric required → assume on hand
+  // Non-numeric ("to taste") / unit-less required amount: we can't compare amounts,
+  // so it's on hand iff we actually hold some (mirrors the recipe page's badge).
+  if (req.amount == null || req.unit == null) return hasPositiveStock(stock) ? "have" : "missing";
   const def = UNITS[req.unit];
   if (!def) return "unknown";
 
@@ -91,6 +98,21 @@ function availability(req: RecommendIngredient, stock: IngredientStock | undefin
     }
   }
   return "unknown"; // stocked, but in a category we can't reconcile
+}
+
+/**
+ * Per-ingredient "do I have enough on hand?" check for the menu / shopping-list
+ * surfaces — i.e. "should I buy this?". Mirrors the recipe page's ✅/❌ badge:
+ * staples are assumed on hand, a non-numeric amount needs *some* positive stock,
+ * and a numeric amount needs enough (with unit reconciliation). Unlike recipe
+ * recommendation scoring, `optional` is irrelevant here: an optional garnish you
+ * don't own still needs buying. Aggregates stock once for O(1) per-ingredient checks.
+ */
+export function buildInStockChecker(
+  inventory: InventoryStock[],
+): (req: RecommendIngredient) => boolean {
+  const stockMap = aggregateStock(inventory);
+  return (req) => req.isStaple || availability(req, stockMap.get(req.ingredientId)) === "have";
 }
 
 function expiryScore(required: RecommendIngredient[], stockMap: Map<number, IngredientStock>, now: Date): number {

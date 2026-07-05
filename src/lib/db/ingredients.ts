@@ -262,13 +262,24 @@ export function mergeIngredients(sourceId: number, targetId: number): MergeResul
       }
     }
 
-    // Add the source's canonical name as an alias for the target.
-    if (
-      source.name.toLowerCase() !== target.name.toLowerCase() &&
-      !targetAliasSet.has(source.name.toLowerCase()) &&
-      !sourceAliases.some((a) => a.alias.toLowerCase() === source.name.toLowerCase())
-    ) {
-      tx.insert(ingredientAliases).values({ ingredientId: targetId, alias: source.name }).run();
+    // Add the source's canonical name as an alias for the target. If that alias
+    // already exists on a different ingredient (a data artifact from older imports
+    // that let duplicate names/aliases slip in), repoint it to the target rather
+    // than crashing on the global UNIQUE constraint on ingredient_aliases.alias.
+    if (source.name.toLowerCase() !== target.name.toLowerCase()) {
+      const existing = tx
+        .select()
+        .from(ingredientAliases)
+        .where(sql`lower(${ingredientAliases.alias}) = lower(${source.name})`)
+        .get();
+      if (!existing) {
+        tx.insert(ingredientAliases).values({ ingredientId: targetId, alias: source.name }).run();
+      } else if (existing.ingredientId !== targetId) {
+        tx.update(ingredientAliases)
+          .set({ ingredientId: targetId })
+          .where(eq(ingredientAliases.id, existing.id))
+          .run();
+      }
     }
 
     tx.delete(ingredients).where(eq(ingredients.id, sourceId)).run();
