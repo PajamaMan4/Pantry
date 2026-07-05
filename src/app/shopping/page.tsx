@@ -29,11 +29,11 @@ export default function ShoppingPage() {
   }));
 
   return (
-    <div className="mx-auto w-full max-w-2xl px-4 py-8">
-      <div className="mb-4 flex items-center justify-between">
+    <div className="mx-auto w-full max-w-5xl px-4 py-8">
+      <div className="mb-4 flex items-start justify-between gap-4">
         <div>
-          <h1 className="mb-1 text-2xl font-semibold tracking-tight">Shopping list</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-2xl font-semibold tracking-tight">Shopping list</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Check items off as you shop, fill in the price you paid, then add what you bought straight to
             your inventory.
           </p>

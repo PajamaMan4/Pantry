@@ -338,7 +338,7 @@ export function RecipeScaler({
                             <Input
                               type="number"
                               inputMode="decimal"
-                              className="h-9 w-20"
+                              className="h-8 w-20"
                               value={sub.amountText}
                               onChange={(e) => patchSub(ing.id, { amountText: e.target.value })}
                               aria-label={`Amount for ${sub.name}`}
@@ -347,7 +347,7 @@ export function RecipeScaler({
                               value={sub.unit ?? ""}
                               onChange={(e) => patchSub(ing.id, { unit: e.target.value || null })}
                               aria-label={`Unit for ${sub.name}`}
-                              className="h-9 rounded-md border bg-transparent px-2 text-sm"
+                              className="h-8 rounded-md border bg-transparent px-2 text-sm"
                             >
                               <option value="">—</option>
                               {UNIT_OPTIONS.map((u) => (

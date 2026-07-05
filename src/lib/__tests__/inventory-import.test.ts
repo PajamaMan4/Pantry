@@ -163,6 +163,24 @@ describe("normalizeImportItems", () => {
     expect(items[0].addUnit).toBe("g");
   });
 
+  it("passes costQuantity through (total-paid model)", () => {
+    const file = inventoryImportSchema.parse({
+      ...base,
+      items: [{ name: "eggs", cost: 1, costUnit: "each", costQuantity: 12 }],
+    });
+    const items = normalizeImportItems(file);
+    expect(items[0].costQuantity).toBe(12);
+  });
+
+  it("defaults costQuantity to null when absent", () => {
+    const file = inventoryImportSchema.parse({
+      ...base,
+      items: [{ name: "flour", cost: 2, costUnit: "kg" }],
+    });
+    const items = normalizeImportItems(file);
+    expect(items[0].costQuantity).toBeNull();
+  });
+
   it("sets null for absent optional fields", () => {
     const file = inventoryImportSchema.parse({
       ...base,

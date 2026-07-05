@@ -9,6 +9,9 @@ import { ExpiryBadge } from "@/components/expiry-badge";
 import { listInventory } from "@/lib/db/inventory";
 import { getRecommendations } from "@/lib/db/recommend";
 import { expiryStatus } from "@/lib/domain/expiry";
+import { RecipeCard } from "@/components/recipe-card";
+import { listRecipes } from "@/lib/db/recipes";
+import { getSettings } from "@/lib/db/settings";
 
 // Reads the DB, so render per-request.
 export const dynamic = "force-dynamic";
@@ -28,9 +31,11 @@ export default function Home() {
   const suggestions = getRecommendations("available")
     .results.filter((r) => r.makeable || r.almost)
     .slice(0, 4);
+  const settings = getSettings();
+  const menuRecipes = listRecipes({ menuOnly: true }).slice(0, 4);
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 py-10">
+    <div className="mx-auto w-full max-w-5xl px-4 py-10">
       <header className="mb-8">
         <h1 className="text-3xl font-semibold tracking-tight">Pantry</h1>
         <p className="mt-1 text-muted-foreground">
@@ -61,11 +66,30 @@ export default function Home() {
         </Card>
       )}
 
-      <section className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <Stat label="Recipes" value={stats.recipes} />
-        <Stat label="Ingredients" value={stats.ingredients} />
-        <Stat label="In stock" value={stats.inventory} />
-        <Stat label="Price entries" value={stats.prices} />
+      <section>
+        <div className="mb-2 flex items-center justify-between">
+          <Link href="/menu" className="text-lg font-medium underline-offset-4 hover:underline">
+            The Menu
+          </Link>
+          <Link href="/menu" className="text-sm text-primary underline-offset-4 hover:underline">
+            See all →
+          </Link>
+        </div>
+        {menuRecipes.length > 0 ? (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {menuRecipes.map((item) => (
+              <RecipeCard key={item.recipe.id} item={item} currency={settings.currency} />
+            ))}
+          </div>
+        ) : (
+          <p className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+            Nothing on the menu yet — add recipes from the{" "}
+            <Link href="/recipes" className="text-primary underline-offset-4 hover:underline">
+              Recipes page
+            </Link>
+            .
+          </p>
+        )}
       </section>
 
       {suggestions.length > 0 && (
@@ -106,18 +130,16 @@ export default function Home() {
         <QuickLink href="/ingredients" title="Ingredients" desc="Stock, expiry & prices." cta="View ingredients →" />
         <QuickLink href="/settings" title="Settings" desc="Units, pricing, rounding." cta="Open settings →" />
       </section>
-    </div>
-  );
-}
 
-function Stat({ label, value }: { label: string; value: number }) {
-  return (
-    <Card>
-      <CardContent className="py-4">
-        <div className="text-2xl font-semibold tabular-nums">{value}</div>
-        <div className="text-xs text-muted-foreground">{label}</div>
-      </CardContent>
-    </Card>
+      <section className="mt-10 border-t pt-4">
+        <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+          <li>{stats.recipes} recipes</li>
+          <li>{stats.ingredients} ingredients</li>
+          <li>{stats.inventory} in stock</li>
+          <li>{stats.prices} price entries</li>
+        </ul>
+      </section>
+    </div>
   );
 }
 

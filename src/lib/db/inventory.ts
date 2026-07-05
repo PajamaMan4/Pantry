@@ -307,6 +307,7 @@ export type BulkImportItem = {
   // Price fields (at least one of price/addQuantity must be present)
   cost?: number | null;
   costUnit?: string | null;
+  costQuantity?: number | null;
   store?: string | null;
   purchasedAt?: Date | null;
   // Inventory fields
@@ -366,7 +367,7 @@ export function importPricesAndInventory(items: BulkImportItem[]): BulkImportSum
           .values({
             ingredientId,
             price: item.cost,
-            quantity: 1,
+            quantity: item.costQuantity ?? 1,
             unit: item.costUnit,
             store: item.store ?? null,
             purchasedAt: item.purchasedAt ?? new Date(),

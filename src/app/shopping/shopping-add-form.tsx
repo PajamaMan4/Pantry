@@ -10,7 +10,7 @@ import type { IngredientOption } from "@/components/ingredient-combobox";
 import { UNIT_OPTIONS } from "@/lib/domain/units";
 import { addShoppingItemAction } from "./actions";
 
-const selectClass = "h-9 rounded-md border border-input bg-transparent px-2 text-sm";
+const selectClass = "h-8 rounded-md border border-input bg-transparent px-2 text-sm";
 
 export function ShoppingAddForm({ ingredientOptions }: { ingredientOptions: IngredientOption[] }) {
   const [ingredientId, setIngredientId] = React.useState<number | null>(null);

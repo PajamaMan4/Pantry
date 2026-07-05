@@ -1,15 +1,17 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { FormActions } from "@/components/ui/form-actions";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { UNIT_OPTIONS } from "@/lib/domain/units";
 import { updateIngredientAction, createIngredientFullAction } from "./actions";
 
-const selectClass = "h-9 rounded-md border border-input bg-transparent px-2 text-sm";
+const selectClass = "h-8 rounded-md border border-input bg-transparent px-2 text-sm";
 
 export type IngredientEditInitial = {
   id?: number;
@@ -22,6 +24,7 @@ export type IngredientEditInitial = {
 };
 
 export function IngredientEditForm({ initial }: { initial: IngredientEditInitial }) {
+  const router = useRouter();
   const isCreate = initial.id == null;
   const [name, setName] = React.useState(initial.name);
   const [category, setCategory] = React.useState(initial.category);
@@ -110,9 +113,14 @@ export function IngredientEditForm({ initial }: { initial: IngredientEditInitial
         Staple (assumed always on hand)
       </label>
 
-      <Button onClick={save} disabled={pending}>
-        {pending ? "Saving…" : isCreate ? "Create ingredient" : "Save ingredient"}
-      </Button>
+      <FormActions>
+        <Button variant="outline" onClick={() => router.back()} disabled={pending}>
+          Cancel
+        </Button>
+        <Button onClick={save} disabled={pending}>
+          {pending ? "Saving…" : isCreate ? "Create ingredient" : "Save ingredient"}
+        </Button>
+      </FormActions>
     </div>
   );
 }

@@ -3,13 +3,14 @@
 import * as React from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { FormActions } from "@/components/ui/form-actions";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LocationCombobox, type LocationOption } from "@/components/location-combobox";
 import { UNIT_OPTIONS } from "@/lib/domain/units";
 import { createInventoryItemAction, updateInventoryItemAction } from "./actions";
 
-const selectClass = "h-9 rounded-md border border-input bg-transparent px-2 text-sm";
+const selectClass = "h-8 rounded-md border border-input bg-transparent px-2 text-sm";
 
 export type InventoryEntryInitial = {
   id: number;
@@ -112,14 +113,14 @@ export function InventoryEntryForm({
         <Input id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="optional" />
       </div>
 
-      <div className="flex items-center gap-2">
+      <FormActions>
+        <Button size="sm" variant="outline" onClick={onCancel} disabled={pending}>
+          Cancel
+        </Button>
         <Button size="sm" onClick={submit} disabled={pending}>
           {pending ? "Saving…" : "Save"}
         </Button>
-        <Button size="sm" variant="ghost" onClick={onCancel} disabled={pending}>
-          Cancel
-        </Button>
-      </div>
+      </FormActions>
     </div>
   );
 }

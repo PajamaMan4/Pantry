@@ -4,6 +4,7 @@ import * as React from "react";
 import { toast } from "sonner";
 import { DollarSignIcon, ShoppingCartIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { FormActions } from "@/components/ui/form-actions";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
@@ -12,7 +13,7 @@ import { LocationCombobox, type LocationOption } from "@/components/location-com
 import { UNIT_OPTIONS } from "@/lib/domain/units";
 import { addPriceAction, logPurchaseAction } from "./actions";
 
-const selectClass = "h-9 rounded-md border border-input bg-transparent px-2 text-sm";
+const selectClass = "h-8 rounded-md border border-input bg-transparent px-2 text-sm";
 
 function todayStr(): string {
   const d = new Date();
@@ -126,8 +127,10 @@ function AddPriceFields({
       </Field>
       <Field label="Store"><Input className="w-28" value={store} onChange={(e) => setStore(e.target.value)} placeholder="optional" /></Field>
       <Field label="Date"><Input type="date" value={purchasedAt} onChange={(e) => setPurchasedAt(e.target.value)} /></Field>
-      <Button size="sm" onClick={save} disabled={pending}>{pending ? "Saving…" : "Save"}</Button>
-      <Button size="sm" variant="ghost" onClick={onCancel} disabled={pending}>Cancel</Button>
+      <div className="ml-auto flex items-center gap-2">
+        <Button size="sm" variant="outline" onClick={onCancel} disabled={pending}>Cancel</Button>
+        <Button size="sm" onClick={save} disabled={pending}>{pending ? "Saving…" : "Save"}</Button>
+      </div>
     </div>
   );
 }
@@ -199,10 +202,10 @@ function LogPurchaseFields({
         <Field label="Expiry date"><Input type="date" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} /></Field>
       </div>
       <p className="text-xs text-muted-foreground">Adds to inventory and records the price.</p>
-      <div className="flex items-center gap-2">
+      <FormActions>
+        <Button size="sm" variant="outline" onClick={onCancel} disabled={pending}>Cancel</Button>
         <Button size="sm" onClick={save} disabled={pending}>{pending ? "Saving…" : "Save"}</Button>
-        <Button size="sm" variant="ghost" onClick={onCancel} disabled={pending}>Cancel</Button>
-      </div>
+      </FormActions>
     </div>
   );
 }

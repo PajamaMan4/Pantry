@@ -21,14 +21,13 @@ export const metadata: Metadata = { title: "Recipes · Pantry" };
 const SORTS = [
   { value: "alpha", label: "Alphabetical" },
   { value: "available", label: "Most Available" },
-  { value: "expiring", label: "Use Soon" },
   { value: "cost", label: "Cheapest" },
 ] as const;
 
 type SortValue = (typeof SORTS)[number]["value"];
 
 function resolveSort(v: string | undefined): SortValue {
-  if (v === "available" || v === "expiring" || v === "cost") return v;
+  if (v === "available" || v === "cost") return v;
   return "alpha";
 }
 
@@ -103,7 +102,7 @@ export default async function RecipesPage({
   const buildMenuUrl = () => buildParams({ menu: !menuOnly });
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 py-8">
+    <div className="mx-auto w-full max-w-5xl px-4 py-8">
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">Recipes</h1>
         <div className="flex items-center gap-2">

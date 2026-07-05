@@ -22,7 +22,7 @@ export default function SettingsPage() {
   const hasApiKey = resolveAnthropicApiKey() != null;
 
   return (
-    <div className="mx-auto w-full max-w-xl space-y-6 px-4 py-8">
+    <div className="mx-auto w-full max-w-5xl space-y-6 px-4 py-8">
       <Card>
         <CardHeader>
           <CardTitle>Settings</CardTitle>

@@ -6,6 +6,7 @@ import { nanoid } from "nanoid";
 import { PlusIcon, XIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { FormActions } from "@/components/ui/form-actions";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { IngredientCombobox, type IngredientOption } from "@/components/ingredient-combobox";
@@ -25,7 +26,7 @@ export type InStockIngredient = {
   stock: StockEntry[];
 };
 
-const selectClass = "h-9 w-full rounded-md border border-input bg-transparent px-2 text-sm";
+const selectClass = "h-8 w-full rounded-md border border-input bg-transparent px-2 text-sm";
 
 const INITIAL_ROWS = 3;
 
@@ -166,17 +167,21 @@ export function RemoveInventoryForm({
         })}
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 pt-2">
-        <Button type="button" variant="outline" size="sm" onClick={addRow} disabled={pending}>
-          <PlusIcon className="size-4" /> Add row
-        </Button>
-        <div className="grow" />
-        <Button type="button" variant="ghost" onClick={() => router.push("/ingredients")} disabled={pending}>
-          Cancel
-        </Button>
-        <Button type="button" onClick={submit} disabled={pending}>
-          {pending ? "Removing…" : "Remove from inventory"}
-        </Button>
+      <div className="sticky bottom-0 z-10 -mx-4 border-t bg-background px-4 py-3">
+        <FormActions
+          extra={
+            <Button type="button" variant="outline" size="sm" onClick={addRow} disabled={pending}>
+              <PlusIcon className="size-4" /> Add row
+            </Button>
+          }
+        >
+          <Button type="button" variant="outline" onClick={() => router.push("/ingredients")} disabled={pending}>
+            Cancel
+          </Button>
+          <Button type="button" onClick={submit} disabled={pending}>
+            {pending ? "Removing…" : "Remove from inventory"}
+          </Button>
+        </FormActions>
       </div>
     </div>
   );

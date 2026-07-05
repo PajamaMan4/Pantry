@@ -126,7 +126,7 @@ export function RecipeFilters({
   }
 
   const hasFilters = params.get("q") || selectedTagIds.length > 0 || selectedIngredientIds.length > 0 || params.get("maxTime") || params.get("fav");
-  const selectClass = "h-9 rounded-md border border-input bg-transparent px-2 text-sm";
+  const selectClass = "h-8 rounded-md border border-input bg-transparent px-2 text-sm";
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -152,7 +152,7 @@ export function RecipeFilters({
       <div ref={tagRef} className="relative">
         <div
           className={cn(
-            "flex min-h-9 min-w-[8rem] flex-wrap items-center gap-1 rounded-md border border-input bg-transparent px-2 py-1 text-sm cursor-pointer",
+            "flex min-h-8 min-w-[8rem] flex-wrap items-center gap-1 rounded-md border border-input bg-transparent px-2 py-1 text-sm cursor-pointer",
           )}
           onClick={() => {
             setTagOpen((o) => !o);
@@ -221,7 +221,7 @@ export function RecipeFilters({
       <div ref={ingredientRef} className="relative">
         <div
           className={cn(
-            "flex min-h-9 min-w-[8rem] flex-wrap items-center gap-1 rounded-md border border-input bg-transparent px-2 py-1 text-sm cursor-pointer",
+            "flex min-h-8 min-w-[8rem] flex-wrap items-center gap-1 rounded-md border border-input bg-transparent px-2 py-1 text-sm cursor-pointer",
           )}
           onClick={() => {
             setIngredientOpen((o) => !o);

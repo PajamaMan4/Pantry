@@ -103,7 +103,7 @@ export default async function IngredientsPage({
   const locations = listLocations().map((l) => ({ id: l.id, name: l.name }));
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 py-8">
+    <div className="mx-auto w-full max-w-5xl px-4 py-8">
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">Ingredients</h1>
         <IngredientsActionsMenu />

@@ -6,6 +6,7 @@ import { nanoid } from "nanoid";
 import { PlusIcon, TrashIcon, ArrowUpIcon, ArrowDownIcon, LayersIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { FormActions } from "@/components/ui/form-actions";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -462,89 +463,85 @@ export function RecipeForm({ ingredientOptions, tagSuggestions, groupSuggestions
                           onCreate={(n) => createIngredientForRow(section.key, row.key, n)}
                         />
                       </div>
-                      <Input
-                        type="number"
-                        min={0}
-                        step="any"
-                        className="w-20"
-                        placeholder="amt"
-                        value={row.amount}
-                        onChange={(e) => patchRow(section.key, row.key, { amount: e.target.value })}
-                      />
-                      <span className="pt-2 text-muted-foreground">–</span>
-                      <Input
-                        type="number"
-                        min={0}
-                        step="any"
-                        className="w-20"
-                        placeholder="max"
-                        value={row.amountMax}
-                        onChange={(e) => patchRow(section.key, row.key, { amountMax: e.target.value })}
-                      />
-                      <select
-                        className="h-9 rounded-md border border-input bg-transparent px-2 text-sm"
-                        value={row.unit}
-                        onChange={(e) => patchRow(section.key, row.key, { unit: e.target.value })}
-                        aria-label="Unit"
-                      >
-                        <option value="">unit…</option>
-                        {UNIT_OPTIONS.map((u) => (
-                          <option key={u.value} value={u.value}>
-                            {u.label}
-                          </option>
-                        ))}
-                      </select>
-                      <div className="flex items-center">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          aria-label="Move ingredient up"
-                          onClick={() => moveRow(section.key, i, -1)}
+                      {/* amount + unit stay together so the unit never wraps alone */}
+                      <div className="flex items-start gap-2">
+                        <Input
+                          type="number"
+                          min={0}
+                          step="any"
+                          className="w-20"
+                          placeholder="amt"
+                          value={row.amount}
+                          onChange={(e) => patchRow(section.key, row.key, { amount: e.target.value })}
+                        />
+                        <select
+                          className="h-8 rounded-md border border-input bg-transparent px-2 text-sm"
+                          value={row.unit}
+                          onChange={(e) => patchRow(section.key, row.key, { unit: e.target.value })}
+                          aria-label="Unit"
                         >
-                          <ArrowUpIcon className="size-4" />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          aria-label="Move ingredient down"
-                          onClick={() => moveRow(section.key, i, 1)}
-                        >
-                          <ArrowDownIcon className="size-4" />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          aria-label="Remove ingredient"
-                          onClick={() => removeRow(section.key, row.key)}
-                        >
-                          <TrashIcon className="size-4" />
-                        </Button>
+                          <option value="">unit…</option>
+                          {UNIT_OPTIONS.map((u) => (
+                            <option key={u.value} value={u.value}>
+                              {u.label}
+                            </option>
+                          ))}
+                        </select>
                       </div>
                     </div>
 
                     <div className="mt-2 flex flex-wrap items-center gap-2">
                       <Input
-                        className="w-40"
+                        className="flex-1 min-w-0 sm:w-40 sm:flex-none"
                         placeholder="prep, e.g. diced"
                         value={row.prep}
                         onChange={(e) => patchRow(section.key, row.key, { prep: e.target.value })}
                       />
                       <Input
-                        className="w-44"
-                        placeholder="or text, e.g. to taste"
+                        className="flex-1 min-w-0 sm:w-44 sm:flex-none"
+                        placeholder="misc, e.g. to taste"
                         value={row.raw}
                         onChange={(e) => patchRow(section.key, row.key, { raw: e.target.value })}
                       />
-                      <label className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                        <Checkbox
-                          checked={row.optional}
-                          onCheckedChange={(v) => patchRow(section.key, row.key, { optional: v === true })}
-                        />
-                        optional
-                      </label>
+                      {/* optional toggle + row controls: own line on mobile, right of the row on desktop */}
+                      <div className="flex w-full items-center gap-2 sm:ml-auto sm:w-auto">
+                        <label className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                          <Checkbox
+                            checked={row.optional}
+                            onCheckedChange={(v) => patchRow(section.key, row.key, { optional: v === true })}
+                          />
+                          optional
+                        </label>
+                        <div className="ml-auto flex items-center sm:ml-0">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            aria-label="Move ingredient up"
+                            onClick={() => moveRow(section.key, i, -1)}
+                          >
+                            <ArrowUpIcon className="size-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            aria-label="Move ingredient down"
+                            onClick={() => moveRow(section.key, i, 1)}
+                          >
+                            <ArrowDownIcon className="size-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            aria-label="Remove ingredient"
+                            onClick={() => removeRow(section.key, row.key)}
+                          >
+                            <TrashIcon className="size-4" />
+                          </Button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -616,26 +613,29 @@ export function RecipeForm({ ingredientOptions, tagSuggestions, groupSuggestions
 
     </div>
     <div className="sticky bottom-0 z-10 bg-background border-t py-3 -mx-4 px-4 sm:-mx-6 sm:px-6">
-      {error && <p className="mb-2 text-sm text-destructive">{error}</p>}
-      <div className="flex items-center gap-3">
+      <FormActions
+        error={error}
+        extra={
+          isEdit && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => saveAsVariant()}
+              disabled={pending}
+            >
+              <LayersIcon className="size-4" />
+              Save as variant
+            </Button>
+          )
+        }
+      >
+        <Button type="button" variant="outline" onClick={() => router.back()} disabled={pending}>
+          Cancel
+        </Button>
         <Button onClick={submit} disabled={pending}>
           {pending ? "Saving…" : isEdit ? "Save changes" : "Create recipe"}
         </Button>
-        {isEdit && (
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => saveAsVariant()}
-            disabled={pending}
-          >
-            <LayersIcon className="size-4" />
-            Save as variant
-          </Button>
-        )}
-        <Button type="button" variant="ghost" onClick={() => router.back()} disabled={pending}>
-          Cancel
-        </Button>
-      </div>
+      </FormActions>
     </div>
 
     <Dialog open={variantDialogOpen} onOpenChange={setVariantDialogOpen}>
