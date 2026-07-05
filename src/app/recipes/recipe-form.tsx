@@ -562,17 +562,7 @@ export function RecipeForm({ ingredientOptions, tagSuggestions, groupSuggestions
 
       {/* Steps — plain prose, with one-click quantity linking for scaling (§3.2) */}
       <section className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-medium">Steps</h2>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setSteps((ss) => [...ss, { id: nanoid(), text: "", quantities: {} }])}
-          >
-            <PlusIcon className="size-4" /> Add step
-          </Button>
-        </div>
+        <h2 className="text-lg font-medium">Steps</h2>
 
         <ol className="space-y-3">
           {steps.map((step, i) => (
@@ -599,6 +589,15 @@ export function RecipeForm({ ingredientOptions, tagSuggestions, groupSuggestions
             </li>
           ))}
         </ol>
+
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => setSteps((ss) => [...ss, { id: nanoid(), text: "", quantities: {} }])}
+        >
+          <PlusIcon className="size-4" /> Add step
+        </Button>
       </section>
 
       <Separator />

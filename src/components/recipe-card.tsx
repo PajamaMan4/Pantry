@@ -4,7 +4,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { FavoriteButton } from "@/app/recipes/favorite-button";
 import { MenuButton } from "@/app/recipes/menu-button";
-import { RatingDisplay } from "@/components/rating-stars";
 import { AddMissingButton } from "@/components/add-missing-button";
 import { formatMinutes, totalTimeMin, formatMoney } from "@/lib/domain/format";
 import type { RecipeListItem } from "@/lib/db/recipes";
@@ -54,7 +53,6 @@ export function RecipeCard({
         </div>
 
         <div className="mt-2 flex flex-wrap gap-4 text-sm text-muted-foreground">
-          <RatingDisplay rating={recipe.rating} />
           <span className="inline-flex items-center gap-1">
             <ClockIcon className="size-4" /> {formatMinutes(total)}
           </span>

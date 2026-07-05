@@ -10,7 +10,7 @@ import { RecipeActionsMenu } from "../recipe-actions-menu";
 import { RecipeScaler } from "../recipe-scaler";
 import { UndoCookButton } from "../undo-cook-button";
 import { RecipeCostSummary } from "../recipe-cost-summary";
-import { RatingStars } from "@/components/rating-stars";
+import { CookModeToggle } from "../cook-mode-toggle";
 import { getRecipeDetail, getVariantsInGroup } from "@/lib/db/recipes";
 import { listIngredientsWithAliases } from "@/lib/db/ingredients";
 import { getSettings } from "@/lib/db/settings";
@@ -59,15 +59,9 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ i
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <MenuButton id={recipe.id} isOnMenu={recipe.isOnMenu} withLabel />
-          <Link href={`/recipes/${recipe.id}/cook`} className={buttonVariants({ size: "sm" })}>
-            <ChefHatIcon className="size-4" /> Cook mode
-          </Link>
+          <CookModeToggle />
           <RecipeActionsMenu recipeId={recipe.id} />
         </div>
-      </div>
-
-      <div className="mt-2">
-        <RatingStars recipeId={recipe.id} rating={recipe.rating} />
       </div>
 
       {recipe.description && <p className="mt-2 text-muted-foreground">{recipe.description}</p>}
