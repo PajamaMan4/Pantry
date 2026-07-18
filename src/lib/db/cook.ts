@@ -159,9 +159,12 @@ function snapshotCost(
 
 export type CookResult = { ok: true; cookLogId: number; plan: CookPlan } | { ok: false; error: string };
 
+const EPS = 1e-9;
+
 /**
- * Record a cook: deduct stock (FIFO-by-expiry, clamped to 0), snapshot the cost,
- * and write a CookLog with per-line detail. All inside one transaction (§3.6).
+ * Record a cook: deduct stock (FIFO-by-expiry; a row emptied to zero is removed),
+ * snapshot the cost, and write a CookLog with per-line detail. All inside one
+ * transaction (§3.6).
  */
 export function cookThisRecipe(recipeId: number, servingsMade: number): CookResult {
   const data = getCookData(recipeId);
@@ -182,10 +185,25 @@ export function cookThisRecipe(recipeId: number, servingsMade: number): CookResu
 
   const cookLogId = db.transaction((tx) => {
     for (const d of plan.deductions) {
-      tx.update(inventoryItems)
-        .set({ quantity: sql`max(0, ${inventoryItems.quantity} - ${d.amount})`, updatedAt: now })
+      const row = tx
+        .select({ quantity: inventoryItems.quantity, publicId: inventoryItems.publicId })
+        .from(inventoryItems)
         .where(eq(inventoryItems.id, d.inventoryItemId))
-        .run();
+        .get();
+      if (!row) continue;
+      const remaining = row.quantity - d.amount;
+      // Remove a row drained to empty. Use a relative floor as well as the
+      // absolute EPS so conversion round-off (~1e-7 of the quantity) doesn't
+      // leave a display-"0" residue behind instead of deleting the row.
+      if (remaining <= EPS || remaining <= row.quantity * 1e-6) {
+        tx.delete(inventoryItems).where(eq(inventoryItems.id, d.inventoryItemId)).run();
+        recordTombstone(tx, "inventory_item", row.publicId);
+      } else {
+        tx.update(inventoryItems)
+          .set({ quantity: remaining, updatedAt: now })
+          .where(eq(inventoryItems.id, d.inventoryItemId))
+          .run();
+      }
     }
 
     const log = tx
@@ -224,11 +242,22 @@ export function undoCook(cookLogId: number): { ok: boolean } {
         .from(inventoryItems)
         .where(eq(inventoryItems.id, line.inventoryItemId))
         .get();
-      if (!exists) continue; // row was deleted since — can't restore
-      tx.update(inventoryItems)
-        .set({ quantity: sql`${inventoryItems.quantity} + ${line.amountDeducted}`, updatedAt: new Date() })
-        .where(eq(inventoryItems.id, line.inventoryItemId))
-        .run();
+      if (exists) {
+        tx.update(inventoryItems)
+          .set({ quantity: sql`${inventoryItems.quantity} + ${line.amountDeducted}`, updatedAt: new Date() })
+          .where(eq(inventoryItems.id, line.inventoryItemId))
+          .run();
+      } else {
+        // Row was fully consumed and deleted by the cook — recreate it. Original
+        // location/expiry/opened/notes aren't on the log line, so they're lost.
+        tx.insert(inventoryItems)
+          .values({
+            ingredientId: line.ingredientId,
+            quantity: line.amountDeducted,
+            unit: line.unit,
+          })
+          .run();
+      }
     }
     const log = tx
       .select({ publicId: cookLogs.publicId })

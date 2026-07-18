@@ -19,11 +19,14 @@ export function AddInventory({
   const [open, setOpen] = React.useState(false);
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
-      <CollapsibleTrigger render={<Button variant="outline" size="sm" />}>
-        <PlusIcon className="size-4" /> Add inventory
-      </CollapsibleTrigger>
+      <div className="mb-2 flex items-center justify-between">
+        <h2 className="text-lg font-medium">Inventory</h2>
+        <CollapsibleTrigger render={<Button variant="outline" size="sm" />}>
+          <PlusIcon className="size-4" /> Add inventory
+        </CollapsibleTrigger>
+      </div>
       <CollapsibleContent>
-        <div className="mt-2">
+        <div className="mb-2">
           <InventoryEntryForm
             ingredientId={ingredientId}
             locations={locations}

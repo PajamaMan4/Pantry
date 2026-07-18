@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { PlusIcon, SparklesIcon, NotebookPenIcon } from "lucide-react";
-import { buttonVariants } from "@/components/ui/button";
+import { NotebookPenIcon, HeartIcon } from "lucide-react";
 import { RecipeCard } from "@/components/recipe-card";
 import { RecipeGroupCard } from "@/components/recipe-group-card";
 import { RecipeFilters } from "./recipe-filters";
@@ -68,6 +67,13 @@ export default async function RecipesPage({
   };
 
   const recipes = listRecipes(filters);
+  const hasFilters =
+    Boolean(filters.search) ||
+    tagIds.length > 0 ||
+    ingredientIds.length > 0 ||
+    filters.maxTotalTimeMin != null ||
+    filters.favoritesOnly ||
+    menuOnly;
   const tags = listTags();
   const ingredients = listIngredients();
   const settings = getSettings();
@@ -83,9 +89,10 @@ export default async function RecipesPage({
     recipes.sort((a, b) => (posById.get(a.recipe.id) ?? Infinity) - (posById.get(b.recipe.id) ?? Infinity));
   }
 
-  function buildParams(overrides: { sort?: string; menu?: boolean }) {
+  function buildParams(overrides: { sort?: string; menu?: boolean; fav?: boolean }) {
     const nextSort = overrides.sort ?? sort;
     const nextMenu = overrides.menu ?? menuOnly;
+    const nextFav = overrides.fav ?? filters.favoritesOnly;
     const next = new URLSearchParams();
     if (nextSort !== "alpha") next.set("sort", nextSort);
     if (nextMenu) next.set("menu", "1");
@@ -93,27 +100,20 @@ export default async function RecipesPage({
     for (const id of tagIds) next.append("tag", String(id));
     for (const id of ingredientIds) next.append("ingredient", String(id));
     if (filters.maxTotalTimeMin != null) next.set("maxTime", String(filters.maxTotalTimeMin));
-    if (filters.favoritesOnly) next.set("fav", "1");
+    if (nextFav) next.set("fav", "1");
     const qs = next.toString();
     return qs ? `/recipes?${qs}` : "/recipes";
   }
 
   const buildSortUrl = (s: string) => buildParams({ sort: s });
   const buildMenuUrl = () => buildParams({ menu: !menuOnly });
+  const buildFavUrl = () => buildParams({ fav: !filters.favoritesOnly });
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-8">
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">Recipes</h1>
-        <div className="flex items-center gap-2">
-          <Link href="/recipes/import" className={buttonVariants({ variant: "outline" })}>
-            <SparklesIcon className="size-4" /> Import
-          </Link>
-          <Link href="/recipes/new" className={buttonVariants()}>
-            <PlusIcon className="size-4" /> New recipe
-          </Link>
-          <RecipesMenu />
-        </div>
+        <RecipesMenu />
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-2 text-xs">
@@ -147,6 +147,23 @@ export default async function RecipesPage({
             <NotebookPenIcon className="size-3.5" /> Menu
           </Link>
         </div>
+        <div className="rounded-md border p-0.5 w-fit">
+          <Link
+            href={buildFavUrl()}
+            aria-pressed={filters.favoritesOnly}
+            className={cn(
+              "inline-flex items-center gap-1 rounded-sm px-2.5 py-1 font-medium transition-colors",
+              filters.favoritesOnly
+                ? "bg-muted text-foreground"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            <HeartIcon
+              className={cn("size-3.5", filters.favoritesOnly && "fill-red-500 text-red-500")}
+            />{" "}
+            Favorites
+          </Link>
+        </div>
       </div>
 
       <div className="mb-6">
@@ -158,13 +175,27 @@ export default async function RecipesPage({
       </div>
 
       {recipes.length === 0 ? (
-        <p className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-          No recipes match. Try clearing filters, or{" "}
-          <Link href="/recipes/new" className="text-primary underline-offset-4 hover:underline">
-            create one
-          </Link>
-          .
-        </p>
+        hasFilters ? (
+          <p className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
+            No recipes match. Try clearing filters, or{" "}
+            <Link href="/recipes/new" className="text-primary underline-offset-4 hover:underline">
+              create one
+            </Link>
+            .
+          </p>
+        ) : (
+          <p className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
+            No recipes yet.{" "}
+            <Link href="/recipes/new" className="text-primary underline-offset-4 hover:underline">
+              Create one
+            </Link>{" "}
+            or{" "}
+            <Link href="/recipes/import" className="text-primary underline-offset-4 hover:underline">
+              import from text or a file
+            </Link>
+            .
+          </p>
+        )
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
           {collapseIntoGroups(recipes, (item) => item.group).map((row) =>

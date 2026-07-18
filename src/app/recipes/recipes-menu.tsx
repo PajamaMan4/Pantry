@@ -1,7 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { MoreHorizontalIcon, NotebookPenIcon } from "lucide-react";
+import Link from "next/link";
+import { MoreHorizontalIcon, PlusIcon, SparklesIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -12,7 +12,6 @@ import {
 
 /** Overflow menu for the recipes page header. */
 export function RecipesMenu() {
-  const router = useRouter();
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -23,8 +22,11 @@ export function RecipesMenu() {
         }
       />
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => router.push("/menu")}>
-          <NotebookPenIcon className="size-4" /> View Menu
+        <DropdownMenuItem render={<Link href="/recipes/new" />}>
+          <PlusIcon className="size-4" /> New recipe
+        </DropdownMenuItem>
+        <DropdownMenuItem render={<Link href="/recipes/import" />}>
+          <SparklesIcon className="size-4" /> Import
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

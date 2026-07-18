@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { PwaRegister } from "./pwa-register";
+import { WelcomeGate } from "./welcome-gate";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -46,6 +47,9 @@ export default function RootLayout({
             <Link href="/" className="font-semibold">
               Pantry
             </Link>
+            <Link href="/menu" className="text-muted-foreground hover:text-foreground">
+              Menu
+            </Link>
             <Link href="/recipes" className="text-muted-foreground hover:text-foreground">
               Recipes
             </Link>
@@ -63,6 +67,7 @@ export default function RootLayout({
         <main className="flex flex-1 flex-col">{children}</main>
         <Toaster />
         <PwaRegister />
+        <WelcomeGate />
       </body>
     </html>
   );

@@ -367,7 +367,7 @@ export function RecipeForm({ ingredientOptions, tagSuggestions, groupSuggestions
               id="servings"
               type="number"
               min={0}
-              step="0.5"
+              step="any"
               value={servings}
               onChange={(e) => setServings(e.target.value)}
             />

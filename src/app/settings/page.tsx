@@ -37,6 +37,24 @@ export default function SettingsPage() {
 
       <Card>
         <CardHeader>
+          <CardTitle>How to use Pantry</CardTitle>
+          <CardDescription>
+            New here? A short guide to every part of Pantry — recipes, inventory, the menu, and
+            more.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Link
+            href="/settings/guide"
+            className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+          >
+            Open the guide →
+          </Link>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle>Storage locations</CardTitle>
           <CardDescription>
             Where inventory is stored. Rename or remove locations; removing one keeps the stock and

@@ -78,6 +78,13 @@
       "when": 1783197484457,
       "tag": "0010_great_namor",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1783593252479,
+      "tag": "0011_stiff_silver_centurion",
+      "breakpoints": true
     }
   ]
 }

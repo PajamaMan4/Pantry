@@ -42,6 +42,35 @@ describe("planCook — basic deduction", () => {
   });
 });
 
+describe("planCook — cross-unit full consumption is exact", () => {
+  // A recipe that consumes the whole row but in a different unit must deduct the
+  // exact stored quantity (not the slightly-short converted value), so the DB row
+  // empties to exactly 0 and gets removed instead of lingering at ~1e-7 (which
+  // renders as "0" in the inventory UI). Same-category conversions (oz↔lb, tsp↔cup)
+  // lose ~1e-7 of relative precision, larger than the absolute 1e-9 epsilon.
+  it("deducts the exact row quantity for 16 oz drawn from a 1 lb row", () => {
+    const plan = planCook(
+      [ing({ ingredientId: 1, amount: 16, unit: "oz" })],
+      stock({ 1: [{ inventoryItemId: 10, quantity: 1, unit: "lb", expiryMs: null }] }),
+      1,
+    );
+    expect(plan.deductions).toEqual([{ inventoryItemId: 10, ingredientId: 1, amount: 1, unit: "lb" }]);
+    expect(plan.lines[0].status).toBe("ok");
+    expect(plan.warnings).toEqual([]);
+  });
+
+  it("deducts the exact row quantity for 48 tsp drawn from a 1 cup row", () => {
+    const plan = planCook(
+      [ing({ ingredientId: 1, amount: 48, unit: "tsp" })],
+      stock({ 1: [{ inventoryItemId: 10, quantity: 1, unit: "cup", expiryMs: null }] }),
+      1,
+    );
+    expect(plan.deductions).toEqual([{ inventoryItemId: 10, ingredientId: 1, amount: 1, unit: "cup" }]);
+    expect(plan.lines[0].status).toBe("ok");
+    expect(plan.warnings).toEqual([]);
+  });
+});
+
 describe("planCook — FIFO by expiry across rows", () => {
   it("deducts soonest-expiry first, spilling to the next row", () => {
     const plan = planCook(

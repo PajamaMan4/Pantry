@@ -52,6 +52,11 @@ export interface CookPlan {
 }
 
 const EPS = 1e-9;
+// Unit-conversion factors carry only ~6 significant figures, so a cross-unit
+// round-trip loses ~1e-7 of relative precision. Decide "row fully consumed" /
+// "requirement satisfied" with a relative tolerance so that slack doesn't leave
+// a display-"0" residue in stock or mislabel a covered line as "partial".
+const REL_EPS = 1e-6;
 
 function planOne(ing: CookIngredientInput, rows: CookStockRow[], factor: number): CookLine {
   const base = {
@@ -78,11 +83,12 @@ function planOne(ing: CookIngredientInput, rows: CookStockRow[], factor: number)
   const ordered = [...rows].sort((a, b) => (a.expiryMs ?? Infinity) - (b.expiryMs ?? Infinity));
 
   let remaining = required; // tracked in the recipe's unit
+  const tol = EPS + required * REL_EPS; // satisfied-requirement tolerance
   let anyConvertible = false;
   const deductions: CookDeduction[] = [];
 
   for (const row of ordered) {
-    if (remaining <= EPS) break;
+    if (remaining <= tol) break;
     let neededInRowUnit: number;
     try {
       neededInRowUnit = convert(remaining, ing.unit, row.unit, ing.density ?? undefined, ing.gramsPerEach ?? undefined);
@@ -90,7 +96,11 @@ function planOne(ing: CookIngredientInput, rows: CookStockRow[], factor: number)
       continue; // this row's unit can't be reconciled with the recipe unit
     }
     anyConvertible = true;
-    const deduct = Math.min(row.quantity, neededInRowUnit);
+    // When the need meets (within round-off) or exceeds the row, consume the row
+    // exactly — using the stored quantity, not the slightly-short converted value,
+    // so applying the plan empties the DB row to exactly 0 (and it gets removed).
+    const fullyConsumed = neededInRowUnit >= row.quantity * (1 - REL_EPS);
+    const deduct = fullyConsumed ? row.quantity : Math.min(row.quantity, neededInRowUnit);
     if (deduct <= EPS) continue;
     deductions.push({ inventoryItemId: row.inventoryItemId, ingredientId: ing.ingredientId, amount: deduct, unit: row.unit });
     remaining -= convert(deduct, row.unit, ing.unit, ing.density ?? undefined, ing.gramsPerEach ?? undefined);
@@ -106,7 +116,7 @@ function planOne(ing: CookIngredientInput, rows: CookStockRow[], factor: number)
     };
   }
 
-  if (remaining > EPS) {
+  if (remaining > tol) {
     const note = ing.isStaple || ing.optional ? undefined : `${ing.name}: ran low — deducted what was in stock`;
     return { ...base, requiredAmount: required, deductions, status: "partial", note };
   }

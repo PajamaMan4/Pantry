@@ -135,7 +135,6 @@ export function RecipeFilters({
           e.preventDefault();
           router.push(buildUrl({ q: search }));
         }}
-        className="flex gap-2"
       >
         <Input
           value={search}
@@ -143,9 +142,6 @@ export function RecipeFilters({
           placeholder="Search recipes…"
           className="w-56"
         />
-        <Button type="submit" variant="outline">
-          Search
-        </Button>
       </form>
 
       {/* Multi-tag combobox */}
@@ -287,27 +283,22 @@ export function RecipeFilters({
       </div>
 
       <select
-        className={selectClass}
+        className={cn(selectClass, !params.get("maxTime") && "text-muted-foreground")}
         value={params.get("maxTime") ?? ""}
         onChange={(e) => router.push(buildUrl({ maxTime: e.target.value || null }))}
         aria-label="Max total time"
       >
-        <option value="">Any time</option>
+        <option value="" className="text-foreground">Any time</option>
         {TIME_OPTIONS.map((m) => (
-          <option key={m} value={String(m)}>
+          <option key={m} value={String(m)} className="text-foreground">
             ≤ {m} min
           </option>
         ))}
       </select>
 
-      <label className="flex items-center gap-1.5 text-sm">
-        <input
-          type="checkbox"
-          checked={params.get("fav") === "1"}
-          onChange={(e) => router.push(buildUrl({ fav: e.target.checked ? "1" : null }))}
-        />
-        Favorites
-      </label>
+      <Button type="button" variant="outline" onClick={() => router.push(buildUrl({ q: search }))}>
+        Search
+      </Button>
 
       {hasFilters && (
         <Button

@@ -1,0 +1,1 @@
+ALTER TABLE `settings` ADD `has_seen_welcome` integer DEFAULT false NOT NULL;

@@ -12,9 +12,13 @@ export function unitLabel(unit: string | null | undefined): string {
 }
 
 export function formatMoney(value: number, currency: string): string {
-  const maximumFractionDigits = value !== 0 && Math.abs(value) < 1 ? 3 : 2;
   try {
-    return new Intl.NumberFormat(undefined, { style: "currency", currency, maximumFractionDigits }).format(value);
+    return new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value);
   } catch {
     return `${currency} ${value.toFixed(2)}`;
   }

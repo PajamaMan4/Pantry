@@ -102,10 +102,7 @@ export default async function IngredientDetailPage({
 
       {/* 1 — In Stock */}
       <section className="mt-6">
-        <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-lg font-medium">Inventory</h2>
-          <AddInventory ingredientId={ingredient.id} locations={locations} defaultUnit={ingredient.defaultUnit} />
-        </div>
+        <AddInventory ingredientId={ingredient.id} locations={locations} defaultUnit={ingredient.defaultUnit} />
         {stockItems.length === 0 ? (
           <p className="text-sm text-muted-foreground">Not currently in inventory.</p>
         ) : (

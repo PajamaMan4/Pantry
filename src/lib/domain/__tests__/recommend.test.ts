@@ -158,6 +158,23 @@ describe("buildInStockChecker (menu/shopping 'should I buy this?')", () => {
     expect(check(ing(1, { amount: 50, unit: "g" }))).toBe(true);
     expect(check(ing(1, { amount: 200, unit: "g" }))).toBe(false);
   });
+
+  // Regression: flour needed by volume with stock split across two categories —
+  // a partial cup (volume) plus a big bag (mass). The cup alone is short, but the
+  // bag covers it many times over, so summing across categories must read as
+  // in-stock. Previously the same-category cup was checked in isolation → false.
+  it("sums stock across unit categories (volume cup + mass lb) via density", () => {
+    const check = buildInStockChecker([
+      { ingredientId: 1, quantity: 1.75, unit: "cup", expiryMs: null }, // not enough alone
+      { ingredientId: 1, quantity: 5, unit: "lb", expiryMs: null }, // 5 lb bag — plenty
+    ]);
+    expect(check(ing(1, { amount: 2, unit: "cup", density: 0.53 }))).toBe(true);
+  });
+
+  it("still short when the only same-category stock can't cover it", () => {
+    const check = buildInStockChecker([{ ingredientId: 1, quantity: 1.75, unit: "cup", expiryMs: null }]);
+    expect(check(ing(1, { amount: 2, unit: "cup", density: 0.53 }))).toBe(false);
+  });
 });
 
 describe("recommendRecipes — sorting", () => {

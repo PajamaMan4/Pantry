@@ -167,6 +167,18 @@ function AlphabeticalView({
         <Link href="/ingredients/new" className="text-primary underline-offset-4 hover:underline">
           Create one
         </Link>
+        {q ? null : (
+          <>
+            {" "}
+            or{" "}
+            <Link
+              href="/ingredients/inventory/add"
+              className="text-primary underline-offset-4 hover:underline"
+            >
+              add stock in bulk
+            </Link>
+          </>
+        )}
         .
       </p>
     );

@@ -36,6 +36,14 @@ export function setInventoryView(view: InventoryView): void {
     .run();
 }
 
+export function setHasSeenWelcome(value: boolean): void {
+  getSettings(); // ensure the row exists
+  db.update(settings)
+    .set({ hasSeenWelcome: value, updatedAt: new Date() })
+    .where(eq(settings.id, SETTINGS_ID))
+    .run();
+}
+
 export function setAnthropicApiKey(key: string | null): void {
   getSettings(); // ensure the row exists
   db.update(settings)

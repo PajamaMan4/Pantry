@@ -84,20 +84,29 @@ function availability(req: RecommendIngredient, stock: IngredientStock | undefin
   if (!def) return "unknown";
 
   const reqBase = req.amount * def.toBase;
-  const same = stock.byCategory.get(def.category);
-  if (same != null) return reqBase <= same + EPS ? "have" : "missing";
 
-  // Bridge across categories using convert(); try each stocked category.
+  // Sum stock across every category, converting cross-category amounts into the
+  // requirement's base unit (via density / grams-per-each). This is what lets a
+  // requirement in cups be satisfied by a flour bag stocked in lb *plus* a
+  // partial cup on hand — checking only the matching category would miss it. A
+  // category we can't reconcile is skipped; if none reconcile it's "unknown".
+  let total = 0;
+  let anyConvertible = false;
   for (const [cat, stockBase] of stock.byCategory) {
-    if (cat === def.category) continue;
-    try {
-      const reqConverted = convert(req.amount, req.unit, BASE_UNIT_FOR[cat], req.density ?? undefined, req.gramsPerEach ?? undefined);
-      return reqConverted <= stockBase + EPS ? "have" : "missing";
-    } catch {
-      // can't bridge to this category — try others
+    if (cat === def.category) {
+      total += stockBase;
+      anyConvertible = true;
+    } else {
+      try {
+        total += convert(stockBase, BASE_UNIT_FOR[cat], BASE_UNIT_FOR[def.category], req.density ?? undefined, req.gramsPerEach ?? undefined);
+        anyConvertible = true;
+      } catch {
+        // can't bridge this category into the requirement's unit — ignore it
+      }
     }
   }
-  return "unknown"; // stocked, but in a category we can't reconcile
+  if (!anyConvertible) return "unknown"; // stocked, but in a category we can't reconcile
+  return reqBase <= total + EPS ? "have" : "missing";
 }
 
 /**

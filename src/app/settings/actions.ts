@@ -3,7 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { settingsUpdateSchema, anthropicKeySchema } from "@/lib/validation/settings";
 import { locationNameSchema } from "@/lib/validation/location";
-import { updateSettings, setAnthropicApiKey, resolveAnthropicApiKey } from "@/lib/db/settings";
+import {
+  updateSettings,
+  setAnthropicApiKey,
+  resolveAnthropicApiKey,
+  setHasSeenWelcome,
+} from "@/lib/db/settings";
 import { createLocation, renameLocation, deleteLocation } from "@/lib/db/locations";
 
 export type SaveSettingsResult =
@@ -44,6 +49,14 @@ export async function renameLocationAction(id: number, input: unknown): Promise<
 export async function deleteLocationAction(id: number): Promise<{ ok: true }> {
   deleteLocation(id);
   revalidateLocations();
+  return { ok: true };
+}
+
+// Marks the first-run welcome dialog as seen so it never shows again.
+export async function markWelcomeSeenAction(): Promise<{ ok: true }> {
+  setHasSeenWelcome(true);
+  revalidatePath("/");
+  revalidatePath("/settings");
   return { ok: true };
 }
 
