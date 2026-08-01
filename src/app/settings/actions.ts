@@ -72,6 +72,7 @@ export async function saveSettingsAction(
     averageWindowMonths: formData.get("averageWindowMonths"),
     currency: formData.get("currency"),
     roundingMode: formData.get("roundingMode"),
+    recipesPerPage: formData.get("recipesPerPage"),
   };
 
   const parsed = settingsUpdateSchema.safeParse(input);
@@ -81,6 +82,8 @@ export async function saveSettingsAction(
 
   updateSettings(parsed.data);
   revalidatePath("/settings");
+  // Page size changed — drop the client Router Cache entry for the recipe list.
+  revalidatePath("/recipes");
   return { ok: true, savedAt: Date.now() };
 }
 

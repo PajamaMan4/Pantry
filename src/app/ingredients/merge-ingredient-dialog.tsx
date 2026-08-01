@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { toast } from "sonner";
-import { MergeIcon, XIcon, CheckIcon } from "lucide-react";
+import { XIcon, CheckIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +14,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { mergeManyIngredientsAction } from "./actions";
@@ -23,15 +22,20 @@ export function MergeIngredientDialog({
   currentId,
   currentName,
   others,
+  open,
+  onOpenChange,
 }: {
   currentId: number;
   currentName: string;
   others: { id: number; name: string }[];
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }) {
   const [pending, startTransition] = React.useTransition();
   const [sourceIds, setSourceIds] = React.useState<Set<number>>(new Set());
   const [query, setQuery] = React.useState("");
-  const [open, setOpen] = React.useState(false);
+  /** Whether the ingredient-suggestion list under the search box is showing. */
+  const [listOpen, setListOpen] = React.useState(false);
   const [active, setActive] = React.useState(0);
   const wrapRef = React.useRef<HTMLDivElement>(null);
 
@@ -42,7 +46,7 @@ export function MergeIngredientDialog({
 
   React.useEffect(() => {
     function onDown(e: MouseEvent) {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setListOpen(false);
     }
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
@@ -58,8 +62,8 @@ export function MergeIngredientDialog({
   }
 
   function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (!open && (e.key === "ArrowDown" || e.key === "Enter")) {
-      setOpen(true);
+    if (!listOpen && (e.key === "ArrowDown" || e.key === "Enter")) {
+      setListOpen(true);
       return;
     }
     if (e.key === "ArrowDown") {
@@ -72,7 +76,7 @@ export function MergeIngredientDialog({
       e.preventDefault();
       if (filtered[active]) toggle(filtered[active].id);
     } else if (e.key === "Escape") {
-      setOpen(false);
+      setListOpen(false);
     }
   }
 
@@ -94,16 +98,13 @@ export function MergeIngredientDialog({
   const selectedItems = others.filter((o) => sourceIds.has(o.id));
 
   return (
-    <Dialog>
-      <DialogTrigger render={<Button variant="outline" size="sm" />}>
-        <MergeIcon className="size-4" /> Merge duplicate
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Merge duplicates into "{currentName}"</DialogTitle>
+          <DialogTitle>Merge duplicates into “{currentName}”</DialogTitle>
           <DialogDescription>
             Pick one or more duplicate ingredients. Their recipes, inventory, prices, and history
-            move onto "{currentName}", and the duplicates are deleted. This can&apos;t be undone.
+            move onto “{currentName}”, and the duplicates are deleted. This can&apos;t be undone.
           </DialogDescription>
         </DialogHeader>
 
@@ -120,13 +121,13 @@ export function MergeIngredientDialog({
                 onChange={(e) => {
                   setQuery(e.target.value);
                   setActive(0);
-                  setOpen(true);
+                  setListOpen(true);
                 }}
-                onFocus={() => setOpen(true)}
+                onFocus={() => setListOpen(true)}
                 onKeyDown={onKeyDown}
               />
 
-              {open && filtered.length > 0 && (
+              {listOpen && filtered.length > 0 && (
                 <ul className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border bg-popover p-1 text-sm text-popover-foreground shadow-md">
                   {filtered.map((opt, i) => {
                     const selected = sourceIds.has(opt.id);

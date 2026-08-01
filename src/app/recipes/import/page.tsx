@@ -39,15 +39,29 @@ export default function ImportRecipePage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Import from text</CardTitle>
+            <CardTitle>Import from text with AI</CardTitle>
             <CardDescription>
-              Paste raw recipe text and Claude will structure it — name, servings, times,
-              ingredients, and steps — into a draft you can review and edit before saving.
+              {hasKey ? (
+                <>
+                  Paste raw recipe text and Claude will structure it — name, servings, times,
+                  ingredients, and steps — into a draft you can review and edit before saving.
+                </>
+              ) : (
+                <>
+                  Add an Anthropic API key in{" "}
+                  <Link href="/settings" className="underline underline-offset-4">
+                    Settings
+                  </Link>{" "}
+                  to enable AI import.
+                </>
+              )}
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <ImportForm hasKey={hasKey} />
-          </CardContent>
+          {hasKey && (
+            <CardContent>
+              <ImportForm />
+            </CardContent>
+          )}
         </Card>
       </div>
     </div>

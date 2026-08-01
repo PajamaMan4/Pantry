@@ -7,7 +7,6 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { PriceSummaryInline } from "@/components/price-summary-inline";
 import { ViewToggle } from "./view-toggle";
 import { IngredientsActionsMenu } from "./ingredients-actions-menu";
-import { UnitSystemToggle } from "@/components/unit-system-toggle";
 import { ClearStockButton } from "./clear-stock-button";
 import { InventoryItemRow, type SerialInventoryItem } from "./inventory-item-row";
 import { listIngredients, searchIngredients } from "@/lib/db/ingredients";
@@ -106,21 +105,17 @@ export default async function IngredientsPage({
     <div className="mx-auto w-full max-w-5xl px-4 py-8">
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">Ingredients</h1>
-        <IngredientsActionsMenu />
+        <IngredientsActionsMenu system={system} />
       </div>
 
-      <form action="/ingredients" className="mb-3">
+      <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+        <ViewToggle current={view} />
+      </div>
+
+      <form action="/ingredients" className="mb-6">
         <input type="hidden" name="units" value={str("units") ?? ""} />
         <Input name="q" defaultValue={q} placeholder="Search ingredients…" className="w-full" />
       </form>
-
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-        <ViewToggle current={view} />
-        <div className="flex items-center gap-2">
-          <span>Units</span>
-          <UnitSystemToggle current={system} />
-        </div>
-      </div>
 
       {view === "alphabetical" ? (
         <AlphabeticalView q={q} system={system} rounding={rounding} currency={settings.currency} windowMonths={settings.averageWindowMonths} now={now} />
@@ -193,12 +188,9 @@ function AlphabeticalView({
         return (
           <li key={ing.id} className="flex items-center justify-between gap-3 py-2.5">
             <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <Link href={`/ingredients/${ing.id}`} className="font-medium hover:underline">
-                  {ing.name}
-                </Link>
-                {ing.category && <Badge variant="secondary">{ing.category}</Badge>}
-              </div>
+              <Link href={`/ingredients/${ing.id}`} className="font-medium hover:underline">
+                {ing.name}
+              </Link>
               <div className="text-sm text-muted-foreground">
                 <span className="tabular-nums">{stock ?? "not in stock"}</span>
                 <span className="mx-2">·</span>

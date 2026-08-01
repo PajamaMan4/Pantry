@@ -4,8 +4,10 @@ import { NotebookPenIcon, HeartIcon } from "lucide-react";
 import { RecipeCard } from "@/components/recipe-card";
 import { RecipeGroupCard } from "@/components/recipe-group-card";
 import { RecipeFilters } from "./recipe-filters";
+import { RecipePagination } from "./recipe-pagination";
 import { RecipesMenu } from "./recipes-menu";
 import { collapseIntoGroups } from "@/lib/domain/variants";
+import { paginate, parsePageParam, resolvePageSize } from "@/lib/domain/pagination";
 import { listRecipes, type RecipeListFilters } from "@/lib/db/recipes";
 import { listTags } from "@/lib/db/tags";
 import { listIngredients } from "@/lib/db/ingredients";
@@ -89,10 +91,25 @@ export default async function RecipesPage({
     recipes.sort((a, b) => (posById.get(a.recipe.id) ?? Infinity) - (posById.get(b.recipe.id) ?? Infinity));
   }
 
-  function buildParams(overrides: { sort?: string; menu?: boolean; fav?: boolean }) {
+  // Paginate *rows*, not recipes: slicing raw recipes would split a variant
+  // group across a page boundary, and the leftover member would then render as
+  // a plain recipe (see domain/variants.ts).
+  const rows = collapseIntoGroups(recipes, (item) => item.group);
+  const pageInfo = paginate(
+    rows.length,
+    resolvePageSize(settings.recipesPerPage),
+    parsePageParam(str("page")),
+  );
+  const pageRows = rows.slice(pageInfo.startIndex, pageInfo.endIndex);
+
+  function buildParams(overrides: { sort?: string; menu?: boolean; fav?: boolean; page?: number }) {
     const nextSort = overrides.sort ?? sort;
     const nextMenu = overrides.menu ?? menuOnly;
     const nextFav = overrides.fav ?? filters.favoritesOnly;
+    // `page` defaults to 1, not to the current page: changing sort/menu/fav
+    // reorders or re-filters the list, so staying on page 4 is meaningless.
+    // RecipeFilters' own buildUrl() likewise never re-emits `page`.
+    const nextPage = overrides.page ?? 1;
     const next = new URLSearchParams();
     if (nextSort !== "alpha") next.set("sort", nextSort);
     if (nextMenu) next.set("menu", "1");
@@ -101,6 +118,8 @@ export default async function RecipesPage({
     for (const id of ingredientIds) next.append("ingredient", String(id));
     if (filters.maxTotalTimeMin != null) next.set("maxTime", String(filters.maxTotalTimeMin));
     if (nextFav) next.set("fav", "1");
+    // Last, and omitted on page 1, so the canonical first-page URL is unchanged.
+    if (nextPage > 1) next.set("page", String(nextPage));
     const qs = next.toString();
     return qs ? `/recipes?${qs}` : "/recipes";
   }
@@ -108,6 +127,7 @@ export default async function RecipesPage({
   const buildSortUrl = (s: string) => buildParams({ sort: s });
   const buildMenuUrl = () => buildParams({ menu: !menuOnly });
   const buildFavUrl = () => buildParams({ fav: !filters.favoritesOnly });
+  const buildPageUrl = (p: number) => buildParams({ page: p });
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-8">
@@ -174,7 +194,7 @@ export default async function RecipesPage({
         />
       </div>
 
-      {recipes.length === 0 ? (
+      {rows.length === 0 ? (
         hasFilters ? (
           <p className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
             No recipes match. Try clearing filters, or{" "}
@@ -197,31 +217,34 @@ export default async function RecipesPage({
           </p>
         )
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
-          {collapseIntoGroups(recipes, (item) => item.group).map((row) =>
-            row.kind === "single" ? (
-              <RecipeCard
-                key={`r-${row.item.recipe.id}`}
-                item={row.item}
-                currency={settings.currency}
-                recommend={recByRecipeId.get(row.item.recipe.id)}
-                ingredientNames={ingredientNames}
-              />
-            ) : (
-              <RecipeGroupCard key={`g-${row.group.id}`} name={row.group.name} count={row.members.length}>
-                {row.members.map((m) => (
-                  <RecipeCard
-                    key={m.recipe.id}
-                    item={m}
-                    currency={settings.currency}
-                    recommend={recByRecipeId.get(m.recipe.id)}
-                    ingredientNames={ingredientNames}
-                  />
-                ))}
-              </RecipeGroupCard>
-            ),
-          )}
-        </div>
+        <>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {pageRows.map((row) =>
+              row.kind === "single" ? (
+                <RecipeCard
+                  key={`r-${row.item.recipe.id}`}
+                  item={row.item}
+                  currency={settings.currency}
+                  recommend={recByRecipeId.get(row.item.recipe.id)}
+                  ingredientNames={ingredientNames}
+                />
+              ) : (
+                <RecipeGroupCard key={`g-${row.group.id}`} name={row.group.name} count={row.members.length}>
+                  {row.members.map((m) => (
+                    <RecipeCard
+                      key={m.recipe.id}
+                      item={m}
+                      currency={settings.currency}
+                      recommend={recByRecipeId.get(m.recipe.id)}
+                      ingredientNames={ingredientNames}
+                    />
+                  ))}
+                </RecipeGroupCard>
+              ),
+            )}
+          </div>
+          <RecipePagination info={pageInfo} buildHref={buildPageUrl} />
+        </>
       )}
     </div>
   );

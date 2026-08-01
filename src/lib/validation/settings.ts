@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { PAGE_SIZE_OPTIONS } from "@/lib/domain/pagination";
 
 // One Zod schema shared by the Settings form + server action (§4.1). Validation
 // lives here so the API boundary and the form agree on what a valid Settings is.
@@ -13,6 +14,13 @@ export const settingsUpdateSchema = z.object({
     .max(8)
     .transform((s) => s.toUpperCase()),
   roundingMode: z.enum(["cooking", "exact"]),
+  // Coerced because FormData hands us strings, like averageWindowMonths above.
+  recipesPerPage: z.coerce
+    .number()
+    .int()
+    .refine((n) => (PAGE_SIZE_OPTIONS as readonly number[]).includes(n), {
+      message: "Invalid page size",
+    }),
 });
 
 export type SettingsUpdate = z.infer<typeof settingsUpdateSchema>;

@@ -18,6 +18,7 @@ const UNIT_SYSTEMS = { imperial: "Imperial (cups, oz, °F)", metric: "Metric (ml
 const PRICE_MODES = { average: "Average over window", current: "Most recent price" };
 const ROUNDING_MODES = { cooking: "Cooking (friendly values)", exact: "Exact (precise factors)" };
 const WINDOWS = { "3": "3 months", "4": "4 months", "5": "5 months", "6": "6 months" };
+const RECIPES_PER_PAGE = { "10": "10 per page", "25": "25 per page", "50": "50 per page" };
 
 export function SettingsForm({ initial }: { initial: Settings }) {
   const [state, formAction, pending] = useActionState<SaveSettingsResult | null, FormData>(
@@ -106,6 +107,29 @@ export function SettingsForm({ initial }: { initial: Settings }) {
           maxLength={8}
           className="w-40 uppercase"
         />
+      </Field>
+
+      <Field
+        label="Recipes per page"
+        htmlFor="recipesPerPage"
+        hint="How many recipes the Recipes page shows at once."
+      >
+        <Select
+          name="recipesPerPage"
+          defaultValue={String(initialValues.recipesPerPage)}
+          items={RECIPES_PER_PAGE}
+        >
+          <SelectTrigger id="recipesPerPage" className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {Object.entries(RECIPES_PER_PAGE).map(([value, label]) => (
+              <SelectItem key={value} value={value}>
+                {label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </Field>
 
       <div className="flex items-center gap-3 pt-2">

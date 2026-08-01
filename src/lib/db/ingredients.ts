@@ -113,7 +113,8 @@ export function getOrCreateIngredient(input: CreateIngredientInput): Ingredient 
 
 export type IngredientEditInput = {
   name: string;
-  category: string | null;
+  /** Omit to leave the stored category untouched (it's no longer edited in the UI). */
+  category?: string | null;
   defaultUnit: string | null;
   density: number | null;
   gramsPerEach: number | null;

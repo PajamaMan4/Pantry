@@ -5,10 +5,9 @@ import Link from "next/link";
 import { SparklesIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { buttonVariants } from "@/components/ui/button";
 import { importRecipeAction } from "./actions";
 
-export function ImportForm({ hasKey }: { hasKey: boolean }) {
+export function ImportForm() {
   const [text, setText] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
   const [needsKey, setNeedsKey] = React.useState(false);
@@ -51,25 +50,10 @@ export function ImportForm({ hasKey }: { hasKey: boolean }) {
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-3">
-        <Button type="submit" disabled={pending || text.trim().length === 0 || !hasKey}>
-          <SparklesIcon className="size-4" />
-          {pending ? "Importing…" : "Import with Claude"}
-        </Button>
-        <Link href="/recipes/new" className={buttonVariants({ variant: "outline" })}>
-          Enter manually instead
-        </Link>
-      </div>
-
-      {!hasKey && (
-        <p className="text-sm text-muted-foreground">
-          Add an Anthropic API key in{" "}
-          <Link href="/settings" className="underline underline-offset-4">
-            Settings
-          </Link>{" "}
-          to enable AI import, or enter the recipe manually.
-        </p>
-      )}
+      <Button type="submit" disabled={pending || text.trim().length === 0}>
+        <SparklesIcon className="size-4" />
+        {pending ? "Importing…" : "Import with Claude"}
+      </Button>
     </form>
   );
 }

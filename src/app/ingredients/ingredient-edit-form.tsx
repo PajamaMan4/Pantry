@@ -16,7 +16,6 @@ const selectClass = "h-8 rounded-md border border-input bg-transparent px-2 text
 export type IngredientEditInitial = {
   id?: number;
   name: string;
-  category: string;
   defaultUnit: string;
   density: string;
   gramsPerEach: string;
@@ -27,7 +26,6 @@ export function IngredientEditForm({ initial }: { initial: IngredientEditInitial
   const router = useRouter();
   const isCreate = initial.id == null;
   const [name, setName] = React.useState(initial.name);
-  const [category, setCategory] = React.useState(initial.category);
   const [defaultUnit, setDefaultUnit] = React.useState(initial.defaultUnit);
   const [density, setDensity] = React.useState(initial.density);
   const [gramsPerEach, setGramsPerEach] = React.useState(initial.gramsPerEach);
@@ -35,7 +33,9 @@ export function IngredientEditForm({ initial }: { initial: IngredientEditInitial
   const [pending, startTransition] = React.useTransition();
 
   function save() {
-    const input = { name, category, defaultUnit, density, gramsPerEach, isStaple };
+    // `category` is intentionally absent: the column still exists but is no
+    // longer edited, and the edit schema leaves stored values untouched.
+    const input = { name, defaultUnit, density, gramsPerEach, isStaple };
     startTransition(async () => {
       if (isCreate) {
         // On success this redirects to the new ingredient; only errors return.
@@ -56,22 +56,21 @@ export function IngredientEditForm({ initial }: { initial: IngredientEditInitial
         <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="grid gap-2">
-          <Label htmlFor="category">Category</Label>
-          <Input id="category" value={category} onChange={(e) => setCategory(e.target.value)} placeholder="e.g. dairy" />
-        </div>
-        <div className="grid gap-2">
-          <Label htmlFor="defaultUnit">Default unit</Label>
-          <select id="defaultUnit" className={selectClass} value={defaultUnit} onChange={(e) => setDefaultUnit(e.target.value)}>
-            <option value="">none</option>
-            {UNIT_OPTIONS.map((u) => (
-              <option key={u.value} value={u.value}>
-                {u.label}
-              </option>
-            ))}
-          </select>
-        </div>
+      <div className="grid gap-2">
+        <Label htmlFor="defaultUnit">Default unit</Label>
+        <select
+          id="defaultUnit"
+          className={`${selectClass} w-40`}
+          value={defaultUnit}
+          onChange={(e) => setDefaultUnit(e.target.value)}
+        >
+          <option value="">none</option>
+          {UNIT_OPTIONS.map((u) => (
+            <option key={u.value} value={u.value}>
+              {u.label}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="grid gap-2">

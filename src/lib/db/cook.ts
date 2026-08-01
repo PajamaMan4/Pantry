@@ -14,17 +14,21 @@ import { listPriceEntriesFor } from "./prices";
 import { recordTombstone } from "./tombstones";
 import {
   planCook,
+  applySubstitutions,
   type CookIngredientInput,
   type CookStockRow,
   type CookPlan,
   type CookDeduction,
+  type ResolvedSubstitution,
 } from "../domain/cook";
 import { unitPrice, type PriceMode } from "../domain/cost";
 import { convert } from "../domain/units";
 
 export type CookData = {
   recipe: { id: number; name: string; baseServings: number };
-  ingredients: CookIngredientInput[];
+  // `rowId` (recipe_ingredients row id) lets an in-view substitution target the
+  // exact line it replaces; harmless extra field for callers that ignore it.
+  ingredients: (CookIngredientInput & { rowId: number })[];
   stock: { ingredientId: number; rows: CookStockRow[] }[];
 };
 
@@ -45,7 +49,8 @@ export function getCookData(recipeId: number): CookData | undefined {
     .orderBy(asc(recipeIngredients.displayOrder))
     .all();
 
-  const cookIngredients: CookIngredientInput[] = rows.map(({ ri, ing }) => ({
+  const cookIngredients: (CookIngredientInput & { rowId: number })[] = rows.map(({ ri, ing }) => ({
+    rowId: ri.id,
     ingredientId: ing.id,
     name: ing.name,
     amount: ri.amount,
@@ -159,20 +164,74 @@ function snapshotCost(
 
 export type CookResult = { ok: true; cookLogId: number; plan: CookPlan } | { ok: false; error: string };
 
+/** An in-view ingredient swap sent from the client to apply before deducting. */
+export type CookSubstitution = {
+  rowId: number; // recipe_ingredients row being replaced
+  ingredientId: number; // the substitute ingredient
+  amount: number | null;
+  unit: string | null;
+};
+
+/**
+ * Resolve client-supplied swaps into full substitutions: the substitute's
+ * conversion factors, staple flag, and inventory come from the DB (the client
+ * only chooses the ingredient/amount/unit), and the replaced line's `optional`
+ * is carried through. Stale rows/unknown ingredients are dropped.
+ */
+function resolveSubstitutions(
+  ingredients: (CookIngredientInput & { rowId: number })[],
+  subs: CookSubstitution[],
+): ResolvedSubstitution[] {
+  const rowById = new Map(ingredients.map((ing) => [ing.rowId, ing]));
+  const resolved: ResolvedSubstitution[] = [];
+  for (const sub of subs) {
+    const original = rowById.get(sub.rowId);
+    if (!original) continue; // stale row — ignore
+    const info = getSubstituteInfo(sub.ingredientId);
+    if (!info) continue;
+    resolved.push({
+      rowId: sub.rowId,
+      ingredient: {
+        ingredientId: info.id,
+        name: info.name,
+        amount: sub.amount,
+        unit: sub.unit,
+        optional: original.optional,
+        isStaple: info.isStaple,
+        density: info.density,
+        gramsPerEach: info.gramsPerEach,
+      },
+      stock: info.stock,
+    });
+  }
+  return resolved;
+}
+
 const EPS = 1e-9;
 
 /**
  * Record a cook: deduct stock (FIFO-by-expiry; a row emptied to zero is removed),
  * snapshot the cost, and write a CookLog with per-line detail. All inside one
- * transaction (§3.6).
+ * transaction (§3.6). In-view substitutions, when supplied, are applied first so
+ * the deduction pulls from the swapped ingredients (and their inventory).
  */
-export function cookThisRecipe(recipeId: number, servingsMade: number): CookResult {
+export function cookThisRecipe(
+  recipeId: number,
+  servingsMade: number,
+  subs: CookSubstitution[] = [],
+): CookResult {
   const data = getCookData(recipeId);
   if (!data) return { ok: false, error: "Recipe not found" };
 
   const factor = data.recipe.baseServings > 0 ? servingsMade / data.recipe.baseServings : 1;
-  const stockByIng = new Map(data.stock.map((s) => [s.ingredientId, s.rows]));
-  const plan = planCook(data.ingredients, stockByIng, factor);
+  const baseStock = new Map(data.stock.map((s) => [s.ingredientId, s.rows]));
+  const resolved = resolveSubstitutions(data.ingredients, subs);
+  const { ingredients: effIngredients, stockByIngredient: stockByIng } = applySubstitutions(
+    data.ingredients,
+    baseStock,
+    resolved,
+  );
+  const plan = planCook(effIngredients, stockByIng, factor);
 
   const settings = getSettings();
   const now = new Date();

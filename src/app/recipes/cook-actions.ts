@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { cookInputSchema } from "@/lib/validation/cook";
+import { cookInputSchema, cookSubstitutionsSchema } from "@/lib/validation/cook";
 import { cookThisRecipe, undoCook } from "@/lib/db/cook";
 
 export type CookActionResult =
@@ -18,11 +18,15 @@ function revalidateAll(recipeId: number): void {
 export async function cookThisRecipeAction(
   recipeId: number,
   servingsMade: unknown,
+  substitutions?: unknown,
 ): Promise<CookActionResult> {
   const parsed = cookInputSchema.safeParse({ servingsMade });
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid servings" };
 
-  const res = cookThisRecipe(recipeId, parsed.data.servingsMade);
+  const parsedSubs = cookSubstitutionsSchema.safeParse(substitutions ?? []);
+  if (!parsedSubs.success) return { ok: false, error: "Invalid substitutions" };
+
+  const res = cookThisRecipe(recipeId, parsed.data.servingsMade, parsedSubs.data);
   if (!res.ok) return { ok: false, error: res.error };
 
   revalidateAll(recipeId);

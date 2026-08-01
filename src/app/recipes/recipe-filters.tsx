@@ -81,6 +81,9 @@ export function RecipeFilters({
     return q ? available.filter((i) => i.name.toLowerCase().includes(q)) : available;
   }, [ingredients, selectedIngredientIds, ingredientQuery]);
 
+  // Builds the query string from scratch, so params it doesn't know about — in
+  // particular `page` — are dropped. That is deliberate: changing a filter must
+  // send you back to page 1. Don't "preserve existing params" here.
   function buildUrl(updates: { tags?: number[]; ingredients?: number[]; q?: string | null; maxTime?: string | null; fav?: string | null }) {
     const next = new URLSearchParams();
     if (sort !== "alpha") next.set("sort", sort);

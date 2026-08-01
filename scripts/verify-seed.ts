@@ -25,7 +25,7 @@ const recipeId = createRecipe({
       optional: false,
     },
   ],
-  steps: [{ text: "Mix it." }],
+  steps: [{ id: "s1", text: "Mix it." }],
 });
 
 const inventoryItemId = createInventoryItem({

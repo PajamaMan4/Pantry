@@ -5,14 +5,12 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { PriceChart } from "@/components/price-chart";
-import { UnitSystemToggle } from "@/components/unit-system-toggle";
 import { IngredientEditForm } from "../ingredient-edit-form";
 import { DeletePriceButton } from "../delete-price-button";
 import { AddInventory } from "../add-inventory";
 import { InventoryItemRow, type SerialInventoryItem } from "../inventory-item-row";
 import { PriceForms } from "../price-forms";
-import { DeleteIngredientDialog } from "../delete-ingredient-dialog";
-import { MergeIngredientDialog } from "../merge-ingredient-dialog";
+import { IngredientDetailActionsMenu } from "../ingredient-detail-actions-menu";
 import { AliasesSection } from "../aliases-section";
 import { getIngredientDetail, listIngredients } from "@/lib/db/ingredients";
 import { getSettings } from "@/lib/db/settings";
@@ -94,10 +92,16 @@ export default async function IngredientDetailPage({
       <div className="mt-3 flex items-start justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <h1 className="text-2xl font-semibold tracking-tight">{ingredient.name}</h1>
-          {ingredient.category && <Badge variant="secondary">{ingredient.category}</Badge>}
           {ingredient.isStaple && <Badge variant="outline">staple</Badge>}
         </div>
-        <UnitSystemToggle current={system} />
+        <IngredientDetailActionsMenu
+          ingredientId={ingredient.id}
+          name={ingredient.name}
+          others={listIngredients()
+            .filter((i) => i.id !== ingredient.id)
+            .map((i) => ({ id: i.id, name: i.name }))}
+          recipeNames={recipes.map((r) => r.name)}
+        />
       </div>
 
       {/* 1 — In Stock */}
@@ -204,7 +208,6 @@ export default async function IngredientDetailPage({
               initial={{
                 id: ingredient.id,
                 name: ingredient.name,
-                category: ingredient.category ?? "",
                 defaultUnit: ingredient.defaultUnit ?? "",
                 density: ingredient.density == null ? "" : String(ingredient.density),
                 gramsPerEach: ingredient.gramsPerEach == null ? "" : String(ingredient.gramsPerEach),
@@ -214,17 +217,6 @@ export default async function IngredientDetailPage({
           </CardContent>
         </Card>
       </section>
-
-      <div className="mt-8 flex flex-wrap justify-end gap-2 border-t pt-6">
-        <MergeIngredientDialog
-          currentId={ingredient.id}
-          currentName={ingredient.name}
-          others={listIngredients()
-            .filter((i) => i.id !== ingredient.id)
-            .map((i) => ({ id: i.id, name: i.name }))}
-        />
-        <DeleteIngredientDialog id={ingredient.id} name={ingredient.name} recipeNames={recipes.map((r) => r.name)} />
-      </div>
     </div>
   );
 }

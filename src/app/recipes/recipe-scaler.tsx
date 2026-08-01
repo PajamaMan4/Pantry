@@ -4,8 +4,6 @@ import * as React from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import {
-  MinusIcon,
-  PlusIcon,
   RotateCcwIcon,
   CheckIcon,
   ArrowLeftRightIcon,
@@ -26,6 +24,7 @@ import { groupRowsBySection } from "@/lib/domain/sections";
 import { IngredientPicker } from "@/components/ingredient-picker";
 import type { IngredientOption } from "@/components/ingredient-combobox";
 import { AddMissingButton } from "@/components/add-missing-button";
+import { ServingsStepper } from "@/components/servings-stepper";
 import { CookButton } from "./cook-button";
 import { getSubstituteInfoAction } from "./actions";
 import { useRecipeView } from "./recipe-view-context";
@@ -168,7 +167,6 @@ export function RecipeScaler({
   );
 
   const opts = { factor, system, rounding };
-  const setServings = (n: number) => setTarget(Math.max(0.25, Math.round(n * 100) / 100));
 
   // Substitution is an override applied to the inputs of the existing pipelines:
   // the ingredients list renders over `effectiveIngredients`, and stock status
@@ -232,27 +230,7 @@ export function RecipeScaler({
           {/* Servings stepper */}
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Serves</span>
-            <div className="flex items-center rounded-md border">
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label="Fewer servings"
-                onClick={() => setServings(target - 1)}
-              >
-                <MinusIcon className="size-4" />
-              </Button>
-              <span className="w-10 text-center text-sm font-medium tabular-nums">
-                {formatNumber(target)}
-              </span>
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label="More servings"
-                onClick={() => setServings(target + 1)}
-              >
-                <PlusIcon className="size-4" />
-              </Button>
-            </div>
+            <ServingsStepper value={target} onChange={setTarget} />
             {target !== baseServings && (
               <Button
                 variant="ghost"
@@ -483,8 +461,14 @@ export function RecipeScaler({
             recipeId={recipeId}
             baseServings={baseServings}
             servings={target}
-            ingredients={cookIngredients}
-            stock={cookStock}
+            ingredients={effectiveCookIngredients}
+            stock={[...effectiveStockMap].map(([ingredientId, rows]) => ({ ingredientId, rows }))}
+            substitutions={[...subs.entries()].map(([rowId, s]) => ({
+              rowId,
+              ingredientId: s.ingredientId,
+              amount: subAmount(s),
+              unit: s.unit,
+            }))}
           />
         </div>
       </section>

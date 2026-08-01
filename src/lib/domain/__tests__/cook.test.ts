@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { planCook, type CookIngredientInput, type CookStockRow } from "@/lib/domain/cook";
+import {
+  planCook,
+  applySubstitutions,
+  type CookIngredientInput,
+  type CookStockRow,
+  type ResolvedSubstitution,
+} from "@/lib/domain/cook";
 
 function ing(p: Partial<CookIngredientInput> & { ingredientId: number }): CookIngredientInput {
   return {
@@ -211,5 +217,76 @@ describe("planCook — duplicate ingredients across sections are summed", () => 
     expect(plan.lines[0].status).toBe("ok");
     expect(plan.lines[1].status).toBe("skipped");
     expect(plan.deductions).toEqual([{ inventoryItemId: 10, ingredientId: 1, amount: 5, unit: "g" }]);
+  });
+});
+
+describe("applySubstitutions — in-view swaps applied before planning", () => {
+  const rowIng = (rowId: number, p: Partial<CookIngredientInput> & { ingredientId: number }) => ({
+    rowId,
+    ...ing(p),
+  });
+
+  it("replaces the matching row's ingredient/amount/unit and leaves others untouched", () => {
+    const ingredients = [
+      rowIng(100, { ingredientId: 1, name: "butter", amount: 50, unit: "g" }),
+      rowIng(200, { ingredientId: 2, name: "sugar", amount: 30, unit: "g" }),
+    ];
+    const sub: ResolvedSubstitution = {
+      rowId: 100,
+      ingredient: ing({ ingredientId: 3, name: "margarine", amount: 40, unit: "g" }),
+      stock: [{ inventoryItemId: 30, quantity: 200, unit: "g", expiryMs: null }],
+    };
+    const { ingredients: out } = applySubstitutions(ingredients, stock({}), [sub]);
+    expect(out[0]).toMatchObject({ ingredientId: 3, name: "margarine", amount: 40, unit: "g" });
+    expect(out[1]).toMatchObject({ ingredientId: 2, name: "sugar", amount: 30 });
+  });
+
+  it("merges the substitute's stock only when that ingredient isn't already stocked", () => {
+    const ingredients = [rowIng(100, { ingredientId: 1, amount: 50, unit: "g" })];
+    const existing = stock({ 3: [{ inventoryItemId: 99, quantity: 5, unit: "g", expiryMs: null }] });
+    const sub: ResolvedSubstitution = {
+      rowId: 100,
+      ingredient: ing({ ingredientId: 3, amount: 40, unit: "g" }),
+      stock: [{ inventoryItemId: 30, quantity: 200, unit: "g", expiryMs: null }],
+    };
+    const { stockByIngredient } = applySubstitutions(ingredients, existing, [sub]);
+    // A real inventory entry for id 3 already exists → it wins, sub stock ignored.
+    expect(stockByIngredient.get(3)).toEqual([{ inventoryItemId: 99, quantity: 5, unit: "g", expiryMs: null }]);
+
+    const { stockByIngredient: added } = applySubstitutions(ingredients, stock({}), [sub]);
+    // No prior stock for id 3 → the substitute's rows are merged in.
+    expect(added.get(3)).toEqual([{ inventoryItemId: 30, quantity: 200, unit: "g", expiryMs: null }]);
+  });
+
+  it("ignores a substitution whose rowId matches no line", () => {
+    const ingredients = [rowIng(100, { ingredientId: 1, amount: 50, unit: "g" })];
+    const sub: ResolvedSubstitution = {
+      rowId: 999, // stale
+      ingredient: ing({ ingredientId: 3, amount: 40, unit: "g" }),
+      stock: [],
+    };
+    const { ingredients: out } = applySubstitutions(ingredients, stock({}), [sub]);
+    expect(out[0]).toMatchObject({ ingredientId: 1 });
+  });
+
+  it("empty substitution list is a no-op", () => {
+    const ingredients = [rowIng(100, { ingredientId: 1, amount: 50, unit: "g" })];
+    const s = stock({ 1: [{ inventoryItemId: 10, quantity: 100, unit: "g", expiryMs: null }] });
+    const { ingredients: out, stockByIngredient } = applySubstitutions(ingredients, s, []);
+    expect(out).toEqual(ingredients);
+    expect(stockByIngredient.get(1)).toEqual(s.get(1));
+  });
+
+  it("plans a deduction against the substitute's stock end-to-end", () => {
+    const ingredients = [rowIng(100, { ingredientId: 1, name: "butter", amount: 50, unit: "g" })];
+    const sub: ResolvedSubstitution = {
+      rowId: 100,
+      ingredient: ing({ ingredientId: 3, name: "margarine", amount: 50, unit: "g" }),
+      stock: [{ inventoryItemId: 30, quantity: 200, unit: "g", expiryMs: null }],
+    };
+    const { ingredients: eff, stockByIngredient } = applySubstitutions(ingredients, stock({}), [sub]);
+    const plan = planCook(eff, stockByIngredient, 1);
+    expect(plan.deductions).toEqual([{ inventoryItemId: 30, ingredientId: 3, amount: 50, unit: "g" }]);
+    expect(plan.lines[0].status).toBe("ok");
   });
 });

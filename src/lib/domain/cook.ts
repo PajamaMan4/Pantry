@@ -51,6 +51,40 @@ export interface CookPlan {
   warnings: string[];
 }
 
+/**
+ * A temporary ingredient swap resolved to everything the deduction needs: which
+ * recipe line it replaces (`rowId`), the substitute as a ready cook input (amount
+ * and unit already resolved, conversion factors + staple flag filled in), and the
+ * substitute's own inventory rows.
+ */
+export interface ResolvedSubstitution {
+  rowId: number;
+  ingredient: CookIngredientInput;
+  stock: CookStockRow[];
+}
+
+/**
+ * Apply in-view ingredient swaps to a recipe's cook inputs before planning: each
+ * ingredient whose `rowId` matches a substitution is replaced by the substitute,
+ * and the substitute's stock is merged in (only when that ingredient isn't already
+ * stocked, so a real inventory entry always wins). Pure — mirrors the client's
+ * `effectiveCookIngredients`/`effectiveStockMap` so preview and deduction agree.
+ */
+export function applySubstitutions(
+  ingredients: (CookIngredientInput & { rowId: number })[],
+  stockByIngredient: Map<number, CookStockRow[]>,
+  subs: ResolvedSubstitution[],
+): { ingredients: CookIngredientInput[]; stockByIngredient: Map<number, CookStockRow[]> } {
+  const byRow = new Map(subs.map((s) => [s.rowId, s]));
+  const outIngredients = ingredients.map((ing) => byRow.get(ing.rowId)?.ingredient ?? ing);
+
+  const outStock = new Map(stockByIngredient);
+  for (const s of subs) {
+    if (!outStock.has(s.ingredient.ingredientId)) outStock.set(s.ingredient.ingredientId, s.stock);
+  }
+  return { ingredients: outIngredients, stockByIngredient: outStock };
+}
+
 const EPS = 1e-9;
 // Unit-conversion factors carry only ~6 significant figures, so a cross-unit
 // round-trip loses ~1e-7 of relative precision. Decide "row fully consumed" /

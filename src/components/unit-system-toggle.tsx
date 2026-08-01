@@ -4,7 +4,8 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import type { DisplaySystem } from "@/lib/domain/scaling";
 
-const OPTIONS: { value: DisplaySystem; label: string }[] = [
+/** Unit-display options, shared by this toggle and the ingredients actions menu. */
+export const UNIT_SYSTEM_OPTIONS: { value: DisplaySystem; label: string }[] = [
   { value: "original", label: "As written" },
   { value: "imperial", label: "Imperial" },
   { value: "metric", label: "Metric" },
@@ -24,7 +25,7 @@ export function UnitSystemToggle({ current }: { current: DisplaySystem }) {
 
   return (
     <div className="flex items-center rounded-md border p-0.5">
-      {OPTIONS.map((o) => (
+      {UNIT_SYSTEM_OPTIONS.map((o) => (
         <button
           key={o.value}
           type="button"

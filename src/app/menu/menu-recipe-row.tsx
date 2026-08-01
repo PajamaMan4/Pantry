@@ -2,15 +2,13 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { MinusIcon, PlusIcon } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { formatNumber } from "@/lib/domain/format";
+import { ServingsStepper } from "@/components/servings-stepper";
 import { MenuButton } from "@/app/recipes/menu-button";
 import { setMenuServingsAction } from "@/app/recipes/actions";
 
 /**
  * One flat row on the Menu: notepad remove toggle, the recipe name (linking to
- * its page), and a −/+ servings stepper. Changing the servings persists to the
+ * its page), and a servings stepper. Changing the servings persists to the
  * recipe's menuServings (debounced) and revalidates /menu so the aggregated
  * "Ingredients needed" list recomputes with the chosen amounts.
  */
@@ -57,28 +55,12 @@ export function MenuRecipeRow({
       </div>
 
       <div className="flex shrink-0 items-center gap-2">
-        <div className="flex items-center rounded-md border">
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label={`Fewer servings for ${name}`}
-            onClick={() => change(servings - 1)}
-            disabled={servings <= 1}
-          >
-            <MinusIcon className="size-4" />
-          </Button>
-          <span className="w-10 text-center text-sm font-medium tabular-nums">
-            {formatNumber(servings)}
-          </span>
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label={`More servings for ${name}`}
-            onClick={() => change(servings + 1)}
-          >
-            <PlusIcon className="size-4" />
-          </Button>
-        </div>
+        <ServingsStepper
+          value={servings}
+          onChange={change}
+          min={1}
+          ariaSuffix={` for ${name}`}
+        />
         <span className="text-sm text-muted-foreground">servings</span>
       </div>
     </li>

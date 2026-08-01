@@ -219,6 +219,7 @@ export const settings = sqliteTable("settings", {
   currency: text("currency").notNull().default("USD"),
   roundingMode: text("rounding_mode").notNull().default("cooking"), // 'cooking' | 'exact'
   inventoryView: text("inventory_view").notNull().default("alphabetical"), // 'alphabetical' | 'location'
+  recipesPerPage: integer("recipes_per_page").notNull().default(10), // 10 | 25 | 50
   anthropicApiKey: text("anthropic_api_key"), // optional, enables Claude recipe import
   hasSeenWelcome: integer("has_seen_welcome", { mode: "boolean" }).notNull().default(false), // first-run welcome dialog dismissed
   // Singleton row (id=1) — no publicId; a future sync LWW-merges it by updatedAt.

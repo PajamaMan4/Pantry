@@ -1,8 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { UploadIcon } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { DownloadIcon, UploadIcon } from "lucide-react";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { importPantryFileAction } from "./actions";
 
 export function PantryFileImport() {
@@ -46,15 +47,25 @@ export function PantryFileImport() {
         onChange={onFileChange}
         disabled={pending}
       />
-      <Button
-        type="button"
-        variant="outline"
-        onClick={() => inputRef.current?.click()}
-        disabled={pending}
-      >
-        <UploadIcon className="size-4" />
-        {pending ? "Importing…" : "Choose .pantry file"}
-      </Button>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => inputRef.current?.click()}
+          disabled={pending}
+        >
+          <UploadIcon className="size-4" />
+          {pending ? "Importing…" : "Choose .pantry file"}
+        </Button>
+        <a
+          href="/api/schema/pantry"
+          download="pantry-file.ts"
+          className={cn(buttonVariants({ variant: "outline" }), "ml-auto")}
+        >
+          <DownloadIcon className="size-4" />
+          Export .pantry JSON schema
+        </a>
+      </div>
       {error && (
         <p className="rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive">
           {error}

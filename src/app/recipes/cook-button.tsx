@@ -27,12 +27,14 @@ export function CookButton({
   servings,
   ingredients,
   stock,
+  substitutions = [],
 }: {
   recipeId: number;
   baseServings: number;
   servings: number;
   ingredients: CookIngredientInput[];
   stock: { ingredientId: number; rows: CookStockRow[] }[];
+  substitutions?: { rowId: number; ingredientId: number; amount: number | null; unit: string | null }[];
 }) {
   const [open, setOpen] = React.useState(false);
   const [servingsMade, setServingsMade] = React.useState(String(servings));
@@ -61,7 +63,7 @@ export function CookButton({
 
   function confirm() {
     startTransition(async () => {
-      const res = await cookThisRecipeAction(recipeId, servingsMade);
+      const res = await cookThisRecipeAction(recipeId, servingsMade, substitutions);
       if (!res.ok) {
         toast.error(res.error);
         return;

@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { Trash2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -11,7 +10,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { deleteIngredientAction } from "./actions";
 
@@ -19,18 +17,19 @@ export function DeleteIngredientDialog({
   id,
   name,
   recipeNames,
+  open,
+  onOpenChange,
 }: {
   id: number;
   name: string;
   recipeNames: string[];
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }) {
   const [pending, startTransition] = React.useTransition();
 
   return (
-    <Dialog>
-      <DialogTrigger render={<Button variant="destructive" size="sm" />}>
-        <Trash2Icon className="size-4" /> Delete ingredient
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Delete “{name}”?</DialogTitle>

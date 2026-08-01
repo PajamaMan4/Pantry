@@ -19,7 +19,7 @@ export default function GuidePage() {
         </Link>
         <h1 className="font-heading text-2xl font-semibold">How to use Pantry</h1>
         <p className="text-sm text-muted-foreground">
-          A short tour of everything Pantry does. Expand a section to learn more.
+          Please find below explanations for the variety of features available in your Pantry app. The Pantry app was developed due to the desire to know just how much some recipes cost to cook. To do this, the app was developed with two main pillars: recipes and ingredients, and the rest of the functions were developed around these. It also was designed to be lightweight, no nonsense, and self owned. No subscription models, no place to put advertising, no data collection and selling. Just a database of recipes and ingredients and different ways to view them.
         </p>
       </div>
 
@@ -42,7 +42,9 @@ export default function GuidePage() {
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <div className="space-y-3 px-4 pb-4 text-sm text-muted-foreground">
-                  <p>{section.body}</p>
+                  {section.body.map((paragraph, i) => (
+                    <p key={i}>{paragraph}</p>
+                  ))}
                   {section.href && (
                     <Link
                       href={section.href}

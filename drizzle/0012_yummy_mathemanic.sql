@@ -1,0 +1,1 @@
+ALTER TABLE `settings` ADD `recipes_per_page` integer DEFAULT 10 NOT NULL;
