@@ -27,6 +27,15 @@ function createConnection(): Database.Database {
 // live handle + drizzle wrapper in a mutable cell so the connection can be
 // swapped out (e.g. after an in-app restore — see maintenance.ts) without every
 // importer of `db` capturing a stale reference.
+//
+// The cell is stashed on globalThis in *all* environments, not just dev. A
+// production build compiles this module into several bundles (server components,
+// route handlers, instrumentation), each with its own module state — without the
+// global, each would open its own handle on the same file. That breaks
+// replaceDatabaseFile() below, which can only close/reopen the handle it knows
+// about: a second handle would keep the old file locked (EBUSY on Windows) or
+// keep stale pages + a dangling WAL index around after the swap. We're a
+// single long-lived local process, so one shared connection is always correct.
 type DbCell = { sqlite: Database.Database; orm: Drizzle };
 
 const globalForDb = globalThis as unknown as { __pantryDb?: DbCell };
@@ -37,9 +46,7 @@ function openCell(): DbCell {
 }
 
 const cell: DbCell = globalForDb.__pantryDb ?? openCell();
-if (process.env.NODE_ENV !== "production") {
-  globalForDb.__pantryDb = cell;
-}
+globalForDb.__pantryDb = cell;
 
 /** The current raw better-sqlite3 handle (for backup/restore/PRAGMA work). */
 export function getRawSqlite(): Database.Database {

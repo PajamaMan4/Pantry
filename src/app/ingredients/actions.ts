@@ -10,6 +10,7 @@ import {
   inventoryRemoveSchema,
   logPurchaseSchema,
 } from "@/lib/validation/inventory";
+import { idOrNull } from "@/lib/validation/common";
 import { importItemSchema, normalizeImportItemList } from "@/lib/inventory-import";
 import { inventoryViewSchema } from "@/lib/validation/settings";
 import {
@@ -25,6 +26,7 @@ import {
   createInventoryItem,
   updateInventoryItem,
   deleteInventoryItem,
+  setInventoryLocation,
   clearInventoryForIngredient,
   decrementInventoryItems,
   importPricesAndInventory,
@@ -32,6 +34,7 @@ import {
   type InventoryItemInput,
   type LogPurchaseInput,
 } from "@/lib/db/inventory";
+import { listLocations } from "@/lib/db/locations";
 import { setInventoryView } from "@/lib/db/settings";
 
 export type IngredientActionResult = { ok: true } | { ok: false; error: string };
@@ -156,6 +159,24 @@ export async function updateInventoryItemAction(id: number, input: unknown): Pro
   const parsed = inventoryItemSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: firstError(parsed.error.issues) };
   updateInventoryItem(id, parsed.data as InventoryItemInput);
+  revalidateIngredients();
+  return { ok: true };
+}
+
+// Move an entry to another storage location (null = Unsorted). Used by the
+// drag-to-sort tray, which only ever sends ids it was rendered with — the
+// existence check catches a tray left open while the location was deleted.
+export async function moveInventoryItemAction(
+  id: number,
+  locationId: number | null,
+): Promise<IngredientActionResult> {
+  const parsed = idOrNull.safeParse(locationId);
+  if (!parsed.success) return { ok: false, error: firstError(parsed.error.issues) };
+  const target = parsed.data as number | null;
+  if (target != null && !listLocations().some((l) => l.id === target)) {
+    return { ok: false, error: "That location no longer exists." };
+  }
+  setInventoryLocation(id, target);
   revalidateIngredients();
   return { ok: true };
 }

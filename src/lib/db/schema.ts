@@ -6,7 +6,7 @@
 //    the Ingredient master for cost/inventory/recommendations.
 //  - Inline step quantities are structured ({qN} placeholders + a quantities map),
 //    which is what makes safe scaling/conversion possible (§3.2, §5.1).
-import { sqliteTable, text, integer, real, index } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, real, blob, index } from "drizzle-orm/sqlite-core";
 import { newPublicId } from "./ids";
 
 // `publicId` is a sync-stable, globally-unique id that travels with a row across
@@ -72,6 +72,26 @@ export const recipes = sqliteTable("recipes", {
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
     .$defaultFn(() => new Date()),
+  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});
+
+// A recipe's optional photo. Kept in its own table (not a column on `recipes`)
+// because every recipe query does `select()` on that table — a blob column would
+// drag image bytes into every list/detail read. `recipeId` is the primary key,
+// which enforces at most one image per recipe at the DB level. No publicId: image
+// bytes are deliberately outside the sync/.pantry-export surface (see the note
+// above about aggregate children).
+export const recipeImages = sqliteTable("recipe_images", {
+  recipeId: integer("recipe_id")
+    .primaryKey()
+    .references(() => recipes.id, { onDelete: "cascade" }),
+  mime: text("mime").notNull(), // 'image/webp' | 'image/jpeg' | 'image/png'
+  bytes: blob("bytes", { mode: "buffer" }).notNull(),
+  width: integer("width"),
+  height: integer("height"),
+  byteSize: integer("byte_size").notNull(),
   updatedAt: integer("updated_at", { mode: "timestamp" })
     .notNull()
     .$defaultFn(() => new Date()),
@@ -220,8 +240,10 @@ export const settings = sqliteTable("settings", {
   roundingMode: text("rounding_mode").notNull().default("cooking"), // 'cooking' | 'exact'
   inventoryView: text("inventory_view").notNull().default("alphabetical"), // 'alphabetical' | 'location'
   recipesPerPage: integer("recipes_per_page").notNull().default(10), // 10 | 25 | 50
+  ingredientsPerPage: integer("ingredients_per_page").notNull().default(25), // 10 | 25 | 50
   anthropicApiKey: text("anthropic_api_key"), // optional, enables Claude recipe import
   hasSeenWelcome: integer("has_seen_welcome", { mode: "boolean" }).notNull().default(false), // first-run welcome dialog dismissed
+  showRecipeImages: integer("show_recipe_images", { mode: "boolean" }).notNull().default(true), // render recipe photo banners on detail pages
   // Singleton row (id=1) — no publicId; a future sync LWW-merges it by updatedAt.
   updatedAt: integer("updated_at", { mode: "timestamp" })
     .notNull()
@@ -282,6 +304,8 @@ export type Recipe = typeof recipes.$inferSelect;
 export type NewRecipe = typeof recipes.$inferInsert;
 export type RecipeIngredient = typeof recipeIngredients.$inferSelect;
 export type NewRecipeIngredient = typeof recipeIngredients.$inferInsert;
+export type RecipeImage = typeof recipeImages.$inferSelect;
+export type NewRecipeImage = typeof recipeImages.$inferInsert;
 export type Tag = typeof tags.$inferSelect;
 export type RecipeGroup = typeof recipeGroups.$inferSelect;
 export type StorageLocation = typeof storageLocations.$inferSelect;

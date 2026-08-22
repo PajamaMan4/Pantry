@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { ClockIcon, ChefHatIcon, LayersIcon } from "lucide-react";
+import { notFoundWithReason, notFoundInvalidId } from "@/lib/not-found";
 import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -18,16 +18,17 @@ import { getSettings } from "@/lib/db/settings";
 import { getCookData, cookStats, listCookLogsForRecipe } from "@/lib/db/cook";
 import { recipeCostFor } from "@/lib/db/recipe-cost";
 import { formatMinutes, totalTimeMin, formatNumber, formatMoney } from "@/lib/domain/format";
+import { recipeImageSrc } from "@/lib/domain/recipe-image";
 
 export const dynamic = "force-dynamic";
 
 export default async function RecipeDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const recipeId = Number(id);
-  if (!Number.isInteger(recipeId)) notFound();
+  if (!Number.isInteger(recipeId)) notFoundInvalidId("recipe", id);
 
   const detail = getRecipeDetail(recipeId);
-  if (!detail) notFound();
+  if (!detail) notFoundWithReason("recipe", recipeId);
 
   const { recipe, ingredients, tags, group } = detail;
   const variants = group ? getVariantsInGroup(group.id, recipe.id) : [];
@@ -47,74 +48,114 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ i
     aliases: i.aliases,
   }));
 
-  return (
-    <RecipeViewProvider defaultSystem={settings.unitSystem === "metric" ? "metric" : "imperial"}>
-      <div className="mx-auto w-full max-w-5xl px-4 py-8">
-        <div className="flex items-center justify-between gap-3">
-          <Link href="/recipes" className="text-sm text-muted-foreground hover:text-foreground">
-            ← All recipes
-          </Link>
-          <div className="flex shrink-0 items-center gap-2">
-            <MenuButton id={recipe.id} isOnMenu={recipe.isOnMenu} withLabel />
-            <CookModeToggle />
-            <RecipeActionsMenu recipeId={recipe.id} />
-          </div>
+  const showBanner = settings.showRecipeImages && detail.image != null;
+  const bannerSrc = detail.image ? recipeImageSrc(recipe.id, detail.image.updatedAt.getTime()) : null;
+
+  const header = (
+    <>
+      <div className="flex items-center justify-between gap-3">
+        <Link href="/recipes" className="text-sm text-muted-foreground hover:text-foreground">
+          ← All recipes
+        </Link>
+        <div className="flex shrink-0 items-center gap-2">
+          <MenuButton id={recipe.id} isOnMenu={recipe.isOnMenu} withLabel />
+          <CookModeToggle />
+          <RecipeActionsMenu recipeId={recipe.id} />
         </div>
+      </div>
 
-        <div className="mt-3 flex items-center gap-2">
-          <h1 className="text-2xl font-semibold tracking-tight">{recipe.name}</h1>
-          <FavoriteButton id={recipe.id} isFavorite={recipe.isFavorite} />
-        </div>
+      <div className="mt-3 flex items-center gap-2">
+        <h1 className="text-2xl font-semibold tracking-tight">{recipe.name}</h1>
+        <FavoriteButton id={recipe.id} isFavorite={recipe.isFavorite} />
+      </div>
 
-        {recipe.description && <p className="mt-2 text-muted-foreground">{recipe.description}</p>}
+      {recipe.description && <p className="mt-2 text-muted-foreground">{recipe.description}</p>}
 
-        <div className="mt-4 flex flex-wrap gap-4 text-sm text-muted-foreground">
-          <span className="inline-flex items-center gap-1">
-            <ClockIcon className="size-4" /> {formatMinutes(total)}
-            {(recipe.prepTimeMin != null || recipe.cookTimeMin != null) && (
-              <span className="text-xs">
-                {" "}
-                ({formatMinutes(recipe.prepTimeMin)} prep · {formatMinutes(recipe.cookTimeMin)} cook)
-              </span>
-            )}
-          </span>
-          {stats.timesCooked > 0 && (
-            <span className="inline-flex items-center gap-1">
-              <ChefHatIcon className="size-4" /> Made {stats.timesCooked}×
-              {stats.lastCookedAt && <span className="text-xs"> · last {stats.lastCookedAt.toLocaleDateString()}</span>}
+      <div className="mt-4 flex flex-wrap gap-4 text-sm text-muted-foreground">
+        <span className="inline-flex items-center gap-1">
+          <ClockIcon className="size-4" /> {formatMinutes(total)}
+          {(recipe.prepTimeMin != null || recipe.cookTimeMin != null) && (
+            <span className="text-xs">
+              {" "}
+              ({formatMinutes(recipe.prepTimeMin)} prep · {formatMinutes(recipe.cookTimeMin)} cook)
             </span>
           )}
-        </div>
+        </span>
+        {stats.timesCooked > 0 && (
+          <span className="inline-flex items-center gap-1">
+            <ChefHatIcon className="size-4" /> Made {stats.timesCooked}×
+            {stats.lastCookedAt && <span className="text-xs"> · last {stats.lastCookedAt.toLocaleDateString()}</span>}
+          </span>
+        )}
+      </div>
 
-        {tags.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            {tags.map((t) => (
-              <Badge key={t.id} variant="secondary">
-                {t.name}
-              </Badge>
+      {tags.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {tags.map((t) => (
+            <Badge key={t.id} variant="secondary">
+              {t.name}
+            </Badge>
+          ))}
+        </div>
+      )}
+
+      {group && variants.length > 0 && (
+        <div className="mt-4 rounded-lg border bg-muted/30 p-3">
+          <div className="mb-2 inline-flex items-center gap-2 text-sm font-medium">
+            <LayersIcon className="size-4" /> Variants · {group.name}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {variants.map((v) => (
+              <Link
+                key={v.id}
+                href={`/recipes/${v.id}`}
+                className={buttonVariants({ variant: "outline", size: "sm" })}
+              >
+                {v.name}
+              </Link>
             ))}
           </div>
-        )}
+        </div>
+      )}
+    </>
+  );
 
-        {group && variants.length > 0 && (
-          <div className="mt-4 rounded-lg border bg-muted/30 p-3">
-            <div className="mb-2 inline-flex items-center gap-2 text-sm font-medium">
-              <LayersIcon className="size-4" /> Variants · {group.name}
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {variants.map((v) => (
-                <Link
-                  key={v.id}
-                  href={`/recipes/${v.id}`}
-                  className={buttonVariants({ variant: "outline", size: "sm" })}
-                >
-                  {v.name}
-                </Link>
-              ))}
+  return (
+    <RecipeViewProvider defaultSystem={settings.unitSystem === "metric" ? "metric" : "imperial"}>
+      {showBanner ? (
+        <div className="relative isolate w-full overflow-hidden min-h-64 sm:min-h-80">
+          {/* eslint-disable-next-line @next/next/no-img-element -- bytes come from a dynamic route with a ?v= query; see recipe-image plan */}
+          <img
+            src={bannerSrc!}
+            alt=""
+            aria-hidden="true"
+            fetchPriority="high"
+            className="absolute inset-0 -z-10 size-full object-cover"
+          />
+          <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:py-12">
+            <div
+              className="rounded-xl border border-border/60 bg-background/85 p-4 shadow-lg
+                         supports-[backdrop-filter]:bg-background/55
+                         supports-[backdrop-filter]:backdrop-blur-xl
+                         supports-[backdrop-filter]:backdrop-saturate-150"
+            >
+              {header}
             </div>
           </div>
-        )}
+        </div>
+      ) : (
+        <div className="mx-auto w-full max-w-5xl px-4 pt-8">{header}</div>
+      )}
 
+      {/*
+        This container's `pb-8` + the header container's `pt-8` reproduce the
+        original single-container `py-8`. The Separator's `my-6` top margin can't
+        collapse through this container's edge — a flex item (this is a direct
+        child of <main>'s flex column) always establishes its own margin-collapsing
+        context — so the no-image layout stays pixel-identical to before this
+        banner feature existed.
+      */}
+      <div className="mx-auto w-full max-w-5xl px-4 pb-8">
         <Separator className="my-6" />
 
         <RecipeScaler

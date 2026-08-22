@@ -1,6 +1,18 @@
 import { z } from "zod";
 import { PAGE_SIZE_OPTIONS } from "@/lib/domain/pagination";
 
+// Base UI's Switch always submits a value — `value` when on, `uncheckedValue`
+// when off — so the FormData key is never missing the way a native unchecked
+// checkbox would be. A strict union (not a truthy coercion) means a genuinely
+// *missing* key surfaces as a validation error instead of silently persisting
+// `false`.
+const formBoolean = z.union([
+  z.boolean(),
+  z.literal("1").transform(() => true),
+  z.literal("0").transform(() => false),
+  z.literal("on").transform(() => true),
+]);
+
 // One Zod schema shared by the Settings form + server action (§4.1). Validation
 // lives here so the API boundary and the form agree on what a valid Settings is.
 export const settingsUpdateSchema = z.object({
@@ -21,6 +33,13 @@ export const settingsUpdateSchema = z.object({
     .refine((n) => (PAGE_SIZE_OPTIONS as readonly number[]).includes(n), {
       message: "Invalid page size",
     }),
+  ingredientsPerPage: z.coerce
+    .number()
+    .int()
+    .refine((n) => (PAGE_SIZE_OPTIONS as readonly number[]).includes(n), {
+      message: "Invalid page size",
+    }),
+  showRecipeImages: formBoolean,
 });
 
 export type SettingsUpdate = z.infer<typeof settingsUpdateSchema>;

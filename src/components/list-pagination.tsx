@@ -5,23 +5,28 @@ import { cn } from "@/lib/utils";
 
 // Server component on purpose: `buildHref` is a function prop, which is only
 // legal because nothing here crosses a client boundary. Do not add "use client".
-export function RecipePagination({
+//
+// Shared by every paginated list (recipes grid, ingredients dictionary). `label`
+// is the nav's accessible name, so pages with more than one list stay distinct.
+export function ListPagination({
   info,
   buildHref,
+  label,
 }: {
   info: PageInfo;
   buildHref: (page: number) => string;
+  label: string;
 }) {
   if (info.totalPages <= 1) return null;
 
   const tokens = pageWindow(info.page, info.totalPages);
-  // Same shape as the sort segmented control on the recipes page.
+  // Same shape as the sort segmented controls elsewhere in the app.
   const item = "rounded-sm px-2.5 py-1 font-medium transition-colors";
   const step = "inline-flex items-center gap-1";
 
   return (
     <nav
-      aria-label="Recipe pages"
+      aria-label={label}
       className="mt-6 flex flex-wrap items-center justify-center gap-3 text-xs"
     >
       <div className="flex items-center gap-1 rounded-md border p-0.5">

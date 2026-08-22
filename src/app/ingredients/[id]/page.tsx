@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFoundWithReason, notFoundInvalidId } from "@/lib/not-found";
 import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,10 +36,10 @@ export default async function IngredientDetailPage({
   const { id } = await params;
   const sp = await searchParams;
   const ingredientId = Number(id);
-  if (!Number.isInteger(ingredientId)) notFound();
+  if (!Number.isInteger(ingredientId)) notFoundInvalidId("ingredient", id);
 
   const detail = getIngredientDetail(ingredientId);
-  if (!detail) notFound();
+  if (!detail) notFoundWithReason("ingredient", ingredientId);
 
   const { ingredient, inventory, recipes, priceEntries, aliases } = detail;
   const settings = getSettings();

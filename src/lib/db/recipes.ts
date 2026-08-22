@@ -18,6 +18,7 @@ import {
 import { lastCookedByRecipe } from "./cook";
 import { recipeCostSummaries } from "./recipe-cost";
 import { recordTombstone } from "./tombstones";
+import { getRecipeImageMeta, setRecipeImageTx, deleteRecipeImageTx, copyRecipeImageTx, type RecipeImageMeta } from "./recipe-images";
 import type { RecipeCost } from "../domain/cost";
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -51,6 +52,19 @@ export type RecipeWriteInput = {
   groupName: string | null;
 };
 
+// The recipe photo is edited out-of-band from `RecipeWriteInput` (see actions.ts):
+// "keep" leaves whatever is already stored untouched, unlike ingredients/tags which
+// are always replaced wholesale — an image is commonly left alone on every edit.
+export type RecipeImageEdit =
+  | { action: "keep" }
+  | { action: "remove" }
+  | { action: "set"; mime: string; bytes: Buffer; width: number | null; height: number | null };
+
+function applyImageEdit(tx: Tx, recipeId: number, edit: RecipeImageEdit): void {
+  if (edit.action === "set") setRecipeImageTx(tx, recipeId, edit);
+  else if (edit.action === "remove") deleteRecipeImageTx(tx, recipeId);
+}
+
 // ---- Read shapes ------------------------------------------------------------
 export type RecipeListItem = {
   recipe: Recipe;
@@ -69,6 +83,9 @@ export type RecipeDetail = {
   ingredients: RecipeIngredientDetail[];
   tags: Tag[];
   group: RecipeGroup | null;
+  // Present iff the recipe has a photo. Metadata only — bytes are served by the
+  // /api/recipes/[id]/image route so a detail render never touches the blob.
+  image: RecipeImageMeta | null;
 };
 
 export type RecipeListFilters = {
@@ -203,7 +220,9 @@ export function getRecipeDetail(id: number): RecipeDetail | undefined {
       ? (db.select().from(recipeGroups).where(eq(recipeGroups.id, recipe.groupId)).get() ?? null)
       : null;
 
-  return { recipe, ingredients: detailIngredients, tags: tagRows.map((t) => t.tag), group };
+  const image = getRecipeImageMeta(id);
+
+  return { recipe, ingredients: detailIngredients, tags: tagRows.map((t) => t.tag), group, image };
 }
 
 /** Other recipes in the same variant group (alphabetical), excluding `excludeRecipeId`. */
@@ -325,10 +344,12 @@ function insertRecipeRow(tx: Tx, input: RecipeWriteInput, groupId: number | null
   return recipe.id;
 }
 
-export function createRecipe(input: RecipeWriteInput): number {
+export function createRecipe(input: RecipeWriteInput, image: RecipeImageEdit = { action: "keep" }): number {
   return db.transaction((tx) => {
     const groupId = input.groupName?.trim() ? getOrCreateGroupId(tx, input.groupName) : null;
-    return insertRecipeRow(tx, input, groupId);
+    const id = insertRecipeRow(tx, input, groupId);
+    applyImageEdit(tx, id, image); // "keep" on a brand-new recipe is a no-op
+    return id;
   });
 }
 
@@ -336,8 +357,16 @@ export function createRecipe(input: RecipeWriteInput): number {
  * Fork the edited form values into a NEW recipe that shares a variant group with
  * `originalId`. The original keeps its content and is only joined to the group.
  * `input.groupName` must be non-empty (caller enforces).
+ *
+ * The new recipe inherits the original's photo by default ("keep"), the same way
+ * it inherits name/ingredients/steps/tags; pass "set"/"remove" to override it. The
+ * original's own image is never touched.
  */
-export function saveRecipeAsVariant(originalId: number, input: RecipeWriteInput): number {
+export function saveRecipeAsVariant(
+  originalId: number,
+  input: RecipeWriteInput,
+  image: RecipeImageEdit = { action: "keep" },
+): number {
   const name = input.groupName?.trim();
   if (!name) throw new Error("A variant group name is required to save a variant.");
 
@@ -358,11 +387,14 @@ export function saveRecipeAsVariant(originalId: number, input: RecipeWriteInput)
         .run();
     }
 
-    return insertRecipeRow(tx, input, groupId);
+    const newId = insertRecipeRow(tx, input, groupId);
+    if (image.action === "keep") copyRecipeImageTx(tx, originalId, newId);
+    else applyImageEdit(tx, newId, image);
+    return newId;
   });
 }
 
-export function updateRecipe(id: number, input: RecipeWriteInput): void {
+export function updateRecipe(id: number, input: RecipeWriteInput, image: RecipeImageEdit = { action: "keep" }): void {
   db.transaction((tx) => {
     const groupId = input.groupName?.trim() ? getOrCreateGroupId(tx, input.groupName) : null;
     tx.update(recipes)
@@ -381,17 +413,20 @@ export function updateRecipe(id: number, input: RecipeWriteInput): void {
       .where(eq(recipes.id, id))
       .run();
 
-    // Replace children wholesale — simplest correct approach at this scale.
+    // Replace children wholesale — simplest correct approach at this scale. The
+    // image is the deliberate exception: "keep" (the default) leaves it alone.
     tx.delete(recipeIngredients).where(eq(recipeIngredients.recipeId, id)).run();
     tx.delete(recipeTags).where(eq(recipeTags.recipeId, id)).run();
     writeIngredients(tx, id, input.ingredients);
     writeTags(tx, id, input.tags);
+    applyImageEdit(tx, id, image);
   });
 }
 
 export function deleteRecipe(id: number): void {
-  // recipe_ingredients / recipe_tags cascade via FK (foreign_keys pragma is ON).
-  // Those are aggregate children of the recipe, so only the recipe is tombstoned.
+  // recipe_ingredients / recipe_tags / recipe_images cascade via FK (foreign_keys
+  // pragma is ON). Those are aggregate children of the recipe, so only the recipe
+  // is tombstoned.
   db.transaction((tx) => {
     const row = tx
       .select({ publicId: recipes.publicId })

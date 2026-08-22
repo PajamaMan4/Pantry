@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { recipeInputSchema } from "@/lib/validation/recipe";
 import { ingredientInputSchema } from "@/lib/validation/ingredient";
+import { recipeImageEditSchema, sniffImageMime, IMAGE_MAX_BYTES } from "@/lib/validation/recipe-image";
 import {
   createRecipe,
   updateRecipe,
@@ -14,6 +15,7 @@ import {
   setMenuServings,
   setRating,
   type RecipeWriteInput,
+  type RecipeImageEdit,
 } from "@/lib/db/recipes";
 import { getOrCreateIngredient } from "@/lib/db/ingredients";
 import { getSubstituteInfo, type SubstituteInfo } from "@/lib/db/cook";
@@ -25,21 +27,42 @@ function firstError(issues: { message: string }[]): string {
   return issues[0]?.message ?? "Please check the form and try again.";
 }
 
+/** Validate + resolve a staged image edit into the shape recipes.ts writes. */
+async function resolveImageEdit(raw: unknown): Promise<RecipeImageEdit | { error: string }> {
+  const parsed = recipeImageEditSchema.safeParse(raw ?? { action: "keep" });
+  if (!parsed.success) return { error: firstError(parsed.error.issues) };
+  if (parsed.data.action !== "set") return parsed.data;
+
+  const { blob, width, height } = parsed.data;
+  if (blob.size === 0) return { error: "That image is empty." };
+  if (blob.size > IMAGE_MAX_BYTES) return { error: "That image is too large." };
+
+  const bytes = Buffer.from(await blob.arrayBuffer());
+  const mime = sniffImageMime(bytes); // authoritative — ignore the client's claimed mime
+  if (!mime) return { error: "Only JPEG, PNG or WebP images are supported." };
+
+  return { action: "set", mime, bytes, width, height };
+}
+
 // On success these redirect (which throws), so they only *return* on failure.
-export async function createRecipeAction(input: unknown): Promise<RecipeFormError> {
+export async function createRecipeAction(input: unknown, image?: unknown): Promise<RecipeFormError> {
   const parsed = recipeInputSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: firstError(parsed.error.issues) };
+  const img = await resolveImageEdit(image);
+  if ("error" in img) return { ok: false, error: img.error };
 
-  const id = createRecipe(parsed.data as RecipeWriteInput);
+  const id = createRecipe(parsed.data as RecipeWriteInput, img);
   revalidatePath("/recipes");
   redirect(`/recipes/${id}`);
 }
 
-export async function updateRecipeAction(id: number, input: unknown): Promise<RecipeFormError> {
+export async function updateRecipeAction(id: number, input: unknown, image?: unknown): Promise<RecipeFormError> {
   const parsed = recipeInputSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: firstError(parsed.error.issues) };
+  const img = await resolveImageEdit(image);
+  if ("error" in img) return { ok: false, error: img.error };
 
-  updateRecipe(id, parsed.data as RecipeWriteInput);
+  updateRecipe(id, parsed.data as RecipeWriteInput, img);
   revalidatePath("/recipes");
   revalidatePath(`/recipes/${id}`);
   redirect(`/recipes/${id}`);
@@ -49,12 +72,18 @@ export async function updateRecipeAction(id: number, input: unknown): Promise<Re
  * Fork the submitted form values into a NEW recipe sharing a variant group with
  * `originalId`. The original is only added to the group; its content is untouched.
  */
-export async function saveAsVariantAction(originalId: number, input: unknown): Promise<RecipeFormError> {
+export async function saveAsVariantAction(
+  originalId: number,
+  input: unknown,
+  image?: unknown,
+): Promise<RecipeFormError> {
   const parsed = recipeInputSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: firstError(parsed.error.issues) };
   if (!parsed.data.groupName?.trim()) return { ok: false, error: "A variant group name is required." };
+  const img = await resolveImageEdit(image);
+  if ("error" in img) return { ok: false, error: img.error };
 
-  const newId = saveRecipeAsVariant(originalId, parsed.data as RecipeWriteInput);
+  const newId = saveRecipeAsVariant(originalId, parsed.data as RecipeWriteInput, img);
   revalidatePath("/recipes");
   revalidatePath(`/recipes/${originalId}`);
   redirect(`/recipes/${newId}`);

@@ -12,13 +12,18 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import type { Settings } from "@/lib/db/schema";
+import { PAGE_SIZE_OPTIONS } from "@/lib/domain/pagination";
 
 const UNIT_SYSTEMS = { imperial: "Imperial (cups, oz, °F)", metric: "Metric (ml, g, °C)" };
 const PRICE_MODES = { average: "Average over window", current: "Most recent price" };
 const ROUNDING_MODES = { cooking: "Cooking (friendly values)", exact: "Exact (precise factors)" };
 const WINDOWS = { "3": "3 months", "4": "4 months", "5": "5 months", "6": "6 months" };
-const RECIPES_PER_PAGE = { "10": "10 per page", "25": "25 per page", "50": "50 per page" };
+// Derived from the domain constant so the two can't drift apart.
+const PER_PAGE: Record<string, string> = Object.fromEntries(
+  PAGE_SIZE_OPTIONS.map((n) => [String(n), `${n} per page`]),
+);
 
 export function SettingsForm({ initial }: { initial: Settings }) {
   const [state, formAction, pending] = useActionState<SaveSettingsResult | null, FormData>(
@@ -117,19 +122,56 @@ export function SettingsForm({ initial }: { initial: Settings }) {
         <Select
           name="recipesPerPage"
           defaultValue={String(initialValues.recipesPerPage)}
-          items={RECIPES_PER_PAGE}
+          items={PER_PAGE}
         >
           <SelectTrigger id="recipesPerPage" className="w-full">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {Object.entries(RECIPES_PER_PAGE).map(([value, label]) => (
+            {Object.entries(PER_PAGE).map(([value, label]) => (
               <SelectItem key={value} value={value}>
                 {label}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
+      </Field>
+
+      <Field
+        label="Ingredients per page"
+        htmlFor="ingredientsPerPage"
+        hint="How many ingredients the Dictionary view shows at once."
+      >
+        <Select
+          name="ingredientsPerPage"
+          defaultValue={String(initialValues.ingredientsPerPage)}
+          items={PER_PAGE}
+        >
+          <SelectTrigger id="ingredientsPerPage" className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {Object.entries(PER_PAGE).map(([value, label]) => (
+              <SelectItem key={value} value={value}>
+                {label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </Field>
+
+      <Field
+        label="Show recipe images"
+        htmlFor="showRecipeImages"
+        hint="Show a recipe's photo as a banner on its detail page. Photos are never shown on cards or lists."
+      >
+        <Switch
+          id="showRecipeImages"
+          name="showRecipeImages"
+          defaultChecked={initialValues.showRecipeImages}
+          value="1"
+          uncheckedValue="0"
+        />
       </Field>
 
       <div className="flex items-center gap-3 pt-2">

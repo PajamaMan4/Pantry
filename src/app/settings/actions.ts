@@ -73,6 +73,8 @@ export async function saveSettingsAction(
     currency: formData.get("currency"),
     roundingMode: formData.get("roundingMode"),
     recipesPerPage: formData.get("recipesPerPage"),
+    ingredientsPerPage: formData.get("ingredientsPerPage"),
+    showRecipeImages: formData.get("showRecipeImages"),
   };
 
   const parsed = settingsUpdateSchema.safeParse(input);
@@ -82,8 +84,11 @@ export async function saveSettingsAction(
 
   updateSettings(parsed.data);
   revalidatePath("/settings");
-  // Page size changed — drop the client Router Cache entry for the recipe list.
+  // Page size changed — drop the client Router Cache entries for the paginated lists.
   revalidatePath("/recipes");
+  revalidatePath("/ingredients");
+  // The recipe detail page's photo banner is gated on showRecipeImages.
+  revalidatePath("/recipes/[id]", "page");
   return { ok: true, savedAt: Date.now() };
 }
 

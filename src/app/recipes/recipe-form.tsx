@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { nanoid } from "nanoid";
-import { PlusIcon, TrashIcon, ArrowUpIcon, ArrowDownIcon, LayersIcon } from "lucide-react";
+import { PlusIcon, TrashIcon, ArrowUpIcon, ArrowDownIcon, LayersIcon, ImageIcon, ImagePlusIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { FormActions } from "@/components/ui/form-actions";
@@ -27,6 +27,8 @@ import {
 import { TagInput } from "@/components/tag-input";
 import { StepEditor, type EditorStep } from "@/components/step-editor";
 import { UNIT_OPTIONS } from "@/lib/domain/units";
+import { prepareRecipeImage, ACCEPTED_INPUT, type PreparedImage } from "@/lib/image/prepare";
+import { recipeImageSrc } from "@/lib/domain/recipe-image";
 import {
   createRecipeAction,
   updateRecipeAction,
@@ -58,6 +60,12 @@ type IngredientSection = {
 
 type StepRow = EditorStep;
 
+// The recipe photo, staged client-side until "Save changes"/"Save as variant".
+type ImageState =
+  | { kind: "existing" } // untouched — whatever the recipe already has
+  | { kind: "removed" }
+  | { kind: "staged"; prepared: PreparedImage };
+
 export type RecipeFormInitial = {
   id: number;
   name: string;
@@ -69,6 +77,8 @@ export type RecipeFormInitial = {
   isFavorite: boolean;
   tags: string[];
   groupName: string | null;
+  hasImage: boolean;
+  imageVersion: number | null; // image.updatedAt epoch ms; null when no image
   ingredients: {
     ingredientId: number;
     ingredientName: string;
@@ -151,6 +161,48 @@ export function RecipeForm({ ingredientOptions, tagSuggestions, groupSuggestions
   const [tags, setTags] = React.useState<string[]>(initial?.tags ?? []);
   const [groupName, setGroupName] = React.useState(initial?.groupName ?? "");
   const groupListId = React.useId();
+
+  const [imageState, setImageState] = React.useState<ImageState>({ kind: "existing" });
+  const [imagePending, setImagePending] = React.useState(false);
+  const fileRef = React.useRef<HTMLInputElement>(null);
+
+  const previewSrc =
+    imageState.kind === "staged"
+      ? imageState.prepared.previewUrl
+      : imageState.kind === "existing" && initial?.hasImage && initial.imageVersion != null
+        ? recipeImageSrc(initial.id, initial.imageVersion)
+        : null;
+
+  // Free the object URL when it's replaced or the form unmounts.
+  React.useEffect(() => {
+    const url = imageState.kind === "staged" ? imageState.prepared.previewUrl : null;
+    return () => {
+      if (url) URL.revokeObjectURL(url);
+    };
+  }, [imageState]);
+
+  async function onPickImage(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // so re-picking the same file still fires change
+    if (!file) return;
+    setImagePending(true);
+    try {
+      setImageState({ kind: "staged", prepared: await prepareRecipeImage(file) });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't read that image.");
+    } finally {
+      setImagePending(false);
+    }
+  }
+
+  function buildImageEdit() {
+    if (imageState.kind === "staged") {
+      const { blob, mime, width, height } = imageState.prepared;
+      return { action: "set" as const, blob, mime, width, height };
+    }
+    if (imageState.kind === "removed") return { action: "remove" as const };
+    return { action: "keep" as const };
+  }
 
   // "Save as variant" naming dialog — only used when no group name is set yet.
   const [variantDialogOpen, setVariantDialogOpen] = React.useState(false);
@@ -301,11 +353,12 @@ export function RecipeForm({ ingredientOptions, tagSuggestions, groupSuggestions
   function submit() {
     setError(null);
     const input = buildInput();
+    const image = buildImageEdit();
 
     startTransition(async () => {
       const res = isEdit
-        ? await updateRecipeAction(initial!.id, input)
-        : await createRecipeAction(input);
+        ? await updateRecipeAction(initial!.id, input, image)
+        : await createRecipeAction(input, image);
       // On success the action redirects; only failures return here.
       if (res && !res.ok) setError(res.error);
     });
@@ -323,8 +376,9 @@ export function RecipeForm({ ingredientOptions, tagSuggestions, groupSuggestions
     }
     setError(null);
     const input = { ...buildInput(), groupName: g };
+    const image = buildImageEdit();
     startTransition(async () => {
-      const res = await saveAsVariantAction(initial!.id, input);
+      const res = await saveAsVariantAction(initial!.id, input, image);
       // On success the action redirects; only failures return here.
       if (res && !res.ok) {
         setVariantDialogOpen(false);
@@ -395,10 +449,67 @@ export function RecipeForm({ ingredientOptions, tagSuggestions, groupSuggestions
             Recipes sharing a group are shown together as variants of one another.
           </p>
         </div>
-        <label className="flex items-center gap-2 text-sm">
-          <Checkbox checked={isFavorite} onCheckedChange={(v) => setIsFavorite(v === true)} />
-          Mark as favorite
-        </label>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <label className="flex items-center gap-2 text-sm">
+            <Checkbox checked={isFavorite} onCheckedChange={(v) => setIsFavorite(v === true)} />
+            Mark as favorite
+          </label>
+
+          <div className="flex items-center gap-2">
+            <input
+              ref={fileRef}
+              type="file"
+              accept={ACCEPTED_INPUT}
+              className="hidden"
+              onChange={onPickImage}
+            />
+            {previewSrc ? (
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={imagePending || pending}
+                  onClick={() => fileRef.current?.click()}
+                >
+                  <ImageIcon className="size-4" />
+                  {imagePending ? "Processing…" : "Replace image"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  disabled={imagePending || pending}
+                  onClick={() => setImageState({ kind: "removed" })}
+                >
+                  <TrashIcon className="size-4" /> Remove image
+                </Button>
+              </>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={imagePending || pending}
+                onClick={() => fileRef.current?.click()}
+              >
+                <ImagePlusIcon className="size-4" />
+                {imagePending ? "Processing…" : "Add photo"}
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {previewSrc && (
+          <div className="flex items-center gap-3">
+            {/* eslint-disable-next-line @next/next/no-img-element -- blob: preview URL / dynamic route; next/image adds nothing here */}
+            <img src={previewSrc} alt="" className="h-20 w-32 rounded-md border object-cover" />
+            <p className="text-xs text-muted-foreground">
+              Shown as the banner on this recipe&rsquo;s page.
+              {imageState.kind === "staged" && " Applied when you save."}
+            </p>
+          </div>
+        )}
       </section>
 
       <Separator />

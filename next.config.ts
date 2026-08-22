@@ -9,6 +9,11 @@ const nextConfig: NextConfig = {
   // testing on a phone) — otherwise Next.js blocks cross-origin requests to
   // /_next/* assets, so the page renders but client JS never hydrates.
   allowedDevOrigins: ["192.168.86.248"],
+  // Recipe photos ride along in the create/update recipe Server Action as a Blob
+  // (a raw multipart part, not base64 — see recipe-form.tsx). The client already
+  // downscales to <=1600px / ~900KB before sending, so this ceiling is headroom
+  // above the default 1MB, not the enforced limit.
+  experimental: { serverActions: { bodySizeLimit: "4mb" } },
 };
 
 export default nextConfig;

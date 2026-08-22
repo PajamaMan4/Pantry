@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { PencilIcon, TrashIcon } from "lucide-react";
+import { PencilIcon, ShelvingUnitIcon, TrashIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
 import {
@@ -18,7 +18,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ExpiryBadge } from "@/components/expiry-badge";
 import type { LocationOption } from "@/components/location-combobox";
+import { cn } from "@/lib/utils";
 import { InventoryEntryForm } from "./inventory-entry-form";
+import { useInventorySort } from "./inventory-sort-context";
 import { deleteInventoryItemAction } from "./actions";
 
 export type SerialInventoryItem = {
@@ -63,9 +65,20 @@ export function InventoryItemRow({
   const [editing, setEditing] = React.useState(false);
   const [deleting, startDelete] = React.useTransition();
 
+  // Null on the ingredient detail page, which keeps its plain behaviour.
+  const sort = useInventorySort();
+  const held = sort?.heldId === item.id;
+  const pending = sort?.pendingIds.has(item.id) ?? false;
+
   return (
     <Collapsible open={editing} onOpenChange={setEditing}>
-      <div className="flex items-center justify-between gap-2 py-2 text-sm">
+      <div
+        className={cn(
+          "flex items-center justify-between gap-2 py-2 text-sm transition-opacity",
+          pending && "opacity-40",
+          held && "opacity-60",
+        )}
+      >
         <div className="min-w-0">
           {name && href && (
             <Link href={href} className="font-medium hover:underline">
@@ -80,6 +93,16 @@ export function InventoryItemRow({
           {priceText && <div className="text-xs text-muted-foreground">{priceText}</div>}
         </div>
         <div className="flex shrink-0 items-center gap-1">
+          {sort && (
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={`Move ${name ?? "entry"} to another location`}
+              onClick={() => sort.hold({ item, ingredientId, name: name ?? "entry" })}
+            >
+              <ShelvingUnitIcon className="size-4" />
+            </Button>
+          )}
           <Button variant="ghost" size="icon" aria-label="Edit entry" onClick={() => setEditing((v) => !v)}>
             <PencilIcon className="size-4" />
           </Button>

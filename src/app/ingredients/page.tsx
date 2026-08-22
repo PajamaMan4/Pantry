@@ -5,16 +5,19 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { PriceSummaryInline } from "@/components/price-summary-inline";
+import { ListPagination } from "@/components/list-pagination";
 import { ViewToggle } from "./view-toggle";
 import { IngredientsActionsMenu } from "./ingredients-actions-menu";
 import { ClearStockButton } from "./clear-stock-button";
 import { InventoryItemRow, type SerialInventoryItem } from "./inventory-item-row";
+import { InventorySortProvider } from "./inventory-sort-context";
 import { listIngredients, searchIngredients } from "@/lib/db/ingredients";
 import { inventoryByIngredient, listInventory, type InventoryRow } from "@/lib/db/inventory";
 import { listPriceEntriesFor } from "@/lib/db/prices";
 import { listLocations } from "@/lib/db/locations";
 import { getSettings } from "@/lib/db/settings";
 import { priceSummary, type PriceSummary } from "@/lib/domain/cost";
+import { paginate, parsePageParam, resolvePageSize } from "@/lib/domain/pagination";
 import { displayQuantity, type DisplaySystem } from "@/lib/domain/scaling";
 import { UNITS } from "@/lib/domain/units";
 import type { RoundingMode } from "@/lib/domain/quantity";
@@ -22,6 +25,10 @@ import { formatMoney, pricePerDisplayUnit } from "@/lib/domain/format";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Ingredients · Pantry" };
+
+// Ceiling on how many *matches* a dictionary search considers, not a page size:
+// pagination walks within this, so a search can never reach match 501.
+const SEARCH_LIMIT = 500;
 
 function resolveSystem(units: string | undefined, fallback: "metric" | "imperial"): DisplaySystem {
   return units === "original" || units === "imperial" || units === "metric" ? units : fallback;
@@ -101,6 +108,22 @@ export default async function IngredientsPage({
   const nowMs = now.getTime();
   const locations = listLocations().map((l) => ({ id: l.id, name: l.name }));
 
+  // Dictionary view only — the inventory view stays a full grouped list.
+  const page = parsePageParam(str("page"));
+  const pageSize = resolvePageSize(settings.ingredientsPerPage);
+
+  // Preserves `q` and `units`; `page` is omitted on page 1 so the canonical
+  // first-page URL is just /ingredients (same convention as the recipes list).
+  function buildPageUrl(p: number) {
+    const next = new URLSearchParams();
+    const units = str("units");
+    if (units) next.set("units", units);
+    if (q) next.set("q", q);
+    if (p > 1) next.set("page", String(p));
+    const qs = next.toString();
+    return qs ? `/ingredients?${qs}` : "/ingredients";
+  }
+
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-8">
       <div className="mb-4 flex items-center justify-between">
@@ -112,13 +135,25 @@ export default async function IngredientsPage({
         <ViewToggle current={view} />
       </div>
 
+      {/* GET form: it submits only the fields below, so `page` is dropped from the
+          URL and a new search always lands on page 1. Don't add a hidden page input. */}
       <form action="/ingredients" className="mb-6">
         <input type="hidden" name="units" value={str("units") ?? ""} />
         <Input name="q" defaultValue={q} placeholder="Search ingredients…" className="w-full" />
       </form>
 
       {view === "alphabetical" ? (
-        <AlphabeticalView q={q} system={system} rounding={rounding} currency={settings.currency} windowMonths={settings.averageWindowMonths} now={now} />
+        <AlphabeticalView
+          q={q}
+          system={system}
+          rounding={rounding}
+          currency={settings.currency}
+          windowMonths={settings.averageWindowMonths}
+          now={now}
+          page={page}
+          pageSize={pageSize}
+          buildPageUrl={buildPageUrl}
+        />
       ) : (
         <LocationView
           q={q}
@@ -135,7 +170,7 @@ export default async function IngredientsPage({
   );
 }
 
-// ---- Alphabetical: all ingredients, flat ----
+// ---- Alphabetical: all ingredients, flat, one page at a time ----
 function AlphabeticalView({
   q,
   system,
@@ -143,6 +178,9 @@ function AlphabeticalView({
   currency,
   windowMonths,
   now,
+  page,
+  pageSize,
+  buildPageUrl,
 }: {
   q: string;
   system: DisplaySystem;
@@ -150,12 +188,21 @@ function AlphabeticalView({
   currency: string;
   windowMonths: number;
   now: Date;
+  page: number | undefined;
+  pageSize: number;
+  buildPageUrl: (page: number) => string;
 }) {
-  const ingredients = q ? searchIngredients(q, 500) : listIngredients();
+  const all = q ? searchIngredients(q, SEARCH_LIMIT) : listIngredients();
+  const pageInfo = paginate(all.length, pageSize, page);
+  const ingredients = all.slice(pageInfo.startIndex, pageInfo.endIndex);
+
   const invByIng = inventoryByIngredient();
+  // Scoped to the visible page — this used to load prices for the whole table.
   const priceMap = listPriceEntriesFor(ingredients.map((i) => i.id));
 
-  if (ingredients.length === 0) {
+  // Guards the whole list, not the current slice: `paginate` clamps an
+  // out-of-range `?page=`, so an empty slice here would mean an empty DB anyway.
+  if (pageInfo.totalItems === 0) {
     return (
       <p className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
         {q ? "No ingredients match." : "No ingredients yet."}{" "}
@@ -180,28 +227,32 @@ function AlphabeticalView({
   }
 
   return (
-    <ul className="divide-y rounded-lg border px-3">
-      {ingredients.map((ing) => {
-        const items = invByIng.get(ing.id) ?? [];
-        const summary = priceSummary(priceMap.get(ing.id) ?? [], { defaultUnit: ing.defaultUnit, density: ing.density, gramsPerEach: ing.gramsPerEach }, windowMonths, now);
-        const stock = aggregateStock(items, system, rounding, ing.density);
-        return (
-          <li key={ing.id} className="flex items-center justify-between gap-3 py-2.5">
-            <div className="min-w-0">
-              <Link href={`/ingredients/${ing.id}`} className="font-medium hover:underline">
-                {ing.name}
-              </Link>
-              <div className="text-sm text-muted-foreground">
-                <span className="tabular-nums">{stock ?? "not in stock"}</span>
-                <span className="mx-2">·</span>
-                <PriceSummaryInline summary={summary} currency={currency} system={system} />
+    <>
+      <ul className="divide-y rounded-lg border px-3">
+        {ingredients.map((ing) => {
+          const items = invByIng.get(ing.id) ?? [];
+          const summary = priceSummary(priceMap.get(ing.id) ?? [], { defaultUnit: ing.defaultUnit, density: ing.density, gramsPerEach: ing.gramsPerEach }, windowMonths, now);
+          const stock = aggregateStock(items, system, rounding, ing.density);
+          return (
+            <li key={ing.id} className="flex items-center justify-between gap-3 py-2.5">
+              <div className="min-w-0">
+                <Link href={`/ingredients/${ing.id}`} className="font-medium hover:underline">
+                  {ing.name}
+                </Link>
+                <div className="text-sm text-muted-foreground">
+                  <span className="tabular-nums">{stock ?? "not in stock"}</span>
+                  <span className="mx-2">·</span>
+                  <PriceSummaryInline summary={summary} currency={currency} system={system} />
+                </div>
               </div>
-            </div>
-            {items.length > 0 && <ClearStockButton ingredientId={ing.id} name={ing.name} />}
-          </li>
-        );
-      })}
-    </ul>
+              {items.length > 0 && <ClearStockButton ingredientId={ing.id} name={ing.name} />}
+            </li>
+          );
+        })}
+      </ul>
+
+      <ListPagination info={pageInfo} buildHref={buildPageUrl} label="Ingredient pages" />
+    </>
   );
 }
 
@@ -253,43 +304,45 @@ function LocationView({
   const ordered = [...groups.entries()].sort((a, b) => a[1].sortOrder - b[1].sortOrder);
 
   return (
-    <div className="space-y-6">
-      {ordered.map(([name, g]) => (
-        <Collapsible key={name} defaultOpen={false} render={<section />}>
-          <CollapsibleTrigger
-            render={
-              <button
-                type="button"
-                className="group mb-2 flex w-full items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-              />
-            }
-          >
-            <ChevronDownIcon className="size-4 transition-transform group-data-[panel-open]:rotate-180" />
-            <span>{name}</span>
-            <Badge variant="secondary" className="ml-1">
-              {g.rows.length}
-            </Badge>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <div className="divide-y rounded-lg border px-3">
-              {g.rows.map((r) => (
-                <InventoryItemRow
-                  key={r.item.id}
-                  item={serialItem(r, system, rounding)}
-                  ingredientId={r.ingredient.id}
-                  locations={locations}
-                  defaultUnit={r.ingredient.defaultUnit}
-                  nowMs={nowMs}
-                  name={r.ingredient.name}
-                  href={`/ingredients/${r.ingredient.id}`}
-                  priceText={priceTextFor(r)}
-                  showLocation={false}
+    <InventorySortProvider locations={locations}>
+      <div className="space-y-6">
+        {ordered.map(([name, g]) => (
+          <Collapsible key={name} defaultOpen={false} render={<section />}>
+            <CollapsibleTrigger
+              render={
+                <button
+                  type="button"
+                  className="group mb-2 flex w-full items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
                 />
-              ))}
-            </div>
-          </CollapsibleContent>
-        </Collapsible>
-      ))}
-    </div>
+              }
+            >
+              <ChevronDownIcon className="size-4 transition-transform group-data-[panel-open]:rotate-180" />
+              <span>{name}</span>
+              <Badge variant="secondary" className="ml-1">
+                {g.rows.length}
+              </Badge>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="divide-y rounded-lg border px-3">
+                {g.rows.map((r) => (
+                  <InventoryItemRow
+                    key={r.item.id}
+                    item={serialItem(r, system, rounding)}
+                    ingredientId={r.ingredient.id}
+                    locations={locations}
+                    defaultUnit={r.ingredient.defaultUnit}
+                    nowMs={nowMs}
+                    name={r.ingredient.name}
+                    href={`/ingredients/${r.ingredient.id}`}
+                    priceText={priceTextFor(r)}
+                    showLocation={false}
+                  />
+                ))}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        ))}
+      </div>
+    </InventorySortProvider>
   );
 }

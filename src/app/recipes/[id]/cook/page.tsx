@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFoundWithReason, notFoundInvalidId } from "@/lib/not-found";
 import { getRecipeDetail } from "@/lib/db/recipes";
 import { getSettings } from "@/lib/db/settings";
 import { CookMode } from "./cook-mode";
@@ -10,10 +10,10 @@ export const metadata: Metadata = { title: "Cooking · Pantry" };
 export default async function CookPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const recipeId = Number(id);
-  if (!Number.isInteger(recipeId)) notFound();
+  if (!Number.isInteger(recipeId)) notFoundInvalidId("recipe", id);
 
   const detail = getRecipeDetail(recipeId);
-  if (!detail) notFound();
+  if (!detail) notFoundWithReason("recipe", recipeId);
 
   const { recipe, ingredients } = detail;
   const settings = getSettings();

@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFoundWithReason, notFoundInvalidId } from "@/lib/not-found";
 import { listIngredientsWithAliases } from "@/lib/db/ingredients";
 import { listTags } from "@/lib/db/tags";
 import { listRecipeGroups } from "@/lib/db/recipe-groups";
@@ -10,10 +10,10 @@ export const dynamic = "force-dynamic";
 export default async function EditRecipePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const recipeId = Number(id);
-  if (!Number.isInteger(recipeId)) notFound();
+  if (!Number.isInteger(recipeId)) notFoundInvalidId("recipe", id);
 
   const detail = getRecipeDetail(recipeId);
-  if (!detail) notFound();
+  if (!detail) notFoundWithReason("recipe", recipeId);
 
   const { recipe } = detail;
   const initial: RecipeFormInitial = {
@@ -27,6 +27,8 @@ export default async function EditRecipePage({ params }: { params: Promise<{ id:
     isFavorite: recipe.isFavorite,
     tags: detail.tags.map((t) => t.name),
     groupName: detail.group?.name ?? null,
+    hasImage: detail.image != null,
+    imageVersion: detail.image?.updatedAt.getTime() ?? null,
     ingredients: detail.ingredients.map((ri) => ({
       ingredientId: ri.ingredientId,
       ingredientName: ri.ingredient.name,

@@ -1,0 +1,1 @@
+ALTER TABLE `settings` ADD `ingredients_per_page` integer DEFAULT 25 NOT NULL;

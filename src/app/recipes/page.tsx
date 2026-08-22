@@ -3,8 +3,8 @@ import Link from "next/link";
 import { NotebookPenIcon, HeartIcon } from "lucide-react";
 import { RecipeCard } from "@/components/recipe-card";
 import { RecipeGroupCard } from "@/components/recipe-group-card";
+import { ListPagination } from "@/components/list-pagination";
 import { RecipeFilters } from "./recipe-filters";
-import { RecipePagination } from "./recipe-pagination";
 import { RecipesMenu } from "./recipes-menu";
 import { collapseIntoGroups } from "@/lib/domain/variants";
 import { paginate, parsePageParam, resolvePageSize } from "@/lib/domain/pagination";
@@ -243,7 +243,7 @@ export default async function RecipesPage({
               ),
             )}
           </div>
-          <RecipePagination info={pageInfo} buildHref={buildPageUrl} />
+          <ListPagination info={pageInfo} buildHref={buildPageUrl} label="Recipe pages" />
         </>
       )}
     </div>

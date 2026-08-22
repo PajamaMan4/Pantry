@@ -1,7 +1,9 @@
-// Generic list pagination for the recipes list (§ recipes). Pure + tested.
+// Generic list pagination, shared by the recipes grid and the ingredients
+// dictionary view. Pure + tested.
 //
 // The recipes page paginates *collapsed rows* (tiles), not raw recipes, so a
 // variant group is never split across a page boundary — see ./variants.ts.
+// The ingredients dictionary paginates plain rows, one per ingredient.
 //
 // Out-of-range pages clamp rather than redirect: a redirect would rewrite the
 // URL underneath the user and trap the Back button on a stale `?page=`.

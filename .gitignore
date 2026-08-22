@@ -45,8 +45,8 @@ next-env.d.ts
 /data/*
 !/data/.gitkeep
 
-# Claude Code personal/local settings (machine-specific permissions, etc.)
-.claude/settings.local.json
+# Claude Code personal/local settings and project skills — not part of the codebase
+.claude/
 
 # Personal reference docs (not part of the codebase)
 UI_COMMUNICATION_GUIDE.md

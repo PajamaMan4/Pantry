@@ -169,6 +169,18 @@ export function updateInventoryItem(id: number, input: InventoryItemInput): void
   });
 }
 
+/**
+ * Move an entry to another storage location (null = Unsorted). Narrow on
+ * purpose: `updateInventoryItem` rewrites every column, so using it to change
+ * only the location means round-tripping quantity/unit/dates/notes.
+ */
+export function setInventoryLocation(id: number, locationId: number | null): void {
+  db.update(inventoryItems)
+    .set({ locationId, updatedAt: new Date() })
+    .where(eq(inventoryItems.id, id))
+    .run();
+}
+
 export function deleteInventoryItem(id: number): void {
   db.transaction((tx) => {
     const row = tx
