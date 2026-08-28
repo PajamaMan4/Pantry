@@ -1,4 +1,4 @@
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "./client";
 import {
   inventoryItems,
@@ -11,6 +11,11 @@ import {
   type StorageLocation,
 } from "./schema";
 import { recordTombstone, recordTombstones } from "./tombstones";
+import {
+  planInventoryEdit,
+  type InventoryEditPayload,
+  type InventorySnapshotRow,
+} from "../domain/inventory-edit";
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -421,5 +426,106 @@ export function importPricesAndInventory(items: BulkImportItem[]): BulkImportSum
     }
 
     return { itemsProcessed: items.length, pricesUpdated, inventoryAdded, ingredientsCreated };
+  });
+}
+
+export type InventoryEditSummary = { updated: number; deleted: number; created: number; merged: number };
+
+/**
+ * Apply a whole Inventory Edit page session in ONE transaction: deletes
+ * (tombstoned), quantity/unit/location updates, and new rows — with new rows
+ * merging into an existing row of the same ingredient+location+unit (same rule
+ * as `logPurchase` / `importPricesAndInventory`). The diff/merge logic itself
+ * lives in `planInventoryEdit` (src/lib/domain/inventory-edit.ts) so it stays
+ * pure and unit-tested; this function only loads a snapshot, runs the planner,
+ * and executes the result. Updates deliberately touch only quantity, unit,
+ * locationId and updatedAt — expiryDate / openedDate / notes are preserved.
+ */
+export function applyInventoryEdits(payload: InventoryEditPayload): InventoryEditSummary {
+  return db.transaction((tx) => {
+    // Guard: a location referenced by an update/create may have been deleted
+    // out from under an open editor tab.
+    const locationIds = new Set<number>();
+    for (const u of payload.updates) if (u.locationId != null) locationIds.add(u.locationId);
+    for (const c of payload.creates) if (c.locationId != null) locationIds.add(c.locationId);
+    if (locationIds.size > 0) {
+      const found = tx
+        .select({ id: storageLocations.id })
+        .from(storageLocations)
+        .where(inArray(storageLocations.id, [...locationIds]))
+        .all();
+      if (found.length !== locationIds.size) {
+        throw new Error("That location no longer exists.");
+      }
+    }
+
+    // Snapshot every row the payload could touch: rows referenced directly
+    // (updates + deletes) plus every row for an ingredient a create might
+    // merge into (which can live in a different location than the create).
+    const touchedIds = [...new Set([...payload.updates.map((u) => u.id), ...payload.deletes])];
+    const createIngredientIds = [...new Set(payload.creates.map((c) => c.ingredientId))];
+
+    const snapshotMap = new Map<number, InventorySnapshotRow>();
+    if (touchedIds.length > 0) {
+      for (const r of tx.select().from(inventoryItems).where(inArray(inventoryItems.id, touchedIds)).all()) {
+        snapshotMap.set(r.id, { id: r.id, ingredientId: r.ingredientId, locationId: r.locationId, quantity: r.quantity, unit: r.unit });
+      }
+    }
+    if (createIngredientIds.length > 0) {
+      for (const r of tx
+        .select()
+        .from(inventoryItems)
+        .where(inArray(inventoryItems.ingredientId, createIngredientIds))
+        .all()) {
+        snapshotMap.set(r.id, { id: r.id, ingredientId: r.ingredientId, locationId: r.locationId, quantity: r.quantity, unit: r.unit });
+      }
+    }
+
+    const { plan, conflicts } = planInventoryEdit([...snapshotMap.values()], payload);
+    if (conflicts.length > 0) {
+      throw new Error("Some inventory lines changed elsewhere. Reload the page and try again.");
+    }
+
+    if (plan.deletes.length > 0) {
+      // InventorySnapshotRow doesn't carry publicId, so fetch it fresh before deleting.
+      const rows = tx
+        .select({ id: inventoryItems.id, publicId: inventoryItems.publicId })
+        .from(inventoryItems)
+        .where(inArray(inventoryItems.id, plan.deletes))
+        .all();
+      tx.delete(inventoryItems).where(inArray(inventoryItems.id, plan.deletes)).run();
+      recordTombstones(
+        tx,
+        "inventory_item",
+        rows.map((r) => r.publicId),
+      );
+    }
+
+    for (const u of plan.updates) {
+      tx.update(inventoryItems)
+        .set({ quantity: u.quantity, unit: u.unit, locationId: u.locationId, updatedAt: new Date() })
+        .where(eq(inventoryItems.id, u.id))
+        .run();
+    }
+
+    if (plan.inserts.length > 0) {
+      tx.insert(inventoryItems)
+        .values(
+          plan.inserts.map((i) => ({
+            ingredientId: i.ingredientId,
+            locationId: i.locationId,
+            quantity: i.quantity,
+            unit: i.unit,
+          })),
+        )
+        .run();
+    }
+
+    return {
+      updated: plan.updates.length,
+      deleted: plan.deletes.length,
+      created: plan.inserts.length,
+      merged: plan.merged,
+    };
   });
 }

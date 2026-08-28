@@ -67,3 +67,38 @@ export const inventoryRemoveSchema = z
   .min(1, "Add at least one item to remove.");
 
 export type InventoryRemoveValues = z.infer<typeof inventoryRemoveSchema>;
+
+// Commit payload from the bulk Inventory Edit page: a diff computed client-side
+// (see src/lib/domain/inventory-edit.ts) that's applied in one transaction.
+// `updates.quantity` is nonnegative (0 is allowed — it zeroes a line without
+// deleting it); `creates.quantity` is positive (adding "0 of something" new is
+// always a mistake).
+export const inventoryEditSchema = z
+  .object({
+    updates: z
+      .array(
+        z.object({
+          id: z.coerce.number().int().positive(),
+          quantity: z.coerce.number().finite().nonnegative("Amount can't be negative"),
+          unit: unitRequired,
+          locationId: idOrNull,
+        }),
+      )
+      .default([]),
+    deletes: z.array(z.coerce.number().int().positive()).default([]),
+    creates: z
+      .array(
+        z.object({
+          ingredientId: z.coerce.number().int().positive("Pick an ingredient for every new line."),
+          quantity: z.coerce.number().finite().positive("Amount must be greater than 0"),
+          unit: unitRequired,
+          locationId: idOrNull,
+        }),
+      )
+      .default([]),
+  })
+  .refine((p) => p.updates.length + p.deletes.length + p.creates.length > 0, {
+    message: "No changes to save.",
+  });
+
+export type InventoryEditValues = z.infer<typeof inventoryEditSchema>;

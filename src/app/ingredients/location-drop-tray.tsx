@@ -65,7 +65,7 @@ export function LocationDropTray({
       >
         <p className="mb-2 truncate text-xs text-muted-foreground">
           Move <span className="font-medium text-foreground">{heldLabel}</span>
-          <span className="tabular-nums"> · {heldQty}</span>
+          {heldQty && <span className="tabular-nums"> · {heldQty}</span>}
         </p>
         <div className="flex flex-wrap gap-2">
           {targets.map((t) => {

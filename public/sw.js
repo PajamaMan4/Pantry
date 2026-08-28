@@ -1,6 +1,9 @@
 // Minimal service worker: enables PWA installability and caches the static app
 // shell. Dynamic/DB-backed pages stay network-first so data is never stale.
-const CACHE = "pantry-v2";
+// Bumped v2 -> v3 to purge any stale /_next/static entries a device cached
+// before the recipe-photo banner shipped (see the fix plan for how a device
+// with only its LAN-IP origin visited could end up pinned to an old bundle).
+const CACHE = "pantry-v3";
 
 self.addEventListener("install", () => {
   self.skipWaiting();

@@ -8,6 +8,7 @@ import {
   priceEntrySchema,
   inventoryItemSchema,
   inventoryRemoveSchema,
+  inventoryEditSchema,
   logPurchaseSchema,
 } from "@/lib/validation/inventory";
 import { idOrNull } from "@/lib/validation/common";
@@ -31,9 +32,11 @@ import {
   decrementInventoryItems,
   importPricesAndInventory,
   logPurchase,
+  applyInventoryEdits,
   type InventoryItemInput,
   type LogPurchaseInput,
 } from "@/lib/db/inventory";
+import type { InventoryEditPayload } from "@/lib/domain/inventory-edit";
 import { listLocations } from "@/lib/db/locations";
 import { setInventoryView } from "@/lib/db/settings";
 
@@ -210,6 +213,20 @@ export async function removeInventoryBulkAction(lines: unknown): Promise<Ingredi
   const parsed = inventoryRemoveSchema.safeParse(lines);
   if (!parsed.success) return { ok: false, error: firstError(parsed.error.issues) };
   decrementInventoryItems(parsed.data);
+  revalidateIngredients();
+  return { ok: true };
+}
+
+// Commit for the bulk Inventory Edit page: applies a diff (computed client-side
+// from the editor's draft state) in one transaction. See applyInventoryEdits.
+export async function saveInventoryEditsAction(payload: unknown): Promise<IngredientActionResult> {
+  const parsed = inventoryEditSchema.safeParse(payload);
+  if (!parsed.success) return { ok: false, error: firstError(parsed.error.issues) };
+  try {
+    applyInventoryEdits(parsed.data as InventoryEditPayload);
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Couldn't save inventory changes." };
+  }
   revalidateIngredients();
   return { ok: true };
 }

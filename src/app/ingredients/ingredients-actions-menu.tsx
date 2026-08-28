@@ -5,6 +5,7 @@ import {
   MoreHorizontalIcon,
   PackageMinusIcon,
   PackagePlusIcon,
+  PencilIcon,
   PlusIcon,
   RulerIcon,
 } from "lucide-react";
@@ -55,6 +56,9 @@ export function IngredientsActionsMenu({ system }: { system: DisplaySystem }) {
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => router.push("/ingredients/inventory/remove")}>
           <PackageMinusIcon className="size-4" /> Remove inventory
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => router.push("/ingredients/inventory/edit")}>
+          <PencilIcon className="size-4" /> Inventory Edit
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuSub>

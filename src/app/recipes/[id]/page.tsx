@@ -123,21 +123,32 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ i
   return (
     <RecipeViewProvider defaultSystem={settings.unitSystem === "metric" ? "metric" : "imperial"}>
       {showBanner ? (
-        <div className="relative isolate w-full overflow-hidden min-h-64 sm:min-h-80">
-          {/* eslint-disable-next-line @next/next/no-img-element -- bytes come from a dynamic route with a ?v= query; see recipe-image plan */}
-          <img
-            src={bannerSrc!}
-            alt=""
-            aria-hidden="true"
-            fetchPriority="high"
-            className="absolute inset-0 -z-10 size-full object-cover"
-          />
+        // A CSS background-image, not an absolutely-positioned <img>: the earlier
+        // <img absolute inset-0 size-full> approach relies on resolving a
+        // percentage height against a container whose height comes only from
+        // min-height (never an explicit height) — an ambiguous corner of the CSS
+        // abs-pos sizing spec that Chromium and WebKit resolve differently, which
+        // broke this banner on iOS (the image rendered at its intrinsic aspect
+        // ratio instead of being cropped, and shoved the panel out of view).
+        // `background-size: cover` is resolved against the element's own box
+        // however it ends up sized, with no cross-element percentage resolution
+        // involved, so this sidesteps that whole class of bug.
+        <div
+          // min-h-80 (not min-h-64) at every width: on a narrow phone viewport a
+          // shorter floor makes for a much more cropped (width-constrained)
+          // "cover" window than on desktop, showing only a thin band through the
+          // photo's vertical extent — often landing on a plain/out-of-focus
+          // region rather than the actual subject. A taller floor lets more of
+          // the photo's height show through on narrow screens.
+          className="w-full overflow-hidden bg-cover bg-center min-h-80"
+          style={{ backgroundImage: `url(${bannerSrc})` }}
+        >
           <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:py-12">
             <div
               className="rounded-xl border border-border/60 bg-background/85 p-4 shadow-lg
-                         supports-[backdrop-filter]:bg-background/55
-                         supports-[backdrop-filter]:backdrop-blur-xl
-                         supports-[backdrop-filter]:backdrop-saturate-150"
+                         supports-backdrop-filter:bg-background/55
+                         supports-backdrop-filter:backdrop-blur-xl
+                         supports-backdrop-filter:backdrop-saturate-150"
             >
               {header}
             </div>
