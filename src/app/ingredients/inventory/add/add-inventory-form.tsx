@@ -143,6 +143,9 @@ export function AddInventoryForm({
                     ingredientId: picked.id,
                     ingredientName: picked.name,
                     amountUnit: row.amountUnit || picked.defaultUnit || "",
+                    location: row.location.name.trim()
+                      ? row.location
+                      : { id: picked.defaultLocationId ?? null, name: picked.defaultLocationName ?? "" },
                   })
                 }
               />

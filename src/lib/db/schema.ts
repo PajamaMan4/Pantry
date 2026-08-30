@@ -38,6 +38,10 @@ export const ingredients = sqliteTable("ingredients", {
   defaultUnit: text("default_unit"), // canonical unit used when normalizing prices/inventory
   density: real("density"), // grams per millilitre; optional, enables volume<->weight
   gramsPerEach: real("grams_per_each"), // grams per count; optional, enables count<->weight
+  // Optional "home shelf": prefills the location when adding new inventory.
+  defaultLocationId: integer("default_location_id").references(() => storageLocations.id, {
+    onDelete: "set null",
+  }),
   isStaple: integer("is_staple", { mode: "boolean" }).notNull().default(false),
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
@@ -239,6 +243,7 @@ export const settings = sqliteTable("settings", {
   currency: text("currency").notNull().default("USD"),
   roundingMode: text("rounding_mode").notNull().default("cooking"), // 'cooking' | 'exact'
   inventoryView: text("inventory_view").notNull().default("alphabetical"), // 'alphabetical' | 'location'
+  listGrouping: text("list_grouping").notNull().default("location"), // 'none' | 'location' — shopping/menu grouping
   recipesPerPage: integer("recipes_per_page").notNull().default(10), // 10 | 25 | 50
   ingredientsPerPage: integer("ingredients_per_page").notNull().default(25), // 10 | 25 | 50
   anthropicApiKey: text("anthropic_api_key"), // optional, enables Claude recipe import

@@ -1,6 +1,6 @@
 import { asc, eq, sql } from "drizzle-orm";
 import { db } from "./client";
-import { storageLocations, inventoryItems, type StorageLocation } from "./schema";
+import { storageLocations, inventoryItems, ingredients, type StorageLocation } from "./schema";
 import { recordTombstone } from "./tombstones";
 
 export function listLocations(): StorageLocation[] {
@@ -35,6 +35,10 @@ export function deleteLocation(id: number): void {
     tx.update(inventoryItems)
       .set({ locationId: null, updatedAt: new Date() })
       .where(eq(inventoryItems.locationId, id))
+      .run();
+    tx.update(ingredients)
+      .set({ defaultLocationId: null, updatedAt: new Date() })
+      .where(eq(ingredients.defaultLocationId, id))
       .run();
     tx.delete(storageLocations).where(eq(storageLocations.id, id)).run();
     if (row) recordTombstone(tx, "storage_location", row.publicId);

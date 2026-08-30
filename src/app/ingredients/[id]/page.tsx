@@ -44,6 +44,10 @@ export default async function IngredientDetailPage({
   const { ingredient, inventory, recipes, priceEntries, aliases } = detail;
   const settings = getSettings();
   const locations = listLocations().map((l) => ({ id: l.id, name: l.name }));
+  const defaultLocation = {
+    id: ingredient.defaultLocationId,
+    name: locations.find((l) => l.id === ingredient.defaultLocationId)?.name ?? "",
+  };
   const now = new Date();
   const nowMs = now.getTime();
   const system = resolveSystem(
@@ -106,7 +110,12 @@ export default async function IngredientDetailPage({
 
       {/* 1 — In Stock */}
       <section className="mt-6">
-        <AddInventory ingredientId={ingredient.id} locations={locations} defaultUnit={ingredient.defaultUnit} />
+        <AddInventory
+          ingredientId={ingredient.id}
+          locations={locations}
+          defaultUnit={ingredient.defaultUnit}
+          defaultLocation={defaultLocation}
+        />
         {stockItems.length === 0 ? (
           <p className="text-sm text-muted-foreground">Not currently in inventory.</p>
         ) : (
@@ -175,7 +184,12 @@ export default async function IngredientDetailPage({
         )}
 
         <div className="mt-4">
-          <PriceForms ingredientId={ingredient.id} defaultUnit={ingredient.defaultUnit} locations={locations} />
+          <PriceForms
+            ingredientId={ingredient.id}
+            defaultUnit={ingredient.defaultUnit}
+            defaultLocation={defaultLocation}
+            locations={locations}
+          />
         </div>
 
         {priceEntries.length > 0 && (
@@ -211,8 +225,11 @@ export default async function IngredientDetailPage({
                 defaultUnit: ingredient.defaultUnit ?? "",
                 density: ingredient.density == null ? "" : String(ingredient.density),
                 gramsPerEach: ingredient.gramsPerEach == null ? "" : String(ingredient.gramsPerEach),
+                defaultLocationId: defaultLocation.id,
+                defaultLocationName: defaultLocation.name,
                 isStaple: ingredient.isStaple,
               }}
+              locations={locations}
             />
           </CardContent>
         </Card>

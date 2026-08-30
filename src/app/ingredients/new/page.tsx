@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { listLocations } from "@/lib/db/locations";
 import { IngredientEditForm } from "../ingredient-edit-form";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "New ingredient · Pantry" };
 
 export default function NewIngredientPage() {
+  const locations = listLocations().map((l) => ({ id: l.id, name: l.name }));
+
   return (
     <div className="mx-auto w-full max-w-xl px-4 py-8">
       <Link href="/ingredients" className="text-sm text-muted-foreground hover:text-foreground">
@@ -15,7 +18,18 @@ export default function NewIngredientPage() {
       <p className="mb-6 text-sm text-muted-foreground">
         Create an ingredient so you can track its price even before it&apos;s used in a recipe.
       </p>
-      <IngredientEditForm initial={{ name: "", defaultUnit: "", density: "", gramsPerEach: "", isStaple: false }} />
+      <IngredientEditForm
+        initial={{
+          name: "",
+          defaultUnit: "",
+          density: "",
+          gramsPerEach: "",
+          defaultLocationId: null,
+          defaultLocationName: "",
+          isStaple: false,
+        }}
+        locations={locations}
+      />
     </div>
   );
 }

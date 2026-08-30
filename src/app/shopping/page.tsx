@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
-import { listShoppingItems } from "@/lib/db/shopping";
+import { listShoppingItems, type ShoppingListRow } from "@/lib/db/shopping";
 import { listIngredientsWithAliases } from "@/lib/db/ingredients";
 import { getSettings } from "@/lib/db/settings";
+import { groupByLocation } from "@/lib/domain/location-groups";
+import { Badge } from "@/components/ui/badge";
+import { ListGroupingToggle } from "@/components/list-grouping-toggle";
 import { ShoppingAddForm } from "./shopping-add-form";
 import { ShoppingItemRow, type SerialShoppingItem } from "./shopping-item-row";
 import { ShoppingBar } from "./shopping-bar";
@@ -12,21 +15,31 @@ export const metadata: Metadata = { title: "Shopping list · Pantry" };
 
 const str = (n: number | null) => (n == null ? "" : String(n));
 
+const toSerial = (i: ShoppingListRow): SerialShoppingItem => ({
+  id: i.id,
+  ingredientId: i.ingredientId,
+  name: i.name,
+  quantity: str(i.quantity),
+  unit: i.unit ?? "",
+  price: str(i.price),
+  checked: i.checked,
+});
+
 export default function ShoppingPage() {
   const items = listShoppingItems();
   const ingredients = listIngredientsWithAliases();
-  const { currency } = getSettings();
+  const { currency, listGrouping } = getSettings();
+  const grouping = listGrouping === "none" ? "none" : "location";
   const checkedCount = items.filter((i) => i.checked).length;
 
-  const serial: SerialShoppingItem[] = items.map((i) => ({
-    id: i.id,
-    ingredientId: i.ingredientId,
-    name: i.name,
-    quantity: str(i.quantity),
-    unit: i.unit ?? "",
-    price: str(i.price),
-    checked: i.checked,
-  }));
+  // Rows already arrive sorted unchecked-before-checked (listShoppingItems'
+  // orderBy), so each location group inherits that order too — a checked item
+  // sinks to the bottom of its own group for free, with no extra sort here.
+  const serial: SerialShoppingItem[] = items.map(toSerial);
+  const groups =
+    grouping === "location"
+      ? groupByLocation(items, (i) => i.location).map((g) => ({ ...g, serial: g.items.map(toSerial) }))
+      : null;
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-8">
@@ -54,14 +67,33 @@ export default function ShoppingPage() {
         </p>
       ) : (
         <>
-          <div className="mb-4">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
             <ShoppingBar checkedCount={checkedCount} />
+            <ListGroupingToggle current={grouping} />
           </div>
-          <div className="divide-y rounded-lg border px-3">
-            {serial.map((item) => (
-              <ShoppingItemRow key={item.id} item={item} currency={currency} />
-            ))}
-          </div>
+          {groups ? (
+            <div className="space-y-6">
+              {groups.map((g) => (
+                <section key={g.name}>
+                  <h3 className="mb-2 flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                    <span>{g.name}</span>
+                    <Badge variant="secondary">{g.items.length}</Badge>
+                  </h3>
+                  <div className="divide-y rounded-lg border px-3">
+                    {g.serial.map((item) => (
+                      <ShoppingItemRow key={item.id} item={item} currency={currency} />
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </div>
+          ) : (
+            <div className="divide-y rounded-lg border px-3">
+              {serial.map((item) => (
+                <ShoppingItemRow key={item.id} item={item} currency={currency} />
+              ))}
+            </div>
+          )}
         </>
       )}
     </div>

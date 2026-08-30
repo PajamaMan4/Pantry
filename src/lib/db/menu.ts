@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db } from "./client";
-import { recipes, recipeIngredients, ingredients, inventoryItems } from "./schema";
+import { recipes, recipeIngredients, ingredients, inventoryItems, storageLocations } from "./schema";
 import { summarizeMenuIngredients, scaleMenuRows, type MenuIngredientRow, type MenuIngredientLine } from "../domain/menu";
 import type { InventoryStock } from "../domain/recommend";
 
@@ -23,12 +23,19 @@ export function menuIngredientRows(): MenuIngredientRow[] {
       gramsPerEach: ingredients.gramsPerEach,
       baseServings: recipes.baseServings,
       menuServings: recipes.menuServings,
+      locName: storageLocations.name,
+      locSortOrder: storageLocations.sortOrder,
     })
     .from(recipeIngredients)
     .innerJoin(ingredients, eq(recipeIngredients.ingredientId, ingredients.id))
     .innerJoin(recipes, eq(recipeIngredients.recipeId, recipes.id))
+    .leftJoin(storageLocations, eq(ingredients.defaultLocationId, storageLocations.id))
     .where(eq(recipes.isOnMenu, true))
-    .all();
+    .all()
+    .map(({ locName, locSortOrder, ...r }) => ({
+      ...r,
+      location: locName != null ? { name: locName, sortOrder: locSortOrder! } : null,
+    }));
 
   return scaleMenuRows(rows);
 }

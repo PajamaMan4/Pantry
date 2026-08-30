@@ -47,6 +47,12 @@ export type SettingsUpdate = z.infer<typeof settingsUpdateSchema>;
 export const inventoryViewSchema = z.enum(["alphabetical", "location"]);
 export type InventoryViewValue = z.infer<typeof inventoryViewSchema>;
 
+// Whether the shopping list / menu ingredient list are grouped by default
+// storage location, or shown as a flat list. Kept outside settingsUpdateSchema
+// since it's not a Settings-form field — it's set via a page-level toggle.
+export const listGroupingSchema = z.enum(["none", "location"]);
+export type ListGroupingValue = z.infer<typeof listGroupingSchema>;
+
 // API key for Claude-assisted recipe import. Blank clears the stored key.
 export const anthropicKeySchema = z.object({
   anthropicApiKey: z.preprocess(

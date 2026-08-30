@@ -37,7 +37,7 @@ import {
   type LogPurchaseInput,
 } from "@/lib/db/inventory";
 import type { InventoryEditPayload } from "@/lib/domain/inventory-edit";
-import { listLocations } from "@/lib/db/locations";
+import { listLocations, getOrCreateLocation } from "@/lib/db/locations";
 import { setInventoryView } from "@/lib/db/settings";
 
 export type IngredientActionResult = { ok: true } | { ok: false; error: string };
@@ -52,10 +52,22 @@ function revalidateIngredients(): void {
 }
 
 // ---- ingredient ----
+
+/** Resolve a location id/name pair from an ingredient form into a plain id,
+ * creating the location on the fly if only a name was typed. */
+function resolveDefaultLocationId(input: {
+  defaultLocationId: number | null;
+  defaultLocationName: string | null;
+}): number | null {
+  return input.defaultLocationId ?? (input.defaultLocationName ? getOrCreateLocation(input.defaultLocationName).id : null);
+}
+
 export async function createIngredientFullAction(input: unknown): Promise<IngredientActionResult> {
   const parsed = ingredientInputSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: firstError(parsed.error.issues) };
-  const ingredient = getOrCreateIngredient(parsed.data);
+  const { defaultLocationName, ...rest } = parsed.data;
+  const defaultLocationId = resolveDefaultLocationId({ defaultLocationId: rest.defaultLocationId, defaultLocationName });
+  const ingredient = getOrCreateIngredient({ ...rest, defaultLocationId });
   revalidatePath("/ingredients");
   redirect(`/ingredients/${ingredient.id}`);
 }
@@ -63,7 +75,9 @@ export async function createIngredientFullAction(input: unknown): Promise<Ingred
 export async function updateIngredientAction(id: number, input: unknown): Promise<IngredientActionResult> {
   const parsed = ingredientEditSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: firstError(parsed.error.issues) };
-  updateIngredient(id, parsed.data);
+  const { defaultLocationName, ...rest } = parsed.data;
+  const defaultLocationId = resolveDefaultLocationId({ defaultLocationId: rest.defaultLocationId, defaultLocationName });
+  updateIngredient(id, { ...rest, defaultLocationId });
   revalidateIngredients();
   return { ok: true };
 }

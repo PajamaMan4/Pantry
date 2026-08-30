@@ -10,12 +10,15 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Add inventory · Pantry" };
 
 export default function AddInventoryPage() {
+  const locations: LocationOption[] = listLocations().map((l) => ({ id: l.id, name: l.name }));
+  const locationNameById = new Map(locations.map((l) => [l.id, l.name]));
   const allIngredients: IngredientOption[] = listIngredients().map((i) => ({
     id: i.id,
     name: i.name,
     defaultUnit: i.defaultUnit,
+    defaultLocationId: i.defaultLocationId,
+    defaultLocationName: i.defaultLocationId != null ? (locationNameById.get(i.defaultLocationId) ?? null) : null,
   }));
-  const locations: LocationOption[] = listLocations().map((l) => ({ id: l.id, name: l.name }));
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-8">

@@ -27,6 +27,7 @@ export function InventoryEntryForm({
   ingredientId,
   locations,
   defaultUnit,
+  defaultLocation,
   initial,
   onDone,
   onCancel,
@@ -34,6 +35,7 @@ export function InventoryEntryForm({
   ingredientId: number;
   locations: LocationOption[];
   defaultUnit: string | null;
+  defaultLocation?: { id: number | null; name: string };
   initial?: InventoryEntryInitial;
   onDone: () => void;
   onCancel: () => void;
@@ -41,10 +43,11 @@ export function InventoryEntryForm({
   const isEdit = initial != null;
   const [quantity, setQuantity] = React.useState(initial?.quantity ?? "");
   const [unit, setUnit] = React.useState(initial?.unit ?? defaultUnit ?? "");
-  const [location, setLocation] = React.useState<{ id: number | null; name: string }>({
-    id: initial?.locationId ?? null,
-    name: initial?.locationName ?? "",
-  });
+  const [location, setLocation] = React.useState<{ id: number | null; name: string }>(
+    isEdit
+      ? { id: initial.locationId, name: initial.locationName }
+      : (defaultLocation ?? { id: null, name: "" }),
+  );
   const [expiryDate, setExpiryDate] = React.useState(initial?.expiryDate ?? "");
   const [openedDate, setOpenedDate] = React.useState(initial?.openedDate ?? "");
   const [notes, setNotes] = React.useState(initial?.notes ?? "");

@@ -5,7 +5,13 @@ import { toast } from "sonner";
 import { IngredientCombobox, type IngredientOption } from "@/components/ingredient-combobox";
 import { createIngredientAction } from "@/app/recipes/actions";
 
-export type PickedIngredient = { id: number | null; name: string; defaultUnit: string | null };
+export type PickedIngredient = {
+  id: number | null;
+  name: string;
+  defaultUnit: string | null;
+  defaultLocationId?: number | null;
+  defaultLocationName?: string | null;
+};
 
 /**
  * Ingredient typeahead with create-on-the-fly, used by the inventory + purchase
@@ -33,7 +39,15 @@ export function IngredientPicker({
       selectedName={selectedName}
       placeholder={placeholder}
       onType={onType}
-      onSelect={(opt) => onPick({ id: opt.id, name: opt.name, defaultUnit: opt.defaultUnit })}
+      onSelect={(opt) =>
+        onPick({
+          id: opt.id,
+          name: opt.name,
+          defaultUnit: opt.defaultUnit,
+          defaultLocationId: opt.defaultLocationId,
+          defaultLocationName: opt.defaultLocationName,
+        })
+      }
       onCreate={async (name) => {
         const res = await createIngredientAction({ name });
         if (!res.ok) {
@@ -44,9 +58,16 @@ export function IngredientPicker({
           id: res.ingredient.id,
           name: res.ingredient.name,
           defaultUnit: res.ingredient.defaultUnit,
+          defaultLocationId: res.ingredient.defaultLocationId,
         };
         setOptions((prev) => (prev.some((o) => o.id === opt.id) ? prev : [...prev, opt]));
-        onPick({ id: opt.id, name: opt.name, defaultUnit: opt.defaultUnit });
+        onPick({
+          id: opt.id,
+          name: opt.name,
+          defaultUnit: opt.defaultUnit,
+          defaultLocationId: opt.defaultLocationId,
+          defaultLocationName: null,
+        });
       }}
     />
   );

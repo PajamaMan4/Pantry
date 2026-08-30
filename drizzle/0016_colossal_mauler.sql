@@ -1,0 +1,1 @@
+ALTER TABLE `settings` ADD `list_grouping` text DEFAULT 'location' NOT NULL;

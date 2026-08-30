@@ -26,6 +26,14 @@ export function LocationCombobox({
 }) {
   const [locations, setLocations] = React.useState<LocationOption[]>(options);
   const [query, setQuery] = React.useState(value.name);
+  // Re-sync the visible text when `value` changes from outside (e.g. a
+  // default location filling in after an ingredient is picked elsewhere in
+  // the form) — `onChange`/`choose`/`create` already keep this in step for
+  // edits made through this combobox itself, so this only has to catch the
+  // external case.
+  React.useEffect(() => {
+    setQuery(value.name);
+  }, [value.name]);
   const [open, setOpen] = React.useState(false);
   const [active, setActive] = React.useState(0);
   const [creating, setCreating] = React.useState(false);

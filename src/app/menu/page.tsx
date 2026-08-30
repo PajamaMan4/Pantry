@@ -3,16 +3,45 @@ import Link from "next/link";
 import { CheckCircle2Icon, XCircleIcon } from "lucide-react";
 import { MenuRecipeRow } from "./menu-recipe-row";
 import { AddMissingForMenuButton } from "@/components/add-missing-for-menu-button";
+import { ListGroupingToggle } from "@/components/list-grouping-toggle";
+import { Badge } from "@/components/ui/badge";
 import { listRecipes } from "@/lib/db/recipes";
 import { getMenuIngredientSummary } from "@/lib/db/menu";
+import { getSettings } from "@/lib/db/settings";
 import { formatQuantityText } from "@/lib/domain/format";
+import { groupByLocation, type LocationGroup } from "@/lib/domain/location-groups";
+import type { MenuIngredientLine } from "@/lib/domain/menu";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Menu · Pantry" };
 
+function MenuIngredientLineItem({ line }: { line: MenuIngredientLine }) {
+  return (
+    <li className="flex items-center justify-between gap-3 py-2 text-sm">
+      <span className="inline-flex items-center gap-2">
+        {line.inStock ? (
+          <CheckCircle2Icon className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" aria-label="In stock" />
+        ) : (
+          <XCircleIcon className="size-4 shrink-0 text-red-600 dark:text-red-400" aria-label="Not enough in stock" />
+        )}
+        <Link href={`/ingredients/${line.ingredientId}`} className="hover:underline">
+          {line.name}
+        </Link>
+      </span>
+      {line.amount != null && (
+        <span className="text-muted-foreground">{formatQuantityText({ amount: line.amount, unit: line.unit })}</span>
+      )}
+    </li>
+  );
+}
+
 export default async function MenuPage() {
   const recipes = listRecipes({ menuOnly: true });
   const { lines } = getMenuIngredientSummary();
+  const { listGrouping } = getSettings();
+  const grouping = listGrouping === "none" ? "none" : "location";
+  const groups: LocationGroup<MenuIngredientLine>[] | null =
+    grouping === "location" ? groupByLocation(lines, (l) => l.location) : null;
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-8">
@@ -49,32 +78,35 @@ export default async function MenuPage() {
           <section className="mt-10">
             <div className="mb-3 flex items-center justify-between gap-2">
               <h2 className="text-lg font-medium">Ingredients needed</h2>
-              <AddMissingForMenuButton />
+              <div className="flex items-center gap-2">
+                <ListGroupingToggle current={grouping} />
+                <AddMissingForMenuButton />
+              </div>
             </div>
             {lines.length === 0 ? (
               <p className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
                 These recipes have no ingredients listed.
               </p>
+            ) : groups ? (
+              <div className="space-y-6">
+                {groups.map((g) => (
+                  <section key={g.name}>
+                    <h3 className="mb-2 flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                      <span>{g.name}</span>
+                      <Badge variant="secondary">{g.items.length}</Badge>
+                    </h3>
+                    <ul className="divide-y rounded-lg border px-3">
+                      {g.items.map((line) => (
+                        <MenuIngredientLineItem key={line.ingredientId} line={line} />
+                      ))}
+                    </ul>
+                  </section>
+                ))}
+              </div>
             ) : (
               <ul className="divide-y rounded-lg border px-3">
                 {lines.map((line) => (
-                  <li key={line.ingredientId} className="flex items-center justify-between gap-3 py-2 text-sm">
-                    <span className="inline-flex items-center gap-2">
-                      {line.inStock ? (
-                        <CheckCircle2Icon className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" aria-label="In stock" />
-                      ) : (
-                        <XCircleIcon className="size-4 shrink-0 text-red-600 dark:text-red-400" aria-label="Not enough in stock" />
-                      )}
-                      <Link href={`/ingredients/${line.ingredientId}`} className="hover:underline">
-                      {line.name}
-                    </Link>
-                    </span>
-                    {line.amount != null && (
-                      <span className="text-muted-foreground">
-                        {formatQuantityText({ amount: line.amount, unit: line.unit })}
-                      </span>
-                    )}
-                  </li>
+                  <MenuIngredientLineItem key={line.ingredientId} line={line} />
                 ))}
               </ul>
             )}

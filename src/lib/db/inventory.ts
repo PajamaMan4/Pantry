@@ -48,7 +48,12 @@ export type LogPurchaseInput = IngredientRef &
   };
 
 // ---- helpers ----------------------------------------------------------------
-function resolveIngredientId(tx: Tx, ref: IngredientRef, defaultUnit?: string | null): number {
+function resolveIngredientId(
+  tx: Tx,
+  ref: IngredientRef,
+  defaultUnit?: string | null,
+  defaultLocationId?: number | null,
+): number {
   if (ref.ingredientId != null) return ref.ingredientId;
   const name = (ref.name ?? "").trim();
   if (!name) throw new Error("Inventory item is missing both an ingredient id and a name.");
@@ -69,7 +74,7 @@ function resolveIngredientId(tx: Tx, ref: IngredientRef, defaultUnit?: string | 
   // 3. Create new ingredient
   return tx
     .insert(ingredients)
-    .values({ name, defaultUnit: defaultUnit ?? null })
+    .values({ name, defaultUnit: defaultUnit ?? null, defaultLocationId: defaultLocationId ?? null })
     .returning({ id: ingredients.id })
     .get().id;
 }
@@ -136,8 +141,8 @@ export function listInventoryForIngredient(
 // ---- mutations --------------------------------------------------------------
 export function createInventoryItem(input: InventoryItemInput): number {
   return db.transaction((tx) => {
-    const ingredientId = resolveIngredientId(tx, input, input.unit);
     const locationId = resolveLocationId(tx, input);
+    const ingredientId = resolveIngredientId(tx, input, input.unit, locationId);
     return tx
       .insert(inventoryItems)
       .values({
@@ -156,8 +161,8 @@ export function createInventoryItem(input: InventoryItemInput): number {
 
 export function updateInventoryItem(id: number, input: InventoryItemInput): void {
   db.transaction((tx) => {
-    const ingredientId = resolveIngredientId(tx, input, input.unit);
     const locationId = resolveLocationId(tx, input);
+    const ingredientId = resolveIngredientId(tx, input, input.unit, locationId);
     tx.update(inventoryItems)
       .set({
         ingredientId,
@@ -260,8 +265,8 @@ export function inventoryByIngredient(): Map<number, InventoryRow[]> {
  */
 export function logPurchase(input: LogPurchaseInput): { inventoryItemId: number; priceEntryId: number } {
   return db.transaction((tx) => {
-    const ingredientId = resolveIngredientId(tx, input, input.unit);
     const locationId = resolveLocationId(tx, input);
+    const ingredientId = resolveIngredientId(tx, input, input.unit, locationId);
 
     const existing = tx
       .select()
@@ -371,10 +376,19 @@ export function importPricesAndInventory(items: BulkImportItem[]): BulkImportSum
             .get();
       const isNew = !beforeCount && !aliasBefore;
 
+      // Resolve the location up front (only when this row actually adds stock)
+      // so a newly-created ingredient can adopt it as its default, mirroring
+      // how defaultUnit is seeded above.
+      const locationId =
+        item.addQuantity != null && item.addUnit
+          ? resolveLocationId(tx, { locationId: null, locationName: item.location ?? null })
+          : null;
+
       const ingredientId = resolveIngredientId(
         tx,
         { ingredientId: null, name: item.name },
         defaultUnit,
+        locationId,
       );
 
       if (isNew) ingredientsCreated++;
@@ -394,9 +408,6 @@ export function importPricesAndInventory(items: BulkImportItem[]): BulkImportSum
       }
 
       if (item.addQuantity != null && item.addUnit) {
-        const locationRef: LocationRef = { locationId: null, locationName: item.location ?? null };
-        const locationId = resolveLocationId(tx, locationRef);
-
         const existing = tx
           .select()
           .from(inventoryItems)

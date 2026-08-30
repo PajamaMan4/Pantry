@@ -8,6 +8,8 @@ export type IngredientOption = {
   id: number;
   name: string;
   defaultUnit: string | null;
+  defaultLocationId?: number | null;
+  defaultLocationName?: string | null;
   aliases?: string[];
 };
 

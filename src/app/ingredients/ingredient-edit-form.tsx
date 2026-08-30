@@ -8,6 +8,7 @@ import { FormActions } from "@/components/ui/form-actions";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { LocationCombobox, type LocationOption } from "@/components/location-combobox";
 import { UNIT_OPTIONS } from "@/lib/domain/units";
 import { updateIngredientAction, createIngredientFullAction } from "./actions";
 
@@ -19,23 +20,43 @@ export type IngredientEditInitial = {
   defaultUnit: string;
   density: string;
   gramsPerEach: string;
+  defaultLocationId: number | null;
+  defaultLocationName: string;
   isStaple: boolean;
 };
 
-export function IngredientEditForm({ initial }: { initial: IngredientEditInitial }) {
+export function IngredientEditForm({
+  initial,
+  locations,
+}: {
+  initial: IngredientEditInitial;
+  locations: LocationOption[];
+}) {
   const router = useRouter();
   const isCreate = initial.id == null;
   const [name, setName] = React.useState(initial.name);
   const [defaultUnit, setDefaultUnit] = React.useState(initial.defaultUnit);
   const [density, setDensity] = React.useState(initial.density);
   const [gramsPerEach, setGramsPerEach] = React.useState(initial.gramsPerEach);
+  const [location, setLocation] = React.useState<{ id: number | null; name: string }>({
+    id: initial.defaultLocationId,
+    name: initial.defaultLocationName,
+  });
   const [isStaple, setIsStaple] = React.useState(initial.isStaple);
   const [pending, startTransition] = React.useTransition();
 
   function save() {
     // `category` is intentionally absent: the column still exists but is no
     // longer edited, and the edit schema leaves stored values untouched.
-    const input = { name, defaultUnit, density, gramsPerEach, isStaple };
+    const input = {
+      name,
+      defaultUnit,
+      density,
+      gramsPerEach,
+      defaultLocationId: location.id,
+      defaultLocationName: location.id == null ? location.name : null,
+      isStaple,
+    };
     startTransition(async () => {
       if (isCreate) {
         // On success this redirects to the new ingredient; only errors return.
@@ -71,6 +92,16 @@ export function IngredientEditForm({ initial }: { initial: IngredientEditInitial
             </option>
           ))}
         </select>
+      </div>
+
+      <div className="grid gap-2">
+        <Label>Default storage location</Label>
+        <div className="w-40">
+          <LocationCombobox options={locations} value={location} onChange={setLocation} />
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Prefills the location when you add inventory for this ingredient.
+        </p>
       </div>
 
       <div className="grid gap-2">

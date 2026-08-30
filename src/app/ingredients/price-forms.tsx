@@ -25,10 +25,12 @@ type Mode = "price" | "purchase" | null;
 export function PriceForms({
   ingredientId,
   defaultUnit,
+  defaultLocation,
   locations,
 }: {
   ingredientId: number;
   defaultUnit: string | null;
+  defaultLocation?: { id: number | null; name: string };
   locations: LocationOption[];
 }) {
   const [mode, setMode] = React.useState<Mode>(null);
@@ -74,6 +76,7 @@ export function PriceForms({
           <LogPurchaseFields
             ingredientId={ingredientId}
             defaultUnit={defaultUnit}
+            defaultLocation={defaultLocation}
             locations={locations}
             onDone={() => setMode(null)}
             onCancel={() => setMode(null)}
@@ -138,19 +141,23 @@ function AddPriceFields({
 function LogPurchaseFields({
   ingredientId,
   defaultUnit,
+  defaultLocation,
   locations,
   onDone,
   onCancel,
 }: {
   ingredientId: number;
   defaultUnit: string | null;
+  defaultLocation?: { id: number | null; name: string };
   locations: LocationOption[];
   onDone: () => void;
   onCancel: () => void;
 }) {
   const [quantity, setQuantity] = React.useState("");
   const [unit, setUnit] = React.useState(defaultUnit ?? "");
-  const [location, setLocation] = React.useState<{ id: number | null; name: string }>({ id: null, name: "" });
+  const [location, setLocation] = React.useState<{ id: number | null; name: string }>(
+    defaultLocation ?? { id: null, name: "" },
+  );
   const [price, setPrice] = React.useState("");
   const [store, setStore] = React.useState("");
   const [purchasedAt, setPurchasedAt] = React.useState(todayStr());

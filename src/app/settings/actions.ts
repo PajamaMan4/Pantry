@@ -1,13 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { settingsUpdateSchema, anthropicKeySchema } from "@/lib/validation/settings";
+import { settingsUpdateSchema, anthropicKeySchema, listGroupingSchema } from "@/lib/validation/settings";
 import { locationNameSchema } from "@/lib/validation/location";
 import {
   updateSettings,
   setAnthropicApiKey,
   resolveAnthropicApiKey,
   setHasSeenWelcome,
+  setListGrouping,
 } from "@/lib/db/settings";
 import { createLocation, renameLocation, deleteLocation } from "@/lib/db/locations";
 
@@ -49,6 +50,18 @@ export async function renameLocationAction(id: number, input: unknown): Promise<
 export async function deleteLocationAction(id: number): Promise<{ ok: true }> {
   deleteLocation(id);
   revalidateLocations();
+  return { ok: true };
+}
+
+// Shared by /shopping and /menu — both lists group by default storage
+// location using the same preference, so flipping it on one flips both.
+export async function setListGroupingAction(value: unknown): Promise<{ ok: true }> {
+  const parsed = listGroupingSchema.safeParse(value);
+  if (parsed.success) {
+    setListGrouping(parsed.data);
+    revalidatePath("/shopping");
+    revalidatePath("/menu");
+  }
   return { ok: true };
 }
 

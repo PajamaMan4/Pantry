@@ -5,6 +5,7 @@ import {
   recipeIngredients,
   ingredients,
   inventoryItems,
+  storageLocations,
   type ShoppingListItem,
 } from "./schema";
 import { createInventoryItem, logPurchase } from "./inventory";
@@ -13,13 +14,27 @@ import { menuIngredientRows, loadInventoryStock } from "./menu";
 import { buildInStockChecker, type InventoryStock } from "../domain/recommend";
 import { combineAmounts } from "../domain/units";
 import type { MenuIngredientRow } from "../domain/menu";
+import type { LocationRef } from "../domain/location-groups";
 
-export function listShoppingItems(): ShoppingListItem[] {
+export type ShoppingListRow = ShoppingListItem & { location: LocationRef };
+
+/** Shopping items joined to their ingredient's default storage location (null for free-text items or ingredients with no default location). */
+export function listShoppingItems(): ShoppingListRow[] {
   return db
-    .select()
+    .select({
+      item: shoppingListItems,
+      locName: storageLocations.name,
+      locSortOrder: storageLocations.sortOrder,
+    })
     .from(shoppingListItems)
+    .leftJoin(ingredients, eq(shoppingListItems.ingredientId, ingredients.id))
+    .leftJoin(storageLocations, eq(ingredients.defaultLocationId, storageLocations.id))
     .orderBy(asc(shoppingListItems.checked), desc(shoppingListItems.createdAt))
-    .all();
+    .all()
+    .map((r) => ({
+      ...r.item,
+      location: r.locName != null ? { name: r.locName, sortOrder: r.locSortOrder! } : null,
+    }));
 }
 
 export type ShoppingItemInput = {

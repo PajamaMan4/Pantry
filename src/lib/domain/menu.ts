@@ -5,8 +5,9 @@
 import { combineAmounts } from "./units";
 import { scaleFactor, scaleIngredientAmount } from "./scaling";
 import { buildInStockChecker, type RecommendIngredient, type InventoryStock } from "./recommend";
+import type { LocationRef } from "./location-groups";
 
-export type MenuIngredientRow = RecommendIngredient & { name: string };
+export type MenuIngredientRow = RecommendIngredient & { name: string; location?: LocationRef };
 
 /** A menu ingredient line still carrying its recipe's servings context. */
 export type MenuRecipeIngredientRow = MenuIngredientRow & {
@@ -33,6 +34,7 @@ export interface MenuIngredientLine {
   amount: number | null; // summed across recipes; null when every occurrence is non-numeric
   unit: string | null;
   inStock: boolean; // false => not enough on hand (or an unreconcilable unit)
+  location: LocationRef; // the ingredient's default storage location, if any
 }
 
 /**
@@ -63,7 +65,14 @@ export function summarizeMenuIngredients(
   for (const [ingredientId, members] of byIngredient) {
     const first = members[0];
     const { amount, unit } = combineAmounts(members, first.density, first.gramsPerEach);
-    lines.push({ ingredientId, name: first.name, amount, unit, inStock: inStockOf({ ...first, amount, unit }) });
+    lines.push({
+      ingredientId,
+      name: first.name,
+      amount,
+      unit,
+      inStock: inStockOf({ ...first, amount, unit }),
+      location: first.location ?? null,
+    });
   }
   lines.sort((a, b) => a.name.localeCompare(b.name));
   return { lines };

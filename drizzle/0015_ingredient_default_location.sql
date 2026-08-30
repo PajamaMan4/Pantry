@@ -1,0 +1,1 @@
+ALTER TABLE `ingredients` ADD `default_location_id` integer REFERENCES storage_locations(id);

@@ -11,10 +11,12 @@ export function AddInventory({
   ingredientId,
   locations,
   defaultUnit,
+  defaultLocation,
 }: {
   ingredientId: number;
   locations: LocationOption[];
   defaultUnit: string | null;
+  defaultLocation: { id: number | null; name: string };
 }) {
   const [open, setOpen] = React.useState(false);
   return (
@@ -31,6 +33,7 @@ export function AddInventory({
             ingredientId={ingredientId}
             locations={locations}
             defaultUnit={defaultUnit}
+            defaultLocation={defaultLocation}
             onDone={() => setOpen(false)}
             onCancel={() => setOpen(false)}
           />

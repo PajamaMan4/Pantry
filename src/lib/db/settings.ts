@@ -36,6 +36,16 @@ export function setInventoryView(view: InventoryView): void {
     .run();
 }
 
+export type ListGrouping = "none" | "location";
+
+export function setListGrouping(grouping: ListGrouping): void {
+  getSettings(); // ensure the row exists
+  db.update(settings)
+    .set({ listGrouping: grouping, updatedAt: new Date() })
+    .where(eq(settings.id, SETTINGS_ID))
+    .run();
+}
+
 export function setHasSeenWelcome(value: boolean): void {
   getSettings(); // ensure the row exists
   db.update(settings)

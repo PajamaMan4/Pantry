@@ -29,4 +29,35 @@ describe("ingredientEditSchema", () => {
     if (!r.success) return;
     expect(r.data.category).toBeNull();
   });
+
+  it("defaults an absent or blank default location to null", () => {
+    const r1 = ingredientEditSchema.safeParse(base);
+    expect(r1.success).toBe(true);
+    if (r1.success) {
+      expect(r1.data.defaultLocationId).toBeNull();
+      expect(r1.data.defaultLocationName).toBeNull();
+    }
+
+    const r2 = ingredientEditSchema.safeParse({ ...base, defaultLocationId: "", defaultLocationName: "" });
+    expect(r2.success).toBe(true);
+    if (r2.success) {
+      expect(r2.data.defaultLocationId).toBeNull();
+      expect(r2.data.defaultLocationName).toBeNull();
+    }
+  });
+
+  it("parses a numeric default location id", () => {
+    const r = ingredientEditSchema.safeParse({ ...base, defaultLocationId: 3 });
+    expect(r.success).toBe(true);
+    if (!r.success) return;
+    expect(r.data.defaultLocationId).toBe(3);
+  });
+
+  it("keeps a default location name when no id was picked", () => {
+    const r = ingredientEditSchema.safeParse({ ...base, defaultLocationName: " Pantry " });
+    expect(r.success).toBe(true);
+    if (!r.success) return;
+    expect(r.data.defaultLocationId).toBeNull();
+    expect(r.data.defaultLocationName).toBe("Pantry");
+  });
 });

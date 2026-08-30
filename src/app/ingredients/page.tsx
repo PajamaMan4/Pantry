@@ -16,6 +16,7 @@ import { inventoryByIngredient, listInventory, type InventoryRow } from "@/lib/d
 import { listPriceEntriesFor } from "@/lib/db/prices";
 import { listLocations } from "@/lib/db/locations";
 import { getSettings } from "@/lib/db/settings";
+import { groupByLocation } from "@/lib/domain/location-groups";
 import { priceSummary, type PriceSummary } from "@/lib/domain/cost";
 import { paginate, parsePageParam, resolvePageSize } from "@/lib/domain/pagination";
 import { displayQuantity, type DisplaySystem } from "@/lib/domain/scaling";
@@ -293,21 +294,13 @@ function LocationView({
     return priceText(summary, currency, system);
   };
 
-  const groups = new Map<string, { sortOrder: number; rows: InventoryRow[] }>();
-  for (const r of rows) {
-    const name = r.location?.name ?? "Unsorted";
-    const sortOrder = r.location?.sortOrder ?? 9999;
-    const g = groups.get(name) ?? { sortOrder, rows: [] };
-    g.rows.push(r);
-    groups.set(name, g);
-  }
-  const ordered = [...groups.entries()].sort((a, b) => a[1].sortOrder - b[1].sortOrder);
+  const groups = groupByLocation(rows, (r) => r.location);
 
   return (
     <InventorySortProvider locations={locations}>
       <div className="space-y-6">
-        {ordered.map(([name, g]) => (
-          <Collapsible key={name} defaultOpen={false} render={<section />}>
+        {groups.map((g) => (
+          <Collapsible key={g.name} defaultOpen={false} render={<section />}>
             <CollapsibleTrigger
               render={
                 <button
@@ -317,14 +310,14 @@ function LocationView({
               }
             >
               <ChevronDownIcon className="size-4 transition-transform group-data-[panel-open]:rotate-180" />
-              <span>{name}</span>
+              <span>{g.name}</span>
               <Badge variant="secondary" className="ml-1">
-                {g.rows.length}
+                {g.items.length}
               </Badge>
             </CollapsibleTrigger>
             <CollapsibleContent>
               <div className="divide-y rounded-lg border px-3">
-                {g.rows.map((r) => (
+                {g.items.map((r) => (
                   <InventoryItemRow
                     key={r.item.id}
                     item={serialItem(r, system, rounding)}

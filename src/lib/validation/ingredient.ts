@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { UNIT_IDS } from "@/lib/domain/units";
-import { nullableText, nullableNumber } from "./common";
+import { nullableText, nullableNumber, idOrNull } from "./common";
 
 const unitEnum = z.preprocess(
   (v) => (v === "" || v == null ? null : v),
@@ -14,6 +14,8 @@ export const ingredientInputSchema = z.object({
   defaultUnit: unitEnum,
   density: nullableNumber,
   gramsPerEach: nullableNumber,
+  defaultLocationId: idOrNull,
+  defaultLocationName: nullableText,
   isStaple: z.boolean().default(false),
 });
 
@@ -30,6 +32,8 @@ export const ingredientEditSchema = z.object({
   defaultUnit: unitEnum,
   density: nullableNumber,
   gramsPerEach: nullableNumber,
+  defaultLocationId: idOrNull,
+  defaultLocationName: nullableText,
   isStaple: z.boolean().default(false),
 });
 
