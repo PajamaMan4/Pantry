@@ -12,7 +12,7 @@ import { InventoryItemRow, type SerialInventoryItem } from "../inventory-item-ro
 import { PriceForms } from "../price-forms";
 import { IngredientDetailActionsMenu } from "../ingredient-detail-actions-menu";
 import { AliasesSection } from "../aliases-section";
-import { getIngredientDetail, listIngredients } from "@/lib/db/ingredients";
+import { getIngredientDetail, listIngredients, listCategories } from "@/lib/db/ingredients";
 import { getSettings } from "@/lib/db/settings";
 import { listLocations } from "@/lib/db/locations";
 import { priceSummary } from "@/lib/domain/cost";
@@ -44,6 +44,7 @@ export default async function IngredientDetailPage({
   const { ingredient, inventory, recipes, priceEntries, aliases } = detail;
   const settings = getSettings();
   const locations = listLocations().map((l) => ({ id: l.id, name: l.name }));
+  const categories = listCategories();
   const defaultLocation = {
     id: ingredient.defaultLocationId,
     name: locations.find((l) => l.id === ingredient.defaultLocationId)?.name ?? "",
@@ -115,6 +116,7 @@ export default async function IngredientDetailPage({
           locations={locations}
           defaultUnit={ingredient.defaultUnit}
           defaultLocation={defaultLocation}
+          showLocation={settings.showLocations}
         />
         {stockItems.length === 0 ? (
           <p className="text-sm text-muted-foreground">Not currently in inventory.</p>
@@ -128,6 +130,7 @@ export default async function IngredientDetailPage({
                 locations={locations}
                 defaultUnit={ingredient.defaultUnit}
                 nowMs={nowMs}
+                showLocations={settings.showLocations}
               />
             ))}
           </div>
@@ -189,6 +192,7 @@ export default async function IngredientDetailPage({
             defaultUnit={ingredient.defaultUnit}
             defaultLocation={defaultLocation}
             locations={locations}
+            showLocation={settings.showLocations}
           />
         </div>
 
@@ -222,6 +226,7 @@ export default async function IngredientDetailPage({
               initial={{
                 id: ingredient.id,
                 name: ingredient.name,
+                category: ingredient.category ?? "",
                 defaultUnit: ingredient.defaultUnit ?? "",
                 density: ingredient.density == null ? "" : String(ingredient.density),
                 gramsPerEach: ingredient.gramsPerEach == null ? "" : String(ingredient.gramsPerEach),
@@ -230,6 +235,8 @@ export default async function IngredientDetailPage({
                 isStaple: ingredient.isStaple,
               }}
               locations={locations}
+              categories={categories}
+              showLocations={settings.showLocations}
             />
           </CardContent>
         </Card>

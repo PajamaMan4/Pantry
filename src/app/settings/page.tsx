@@ -58,7 +58,7 @@ export default function SettingsPage() {
           <CardTitle>Storage locations</CardTitle>
           <CardDescription>
             Where inventory is stored. Rename or remove locations; removing one keeps the stock and
-            moves it to “Unsorted”.
+            moves it to “Unsorted”. Hidden throughout the app while “Show storage locations” is off.
           </CardDescription>
         </CardHeader>
         <CardContent>

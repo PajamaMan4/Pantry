@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { listLocations } from "@/lib/db/locations";
+import { listCategories } from "@/lib/db/ingredients";
+import { getSettings } from "@/lib/db/settings";
 import { IngredientEditForm } from "../ingredient-edit-form";
 
 export const dynamic = "force-dynamic";
@@ -8,6 +10,8 @@ export const metadata: Metadata = { title: "New ingredient · Pantry" };
 
 export default function NewIngredientPage() {
   const locations = listLocations().map((l) => ({ id: l.id, name: l.name }));
+  const categories = listCategories();
+  const { showLocations } = getSettings();
 
   return (
     <div className="mx-auto w-full max-w-xl px-4 py-8">
@@ -21,6 +25,7 @@ export default function NewIngredientPage() {
       <IngredientEditForm
         initial={{
           name: "",
+          category: "",
           defaultUnit: "",
           density: "",
           gramsPerEach: "",
@@ -29,6 +34,8 @@ export default function NewIngredientPage() {
           isStaple: false,
         }}
         locations={locations}
+        categories={categories}
+        showLocations={showLocations}
       />
     </div>
   );

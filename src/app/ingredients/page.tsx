@@ -17,6 +17,7 @@ import { listPriceEntriesFor } from "@/lib/db/prices";
 import { listLocations } from "@/lib/db/locations";
 import { getSettings } from "@/lib/db/settings";
 import { groupByLocation } from "@/lib/domain/location-groups";
+import { groupByCategory } from "@/lib/domain/category-groups";
 import { priceSummary, type PriceSummary } from "@/lib/domain/cost";
 import { paginate, parsePageParam, resolvePageSize } from "@/lib/domain/pagination";
 import { displayQuantity, type DisplaySystem } from "@/lib/domain/scaling";
@@ -102,6 +103,7 @@ export default async function IngredientsPage({
   const q = (str("q") ?? "").trim();
 
   const settings = getSettings();
+  const showLocations = settings.showLocations;
   const view = settings.inventoryView === "location" ? "location" : "alphabetical";
   const system = resolveSystem(str("units"), settings.unitSystem === "metric" ? "metric" : "imperial");
   const rounding: RoundingMode = settings.roundingMode === "exact" ? "exact" : "cooking";
@@ -165,6 +167,7 @@ export default async function IngredientsPage({
           now={now}
           nowMs={nowMs}
           locations={locations}
+          showLocations={showLocations}
         />
       )}
     </div>
@@ -267,6 +270,7 @@ function LocationView({
   now,
   nowMs,
   locations,
+  showLocations,
 }: {
   q: string;
   system: DisplaySystem;
@@ -276,6 +280,7 @@ function LocationView({
   now: Date;
   nowMs: number;
   locations: { id: number; name: string }[];
+  showLocations: boolean;
 }) {
   let rows = listInventory();
   if (q) rows = rows.filter((r) => r.ingredient.name.toLowerCase().includes(q.toLowerCase()));
@@ -294,48 +299,57 @@ function LocationView({
     return priceText(summary, currency, system);
   };
 
-  const groups = groupByLocation(rows, (r) => r.location);
+  const row = (r: InventoryRow) => (
+    <InventoryItemRow
+      key={r.item.id}
+      item={serialItem(r, system, rounding)}
+      ingredientId={r.ingredient.id}
+      locations={locations}
+      defaultUnit={r.ingredient.defaultUnit}
+      nowMs={nowMs}
+      name={r.ingredient.name}
+      href={`/ingredients/${r.ingredient.id}`}
+      priceText={priceTextFor(r)}
+      showLocation={false}
+    />
+  );
 
-  return (
-    <InventorySortProvider locations={locations}>
-      <div className="space-y-6">
-        {groups.map((g) => (
-          <Collapsible key={g.name} defaultOpen={false} render={<section />}>
-            <CollapsibleTrigger
-              render={
-                <button
-                  type="button"
-                  className="group mb-2 flex w-full items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-                />
-              }
-            >
-              <ChevronDownIcon className="size-4 transition-transform group-data-[panel-open]:rotate-180" />
-              <span>{g.name}</span>
-              <Badge variant="secondary" className="ml-1">
-                {g.items.length}
-              </Badge>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <div className="divide-y rounded-lg border px-3">
-                {g.items.map((r) => (
-                  <InventoryItemRow
-                    key={r.item.id}
-                    item={serialItem(r, system, rounding)}
-                    ingredientId={r.ingredient.id}
-                    locations={locations}
-                    defaultUnit={r.ingredient.defaultUnit}
-                    nowMs={nowMs}
-                    name={r.ingredient.name}
-                    href={`/ingredients/${r.ingredient.id}`}
-                    priceText={priceTextFor(r)}
-                    showLocation={false}
-                  />
-                ))}
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
-        ))}
-      </div>
-    </InventorySortProvider>
+  // Locations shown -> group by storage location, with drag/tap-to-move
+  // (InventorySortProvider). Locations hidden -> group by category instead;
+  // there's no location to move an item to, so no provider, no move button.
+  const groups: { name: string; items: InventoryRow[] }[] = showLocations
+    ? groupByLocation(rows, (r) => r.location)
+    : groupByCategory(rows, (r) => r.ingredient.category);
+
+  const sections = (
+    <div className="space-y-6">
+      {groups.map((g) => (
+        <Collapsible key={g.name} defaultOpen={false} render={<section />}>
+          <CollapsibleTrigger
+            render={
+              <button
+                type="button"
+                className="group mb-2 flex w-full items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              />
+            }
+          >
+            <ChevronDownIcon className="size-4 transition-transform group-data-[panel-open]:rotate-180" />
+            <span>{g.name}</span>
+            <Badge variant="secondary" className="ml-1">
+              {g.items.length}
+            </Badge>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="divide-y rounded-lg border px-3">{g.items.map(row)}</div>
+          </CollapsibleContent>
+        </Collapsible>
+      ))}
+    </div>
+  );
+
+  return showLocations ? (
+    <InventorySortProvider locations={locations}>{sections}</InventorySortProvider>
+  ) : (
+    sections
   );
 }

@@ -1,21 +1,22 @@
 "use client";
 
 import * as React from "react";
-import { ListIcon, ShelvingUnitIcon } from "lucide-react";
+import { ListIcon, ShelvingUnitIcon, TagIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { setListGroupingAction } from "@/app/settings/actions";
 
-type Grouping = "none" | "location";
+type Grouping = "none" | "grouped";
 
-const OPTIONS: { value: Grouping; label: string; icon: typeof ListIcon }[] = [
-  { value: "location", label: "By location", icon: ShelvingUnitIcon },
-  { value: "none", label: "Alphabetical", icon: ListIcon },
-];
-
-/** Shared by /shopping and /menu to toggle whether ingredients are grouped by default storage location. */
-export function ListGroupingToggle({ current }: { current: Grouping }) {
+/** Shared by /shopping and /menu to toggle whether ingredients are grouped —
+ *  by default storage location, or by category when locations are hidden. */
+export function ListGroupingToggle({ current, showLocations }: { current: Grouping; showLocations: boolean }) {
   const [pending, startTransition] = React.useTransition();
   const [optimistic, setOptimistic] = React.useState<Grouping>(current);
+
+  const options: { value: Grouping; label: string; icon: typeof ListIcon }[] = [
+    { value: "grouped", label: showLocations ? "By location" : "By category", icon: showLocations ? ShelvingUnitIcon : TagIcon },
+    { value: "none", label: "Alphabetical", icon: ListIcon },
+  ];
 
   function pick(value: Grouping) {
     setOptimistic(value);
@@ -26,7 +27,7 @@ export function ListGroupingToggle({ current }: { current: Grouping }) {
 
   return (
     <div className="flex items-center rounded-md border p-0.5" aria-busy={pending}>
-      {OPTIONS.map((o) => {
+      {options.map((o) => {
         const Icon = o.icon;
         return (
           <button

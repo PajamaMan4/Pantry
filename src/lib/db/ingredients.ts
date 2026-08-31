@@ -1,4 +1,4 @@
-import { asc, eq, inArray, like, or, sql } from "drizzle-orm";
+import { asc, eq, inArray, isNotNull, like, or, sql } from "drizzle-orm";
 import { db } from "./client";
 import {
   ingredients,
@@ -34,6 +34,28 @@ export function listIngredientsWithAliases(): IngredientWithAliases[] {
     aliasMap.set(row.ingredientId, list);
   }
   return all.map((i) => ({ ...i, aliases: aliasMap.get(i.id) ?? [] }));
+}
+
+/**
+ * Distinct ingredient categories in use, for the category combobox. Category
+ * is free text with no dedicated table, so this dedupes case-insensitively
+ * (keeping whichever casing was seen first) and sorts alphabetically — a
+ * typo-preventing typeahead, not an enum.
+ */
+export function listCategories(): string[] {
+  const rows = db
+    .selectDistinct({ category: ingredients.category })
+    .from(ingredients)
+    .where(isNotNull(ingredients.category))
+    .all();
+  const seen = new Map<string, string>(); // lowercase -> first-seen original casing
+  for (const r of rows) {
+    const raw = r.category?.trim();
+    if (!raw) continue;
+    const key = raw.toLowerCase();
+    if (!seen.has(key)) seen.set(key, raw);
+  }
+  return [...seen.values()].sort((a, b) => a.localeCompare(b));
 }
 
 export function searchIngredients(query: string, limit = 12): Ingredient[] {
@@ -115,7 +137,7 @@ export function getOrCreateIngredient(input: CreateIngredientInput): Ingredient 
 
 export type IngredientEditInput = {
   name: string;
-  /** Omit to leave the stored category untouched (it's no longer edited in the UI). */
+  /** Omit to leave the stored category untouched. */
   category?: string | null;
   defaultUnit: string | null;
   density: number | null;

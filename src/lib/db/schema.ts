@@ -243,12 +243,13 @@ export const settings = sqliteTable("settings", {
   currency: text("currency").notNull().default("USD"),
   roundingMode: text("rounding_mode").notNull().default("cooking"), // 'cooking' | 'exact'
   inventoryView: text("inventory_view").notNull().default("alphabetical"), // 'alphabetical' | 'location'
-  listGrouping: text("list_grouping").notNull().default("location"), // 'none' | 'location' — shopping/menu grouping
+  listGrouping: text("list_grouping").notNull().default("grouped"), // 'none' | 'grouped' — shopping/menu/inventory grouping; axis (location vs. category) follows showLocations
   recipesPerPage: integer("recipes_per_page").notNull().default(10), // 10 | 25 | 50
   ingredientsPerPage: integer("ingredients_per_page").notNull().default(25), // 10 | 25 | 50
   anthropicApiKey: text("anthropic_api_key"), // optional, enables Claude recipe import
   hasSeenWelcome: integer("has_seen_welcome", { mode: "boolean" }).notNull().default(false), // first-run welcome dialog dismissed
   showRecipeImages: integer("show_recipe_images", { mode: "boolean" }).notNull().default(true), // render recipe photo banners on detail pages
+  showLocations: integer("show_locations", { mode: "boolean" }).notNull().default(true), // hide storage-location fields/grouping app-wide when off; data is kept, not migrated
   // Singleton row (id=1) — no publicId; a future sync LWW-merges it by updatedAt.
   updatedAt: integer("updated_at", { mode: "timestamp" })
     .notNull()

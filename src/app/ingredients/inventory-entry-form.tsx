@@ -31,6 +31,7 @@ export function InventoryEntryForm({
   initial,
   onDone,
   onCancel,
+  showLocation = true,
 }: {
   ingredientId: number;
   locations: LocationOption[];
@@ -39,6 +40,7 @@ export function InventoryEntryForm({
   initial?: InventoryEntryInitial;
   onDone: () => void;
   onCancel: () => void;
+  showLocation?: boolean;
 }) {
   const isEdit = initial != null;
   const [quantity, setQuantity] = React.useState(initial?.quantity ?? "");
@@ -80,7 +82,7 @@ export function InventoryEntryForm({
 
   return (
     <div className="space-y-3 rounded-lg border bg-muted/30 p-3">
-      <div className="grid grid-cols-3 gap-3">
+      <div className={showLocation ? "grid grid-cols-3 gap-3" : "grid grid-cols-2 gap-3"}>
         <div className="grid gap-1">
           <Label htmlFor="qty" className="text-xs">Quantity</Label>
           <Input id="qty" type="number" min={0} step="any" value={quantity} onChange={(e) => setQuantity(e.target.value)} />
@@ -94,10 +96,12 @@ export function InventoryEntryForm({
             ))}
           </select>
         </div>
-        <div className="grid gap-1">
-          <Label className="text-xs">Location</Label>
-          <LocationCombobox options={locations} value={location} onChange={setLocation} />
-        </div>
+        {showLocation && (
+          <div className="grid gap-1">
+            <Label className="text-xs">Location</Label>
+            <LocationCombobox options={locations} value={location} onChange={setLocation} />
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-3">

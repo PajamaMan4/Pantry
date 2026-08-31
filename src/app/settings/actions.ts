@@ -88,6 +88,7 @@ export async function saveSettingsAction(
     recipesPerPage: formData.get("recipesPerPage"),
     ingredientsPerPage: formData.get("ingredientsPerPage"),
     showRecipeImages: formData.get("showRecipeImages"),
+    showLocations: formData.get("showLocations"),
   };
 
   const parsed = settingsUpdateSchema.safeParse(input);
@@ -102,6 +103,14 @@ export async function saveSettingsAction(
   revalidatePath("/ingredients");
   // The recipe detail page's photo banner is gated on showRecipeImages.
   revalidatePath("/recipes/[id]", "page");
+  // showLocations hides location fields/grouping across these routes.
+  revalidatePath("/ingredients/[id]", "page");
+  revalidatePath("/ingredients/new");
+  revalidatePath("/ingredients/inventory/add");
+  revalidatePath("/ingredients/inventory/edit");
+  revalidatePath("/ingredients/inventory/remove");
+  revalidatePath("/shopping");
+  revalidatePath("/menu");
   return { ok: true, savedAt: Date.now() };
 }
 

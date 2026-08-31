@@ -13,6 +13,7 @@ describe("settingsUpdateSchema — showRecipeImages", () => {
     roundingMode: "cooking",
     recipesPerPage: "10",
     ingredientsPerPage: "25",
+    showLocations: "1",
   };
 
   it("coerces the Switch's on-value to true", () => {

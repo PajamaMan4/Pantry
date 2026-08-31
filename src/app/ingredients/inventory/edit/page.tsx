@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { listIngredients } from "@/lib/db/ingredients";
 import { listLocations } from "@/lib/db/locations";
 import { listInventory } from "@/lib/db/inventory";
+import { getSettings } from "@/lib/db/settings";
 import type { IngredientOption } from "@/components/ingredient-combobox";
 import type { LocationOption } from "@/components/location-combobox";
 import type { InventoryEditSeed } from "@/lib/domain/inventory-edit";
@@ -11,6 +12,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Edit inventory · Pantry" };
 
 export default function InventoryEditPage() {
+  const { showLocations } = getSettings();
   const seeds: InventoryEditSeed[] = listInventory().map((r) => ({
     id: r.item.id,
     ingredientId: r.ingredient.id,
@@ -31,7 +33,12 @@ export default function InventoryEditPage() {
       {/* No "← Ingredients" link here on purpose: it's a silent data-loss path
           that bypasses the discard-changes dialog. Cancel is the only exit. */}
       <h1 className="mb-6 text-2xl font-semibold tracking-tight">Edit inventory</h1>
-      <InventoryEditor seeds={seeds} locations={locations} allIngredients={allIngredients} />
+      <InventoryEditor
+        seeds={seeds}
+        locations={locations}
+        allIngredients={allIngredients}
+        showLocations={showLocations}
+      />
     </div>
   );
 }

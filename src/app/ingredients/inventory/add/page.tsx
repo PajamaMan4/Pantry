@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { listIngredients } from "@/lib/db/ingredients";
 import { listLocations } from "@/lib/db/locations";
+import { getSettings } from "@/lib/db/settings";
 import type { IngredientOption } from "@/components/ingredient-combobox";
 import type { LocationOption } from "@/components/location-combobox";
 import { AddInventoryForm } from "./add-inventory-form";
@@ -10,6 +11,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Add inventory · Pantry" };
 
 export default function AddInventoryPage() {
+  const { showLocations } = getSettings();
   const locations: LocationOption[] = listLocations().map((l) => ({ id: l.id, name: l.name }));
   const locationNameById = new Map(locations.map((l) => [l.id, l.name]));
   const allIngredients: IngredientOption[] = listIngredients().map((i) => ({
@@ -30,7 +32,7 @@ export default function AddInventoryPage() {
         Add several items to your inventory at once. Each line can record stock (amount + unit +
         location) and/or a price (cost per cost-unit). Blank lines are ignored.
       </p>
-      <AddInventoryForm allIngredients={allIngredients} locations={locations} />
+      <AddInventoryForm allIngredients={allIngredients} locations={locations} showLocations={showLocations} />
     </div>
   );
 }

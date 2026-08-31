@@ -1,10 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { ingredientEditSchema } from "@/lib/validation/ingredient";
 
-// The ingredient edit form no longer renders a category field, but the column
-// is kept for future use. `updateIngredient` spreads the parsed payload into
-// the UPDATE, so an absent category must stay absent — parsing it to null
-// would silently wipe stored categories on every save.
+// `updateIngredient` spreads the parsed payload into the UPDATE, so an absent
+// category must stay absent — parsing it to null would silently wipe stored
+// categories on every save that doesn't touch the field.
 describe("ingredientEditSchema", () => {
   const base = { name: "Flour", defaultUnit: "g", density: "", gramsPerEach: "", isStaple: false };
 

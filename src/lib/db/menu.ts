@@ -25,6 +25,7 @@ export function menuIngredientRows(): MenuIngredientRow[] {
       menuServings: recipes.menuServings,
       locName: storageLocations.name,
       locSortOrder: storageLocations.sortOrder,
+      category: ingredients.category,
     })
     .from(recipeIngredients)
     .innerJoin(ingredients, eq(recipeIngredients.ingredientId, ingredients.id))

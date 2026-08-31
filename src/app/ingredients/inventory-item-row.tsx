@@ -51,6 +51,7 @@ export function InventoryItemRow({
   href,
   priceText,
   showLocation = true,
+  showLocations = true,
 }: {
   item: SerialInventoryItem;
   ingredientId: number;
@@ -60,7 +61,8 @@ export function InventoryItemRow({
   name?: string;
   href?: string;
   priceText?: string;
-  showLocation?: boolean;
+  showLocation?: boolean; // per-context: suppress "in {location}" when a location group header already says it
+  showLocations?: boolean; // app-wide "Show storage locations" setting: hides the location field/text entirely
 }) {
   const [editing, setEditing] = React.useState(false);
   const [deleting, startDelete] = React.useTransition();
@@ -87,7 +89,7 @@ export function InventoryItemRow({
           )}
           <div className="flex flex-wrap items-center gap-2 text-muted-foreground">
             <span className="tabular-nums text-foreground">{item.qtyDisplay}</span>
-            {showLocation && <span>in {item.locationName ?? "Unsorted"}</span>}
+            {showLocations && showLocation && <span>in {item.locationName ?? "Unsorted"}</span>}
             <ExpiryBadge expiry={item.expiryMs != null ? new Date(item.expiryMs) : null} now={new Date(nowMs)} />
           </div>
           {priceText && <div className="text-xs text-muted-foreground">{priceText}</div>}
@@ -114,7 +116,9 @@ export function InventoryItemRow({
               <AlertDialogHeader>
                 <AlertDialogTitle>Remove this stock entry?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Removes {item.qtyDisplay} from {item.locationName ?? "Unsorted"}. Price history is kept.
+                  {showLocations
+                    ? `Removes ${item.qtyDisplay} from ${item.locationName ?? "Unsorted"}. Price history is kept.`
+                    : `Removes ${item.qtyDisplay}. Price history is kept.`}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -137,6 +141,7 @@ export function InventoryItemRow({
             ingredientId={ingredientId}
             locations={locations}
             defaultUnit={defaultUnit}
+            showLocation={showLocations}
             initial={{
               id: item.id,
               quantity: String(item.quantity),

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { listInventory } from "@/lib/db/inventory";
+import { getSettings } from "@/lib/db/settings";
 import { displayQuantity } from "@/lib/domain/scaling";
 import type { IngredientOption } from "@/components/ingredient-combobox";
 import { RemoveInventoryForm, type InStockIngredient } from "./remove-inventory-form";
@@ -9,6 +10,8 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Remove inventory · Pantry" };
 
 export default function RemoveInventoryPage() {
+  const { showLocations } = getSettings();
+
   // Build the in-stock list grouped by ingredient. Each stock entry targets an
   // exact inventory row, so removal happens in that row's own (stored) unit —
   // we render labels in "original" mode so the displayed unit matches storage.
@@ -30,12 +33,33 @@ export default function RemoveInventoryPage() {
       inventoryItemId: r.item.id,
       locationName,
       unit: r.item.unit,
-      label: `${locationName} — ${qty}`,
+      label: showLocations ? `${locationName} — ${qty}` : qty,
     });
     byIngredient.set(ing.id, entry);
   }
 
   const inStock = [...byIngredient.values()].sort((a, b) => a.name.localeCompare(b.name));
+
+  // With locations hidden, multiple stock entries for one ingredient can carry
+  // an identical label (same rounded qty). Disambiguate so the <select> never
+  // shows two indistinguishable options.
+  if (!showLocations) {
+    for (const ing of inStock) {
+      const seen = new Map<string, number>();
+      for (const s of ing.stock) {
+        const n = (seen.get(s.label) ?? 0) + 1;
+        seen.set(s.label, n);
+      }
+      const seenSoFar = new Map<string, number>();
+      for (const s of ing.stock) {
+        const total = seen.get(s.label) ?? 1;
+        if (total <= 1) continue;
+        const n = (seenSoFar.get(s.label) ?? 0) + 1;
+        seenSoFar.set(s.label, n);
+        s.label = `${s.label} (${n})`;
+      }
+    }
+  }
   const options: IngredientOption[] = inStock.map((i) => ({
     id: i.id,
     name: i.name,

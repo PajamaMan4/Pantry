@@ -7,7 +7,11 @@ import { scaleFactor, scaleIngredientAmount } from "./scaling";
 import { buildInStockChecker, type RecommendIngredient, type InventoryStock } from "./recommend";
 import type { LocationRef } from "./location-groups";
 
-export type MenuIngredientRow = RecommendIngredient & { name: string; location?: LocationRef };
+export type MenuIngredientRow = RecommendIngredient & {
+  name: string;
+  location?: LocationRef;
+  category?: string | null;
+};
 
 /** A menu ingredient line still carrying its recipe's servings context. */
 export type MenuRecipeIngredientRow = MenuIngredientRow & {
@@ -35,6 +39,7 @@ export interface MenuIngredientLine {
   unit: string | null;
   inStock: boolean; // false => not enough on hand (or an unreconcilable unit)
   location: LocationRef; // the ingredient's default storage location, if any
+  category: string | null; // the ingredient's category, if any
 }
 
 /**
@@ -72,6 +77,7 @@ export function summarizeMenuIngredients(
       unit,
       inStock: inStockOf({ ...first, amount, unit }),
       location: first.location ?? null,
+      category: first.category ?? null,
     });
   }
   lines.sort((a, b) => a.name.localeCompare(b.name));

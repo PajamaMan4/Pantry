@@ -3,6 +3,7 @@ import { listShoppingItems, type ShoppingListRow } from "@/lib/db/shopping";
 import { listIngredientsWithAliases } from "@/lib/db/ingredients";
 import { getSettings } from "@/lib/db/settings";
 import { groupByLocation } from "@/lib/domain/location-groups";
+import { groupByCategory } from "@/lib/domain/category-groups";
 import { Badge } from "@/components/ui/badge";
 import { ListGroupingToggle } from "@/components/list-grouping-toggle";
 import { ShoppingAddForm } from "./shopping-add-form";
@@ -28,17 +29,19 @@ const toSerial = (i: ShoppingListRow): SerialShoppingItem => ({
 export default function ShoppingPage() {
   const items = listShoppingItems();
   const ingredients = listIngredientsWithAliases();
-  const { currency, listGrouping } = getSettings();
-  const grouping = listGrouping === "none" ? "none" : "location";
+  const { currency, listGrouping, showLocations } = getSettings();
+  const grouping = listGrouping === "none" ? "none" : "grouped";
   const checkedCount = items.filter((i) => i.checked).length;
 
   // Rows already arrive sorted unchecked-before-checked (listShoppingItems'
-  // orderBy), so each location group inherits that order too — a checked item
-  // sinks to the bottom of its own group for free, with no extra sort here.
+  // orderBy), so each group inherits that order too — a checked item sinks to
+  // the bottom of its own group for free, with no extra sort here.
   const serial: SerialShoppingItem[] = items.map(toSerial);
   const groups =
-    grouping === "location"
-      ? groupByLocation(items, (i) => i.location).map((g) => ({ ...g, serial: g.items.map(toSerial) }))
+    grouping === "grouped"
+      ? (showLocations ? groupByLocation(items, (i) => i.location) : groupByCategory(items, (i) => i.category)).map(
+          (g) => ({ ...g, serial: g.items.map(toSerial) }),
+        )
       : null;
 
   return (
@@ -69,7 +72,7 @@ export default function ShoppingPage() {
         <>
           <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
             <ShoppingBar checkedCount={checkedCount} />
-            <ListGroupingToggle current={grouping} />
+            <ListGroupingToggle current={grouping} showLocations={showLocations} />
           </div>
           {groups ? (
             <div className="space-y-6">

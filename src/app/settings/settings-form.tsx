@@ -174,6 +174,20 @@ export function SettingsForm({ initial }: { initial: Settings }) {
         />
       </Field>
 
+      <Field
+        label="Show storage locations"
+        htmlFor="showLocations"
+        hint="Track which shelf or fridge each item lives on. Off hides every location field and grouping; your locations are kept and reappear if you turn it back on."
+      >
+        <Switch
+          id="showLocations"
+          name="showLocations"
+          defaultChecked={initialValues.showLocations}
+          value="1"
+          uncheckedValue="0"
+        />
+      </Field>
+
       <div className="flex items-center gap-3 pt-2">
         <Button type="submit" disabled={pending}>
           {pending ? "Saving…" : "Save settings"}

@@ -36,7 +36,7 @@ export function setInventoryView(view: InventoryView): void {
     .run();
 }
 
-export type ListGrouping = "none" | "location";
+export type ListGrouping = "none" | "grouped";
 
 export function setListGrouping(grouping: ListGrouping): void {
   getSettings(); // ensure the row exists

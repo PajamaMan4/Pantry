@@ -14,6 +14,7 @@ import { LocationCombobox, type LocationOption } from "@/components/location-com
 import type { IngredientOption } from "@/components/ingredient-combobox";
 import { UNIT_OPTIONS } from "@/lib/domain/units";
 import { addInventoryBulkAction } from "@/app/ingredients/actions";
+import { cn } from "@/lib/utils";
 
 const selectClass = "h-8 rounded-md border border-input bg-transparent px-2 text-sm";
 
@@ -44,9 +45,11 @@ function emptyRow(): Row {
 export function AddInventoryForm({
   allIngredients,
   locations,
+  showLocations = true,
 }: {
   allIngredients: IngredientOption[];
   locations: LocationOption[];
+  showLocations?: boolean;
 }) {
   const router = useRouter();
   const [rows, setRows] = React.useState<Row[]>(() =>
@@ -116,11 +119,18 @@ export function AddInventoryForm({
   return (
     <div className="space-y-3">
       {/* Column headers (md+) */}
-      <div className="hidden gap-2 px-1 text-xs text-muted-foreground md:grid md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.5fr)_minmax(0,1fr)_auto]">
+      <div
+        className={cn(
+          "hidden gap-2 px-1 text-xs text-muted-foreground md:grid",
+          showLocations
+            ? "md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.5fr)_minmax(0,1fr)_auto]"
+            : "md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto]",
+        )}
+      >
         <span>Ingredient</span>
         <span>Amount</span>
         <span>Unit</span>
-        <span>Location</span>
+        {showLocations && <span>Location</span>}
         <span>Cost paid</span>
         <span className="w-7" />
       </div>
@@ -129,7 +139,12 @@ export function AddInventoryForm({
         {rows.map((row) => (
           <div
             key={row.key}
-            className="grid grid-cols-2 gap-2 rounded-lg border p-3 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.5fr)_minmax(0,1fr)_auto] md:items-center md:rounded-none md:border-0 md:p-0"
+            className={cn(
+              "grid grid-cols-2 gap-2 rounded-lg border p-3 md:items-center md:rounded-none md:border-0 md:p-0",
+              showLocations
+                ? "md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.5fr)_minmax(0,1fr)_auto]"
+                : "md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto]",
+            )}
           >
             <div className="col-span-2 md:col-span-1">
               <Label className="text-xs md:hidden">Ingredient</Label>
@@ -178,14 +193,16 @@ export function AddInventoryForm({
               </select>
             </div>
 
-            <div>
-              <Label className="text-xs md:hidden">Location</Label>
-              <LocationCombobox
-                options={locations}
-                value={row.location}
-                onChange={(v) => patchRow(row.key, { location: v })}
-              />
-            </div>
+            {showLocations && (
+              <div>
+                <Label className="text-xs md:hidden">Location</Label>
+                <LocationCombobox
+                  options={locations}
+                  value={row.location}
+                  onChange={(v) => patchRow(row.key, { location: v })}
+                />
+              </div>
+            )}
 
             <div>
               <Label className="text-xs md:hidden">Cost paid</Label>

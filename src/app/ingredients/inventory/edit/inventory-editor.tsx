@@ -41,10 +41,12 @@ export function InventoryEditor({
   seeds,
   locations,
   allIngredients,
+  showLocations = true,
 }: {
   seeds: InventoryEditSeed[];
   locations: LocationOption[];
   allIngredients: IngredientOption[];
+  showLocations?: boolean;
 }) {
   const router = useRouter();
   const [lines, setLines] = React.useState<DraftLine[]>(() => seeds.map(seedToLine));
@@ -89,14 +91,14 @@ export function InventoryEditor({
     return [...locationTabs, { id: null, name: "Unsorted", count: counts.get("unsorted") ?? 0 }];
   }, [lines, locations]);
 
-  const visibleLines = lines.filter((l) => sameLocation(l.locationId, activeTab));
+  const visibleLines = showLocations ? lines.filter((l) => sameLocation(l.locationId, activeTab)) : lines;
 
   function patchLine(key: string, patch: LinePatch) {
     setLines((prev) => prev.map((l) => (l.key === key ? ({ ...l, ...patch } as DraftLine) : l)));
   }
 
   function addLine() {
-    setLines((prev) => [...prev, newLine(activeTab, nanoid())]);
+    setLines((prev) => [...prev, newLine(showLocations ? activeTab : null, nanoid())]);
   }
 
   function removeLine(line: DraftLine) {
@@ -137,7 +139,7 @@ export function InventoryEditor({
   function save() {
     const built = buildInventoryEditPayload(lines);
     if (!built.ok) {
-      setActiveTab(built.locationId);
+      if (showLocations) setActiveTab(built.locationId);
       setInvalidKey(built.key);
       toast.error(built.error);
       return;
@@ -157,12 +159,12 @@ export function InventoryEditor({
 
   return (
     <div className="space-y-3">
-      <LocationTabs tabs={tabs} active={activeTab} onChange={setActiveTab} />
+      {showLocations && <LocationTabs tabs={tabs} active={activeTab} onChange={setActiveTab} />}
 
       <div
-        role="tabpanel"
-        id={`inv-panel-${locationKey(activeTab)}`}
-        aria-labelledby={`inv-tab-${locationKey(activeTab)}`}
+        role={showLocations ? "tabpanel" : undefined}
+        id={showLocations ? `inv-panel-${locationKey(activeTab)}` : undefined}
+        aria-labelledby={showLocations ? `inv-tab-${locationKey(activeTab)}` : undefined}
         className="space-y-3"
       >
         <InventoryEditRowHeader />
@@ -185,6 +187,7 @@ export function InventoryEditor({
               onRestore={() => restoreLine(line.key)}
               onPick={(picked) => onPick(line.key, picked)}
               onMove={() => setHeldKey(line.key)}
+              showLocation={showLocations}
             />
           ))}
         </div>

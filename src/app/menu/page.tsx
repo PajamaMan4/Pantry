@@ -9,8 +9,11 @@ import { listRecipes } from "@/lib/db/recipes";
 import { getMenuIngredientSummary } from "@/lib/db/menu";
 import { getSettings } from "@/lib/db/settings";
 import { formatQuantityText } from "@/lib/domain/format";
-import { groupByLocation, type LocationGroup } from "@/lib/domain/location-groups";
+import { groupByLocation } from "@/lib/domain/location-groups";
+import { groupByCategory } from "@/lib/domain/category-groups";
 import type { MenuIngredientLine } from "@/lib/domain/menu";
+
+type MenuGroup = { name: string; items: MenuIngredientLine[] };
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Menu · Pantry" };
@@ -38,10 +41,14 @@ function MenuIngredientLineItem({ line }: { line: MenuIngredientLine }) {
 export default async function MenuPage() {
   const recipes = listRecipes({ menuOnly: true });
   const { lines } = getMenuIngredientSummary();
-  const { listGrouping } = getSettings();
-  const grouping = listGrouping === "none" ? "none" : "location";
-  const groups: LocationGroup<MenuIngredientLine>[] | null =
-    grouping === "location" ? groupByLocation(lines, (l) => l.location) : null;
+  const { listGrouping, showLocations } = getSettings();
+  const grouping = listGrouping === "none" ? "none" : "grouped";
+  const groups: MenuGroup[] | null =
+    grouping === "grouped"
+      ? showLocations
+        ? groupByLocation(lines, (l) => l.location)
+        : groupByCategory(lines, (l) => l.category)
+      : null;
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-8">
@@ -79,7 +86,7 @@ export default async function MenuPage() {
             <div className="mb-3 flex items-center justify-between gap-2">
               <h2 className="text-lg font-medium">Ingredients needed</h2>
               <div className="flex items-center gap-2">
-                <ListGroupingToggle current={grouping} />
+                <ListGroupingToggle current={grouping} showLocations={showLocations} />
                 <AddMissingForMenuButton />
               </div>
             </div>

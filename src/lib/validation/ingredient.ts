@@ -25,9 +25,8 @@ export type IngredientInput = z.infer<typeof ingredientInputSchema>;
 // rest optional. Density drives volume<->weight conversion (§3.3).
 export const ingredientEditSchema = z.object({
   name: z.string().trim().min(1, "Ingredient name is required").max(200),
-  // Category is no longer rendered in the UI, so the edit form omits it.
-  // Optional (not nullable) on purpose: an absent key leaves the stored value
-  // alone instead of clearing it, keeping the data for a future use.
+  // Optional (not nullable): an absent key leaves the stored value alone
+  // instead of clearing it.
   category: nullableText.optional(),
   defaultUnit: unitEnum,
   density: nullableNumber,

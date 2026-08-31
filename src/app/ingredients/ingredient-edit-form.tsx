@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { LocationCombobox, type LocationOption } from "@/components/location-combobox";
+import { CategoryCombobox } from "@/components/category-combobox";
 import { UNIT_OPTIONS } from "@/lib/domain/units";
 import { updateIngredientAction, createIngredientFullAction } from "./actions";
 
@@ -17,6 +18,7 @@ const selectClass = "h-8 rounded-md border border-input bg-transparent px-2 text
 export type IngredientEditInitial = {
   id?: number;
   name: string;
+  category: string;
   defaultUnit: string;
   density: string;
   gramsPerEach: string;
@@ -28,13 +30,18 @@ export type IngredientEditInitial = {
 export function IngredientEditForm({
   initial,
   locations,
+  categories,
+  showLocations = true,
 }: {
   initial: IngredientEditInitial;
   locations: LocationOption[];
+  categories: string[];
+  showLocations?: boolean;
 }) {
   const router = useRouter();
   const isCreate = initial.id == null;
   const [name, setName] = React.useState(initial.name);
+  const [category, setCategory] = React.useState(initial.category);
   const [defaultUnit, setDefaultUnit] = React.useState(initial.defaultUnit);
   const [density, setDensity] = React.useState(initial.density);
   const [gramsPerEach, setGramsPerEach] = React.useState(initial.gramsPerEach);
@@ -46,10 +53,9 @@ export function IngredientEditForm({
   const [pending, startTransition] = React.useTransition();
 
   function save() {
-    // `category` is intentionally absent: the column still exists but is no
-    // longer edited, and the edit schema leaves stored values untouched.
     const input = {
       name,
+      category,
       defaultUnit,
       density,
       gramsPerEach,
@@ -78,6 +84,13 @@ export function IngredientEditForm({
       </div>
 
       <div className="grid gap-2">
+        <Label>Category</Label>
+        <div className="w-40">
+          <CategoryCombobox options={categories} value={category} onChange={setCategory} />
+        </div>
+      </div>
+
+      <div className="grid gap-2">
         <Label htmlFor="defaultUnit">Default unit</Label>
         <select
           id="defaultUnit"
@@ -94,15 +107,17 @@ export function IngredientEditForm({
         </select>
       </div>
 
-      <div className="grid gap-2">
-        <Label>Default storage location</Label>
-        <div className="w-40">
-          <LocationCombobox options={locations} value={location} onChange={setLocation} />
+      {showLocations && (
+        <div className="grid gap-2">
+          <Label>Default storage location</Label>
+          <div className="w-40">
+            <LocationCombobox options={locations} value={location} onChange={setLocation} />
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Prefills the location when you add inventory for this ingredient.
+          </p>
         </div>
-        <p className="text-xs text-muted-foreground">
-          Prefills the location when you add inventory for this ingredient.
-        </p>
-      </div>
+      )}
 
       <div className="grid gap-2">
         <Label htmlFor="density">Density (g/ml)</Label>

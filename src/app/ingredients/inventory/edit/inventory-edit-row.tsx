@@ -58,6 +58,7 @@ export function InventoryEditRow({
   onRestore,
   onPick,
   onMove,
+  showLocation = true,
 }: {
   line: DraftLine;
   invalid: boolean;
@@ -68,6 +69,7 @@ export function InventoryEditRow({
   onRestore: () => void;
   onPick: (picked: { id: number | null; name: string; defaultUnit: string | null }) => void;
   onMove: () => void;
+  showLocation?: boolean;
 }) {
   const deleted = line.kind === "existing" && line.deleted;
   const name = line.ingredientName;
@@ -121,7 +123,7 @@ export function InventoryEditRow({
         </select>
 
         <div className="ml-auto flex gap-1 md:ml-0">
-          {!deleted && (
+          {!deleted && showLocation && (
             <Button
               type="button"
               variant="ghost"

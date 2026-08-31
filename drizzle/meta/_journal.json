@@ -120,6 +120,20 @@
       "when": 1787916862300,
       "tag": "0016_colossal_mauler",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1788139326355,
+      "tag": "0017_quick_supreme_intelligence",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1788140895723,
+      "tag": "0018_condemned_purple_man",
+      "breakpoints": true
     }
   ]
 }

@@ -27,11 +27,13 @@ export function PriceForms({
   defaultUnit,
   defaultLocation,
   locations,
+  showLocation = true,
 }: {
   ingredientId: number;
   defaultUnit: string | null;
   defaultLocation?: { id: number | null; name: string };
   locations: LocationOption[];
+  showLocation?: boolean;
 }) {
   const [mode, setMode] = React.useState<Mode>(null);
 
@@ -78,6 +80,7 @@ export function PriceForms({
             defaultUnit={defaultUnit}
             defaultLocation={defaultLocation}
             locations={locations}
+            showLocation={showLocation}
             onDone={() => setMode(null)}
             onCancel={() => setMode(null)}
           />
@@ -143,6 +146,7 @@ function LogPurchaseFields({
   defaultUnit,
   defaultLocation,
   locations,
+  showLocation = true,
   onDone,
   onCancel,
 }: {
@@ -150,6 +154,7 @@ function LogPurchaseFields({
   defaultUnit: string | null;
   defaultLocation?: { id: number | null; name: string };
   locations: LocationOption[];
+  showLocation?: boolean;
   onDone: () => void;
   onCancel: () => void;
 }) {
@@ -200,8 +205,10 @@ function LogPurchaseFields({
         </Field>
         <Field label="Price paid"><Input type="number" min={0} step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} /></Field>
       </div>
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="Location"><LocationCombobox options={locations} value={location} onChange={setLocation} /></Field>
+      <div className={showLocation ? "grid grid-cols-2 gap-3" : "grid grid-cols-1 gap-3"}>
+        {showLocation && (
+          <Field label="Location"><LocationCombobox options={locations} value={location} onChange={setLocation} /></Field>
+        )}
         <Field label="Store"><Input value={store} onChange={(e) => setStore(e.target.value)} placeholder="optional" /></Field>
       </div>
       <div className="grid grid-cols-2 gap-3">

@@ -16,15 +16,21 @@ import { combineAmounts } from "../domain/units";
 import type { MenuIngredientRow } from "../domain/menu";
 import type { LocationRef } from "../domain/location-groups";
 
-export type ShoppingListRow = ShoppingListItem & { location: LocationRef };
+export type ShoppingListRow = ShoppingListItem & { location: LocationRef; category: string | null };
 
-/** Shopping items joined to their ingredient's default storage location (null for free-text items or ingredients with no default location). */
+/**
+ * Shopping items joined to their ingredient's default storage location (null
+ * for free-text items or ingredients with no default location) and category
+ * (null for free-text items). The `ingredients` join already exists for the
+ * location lookup, so reading `category` off it is free.
+ */
 export function listShoppingItems(): ShoppingListRow[] {
   return db
     .select({
       item: shoppingListItems,
       locName: storageLocations.name,
       locSortOrder: storageLocations.sortOrder,
+      category: ingredients.category,
     })
     .from(shoppingListItems)
     .leftJoin(ingredients, eq(shoppingListItems.ingredientId, ingredients.id))
@@ -34,6 +40,7 @@ export function listShoppingItems(): ShoppingListRow[] {
     .map((r) => ({
       ...r.item,
       location: r.locName != null ? { name: r.locName, sortOrder: r.locSortOrder! } : null,
+      category: r.category,
     }));
 }
 

@@ -40,6 +40,7 @@ export const settingsUpdateSchema = z.object({
       message: "Invalid page size",
     }),
   showRecipeImages: formBoolean,
+  showLocations: formBoolean,
 });
 
 export type SettingsUpdate = z.infer<typeof settingsUpdateSchema>;
@@ -47,10 +48,12 @@ export type SettingsUpdate = z.infer<typeof settingsUpdateSchema>;
 export const inventoryViewSchema = z.enum(["alphabetical", "location"]);
 export type InventoryViewValue = z.infer<typeof inventoryViewSchema>;
 
-// Whether the shopping list / menu ingredient list are grouped by default
-// storage location, or shown as a flat list. Kept outside settingsUpdateSchema
-// since it's not a Settings-form field — it's set via a page-level toggle.
-export const listGroupingSchema = z.enum(["none", "location"]);
+// Whether the shopping list / menu ingredient list / inventory view are
+// grouped, or shown as a flat list. The grouping axis itself (location vs.
+// category) follows showLocations, not this value. Kept outside
+// settingsUpdateSchema since it's not a Settings-form field — it's set via a
+// page-level toggle.
+export const listGroupingSchema = z.enum(["none", "grouped"]);
 export type ListGroupingValue = z.infer<typeof listGroupingSchema>;
 
 // API key for Claude-assisted recipe import. Blank clears the stored key.

@@ -1,0 +1,1 @@
+ALTER TABLE `settings` ADD `show_locations` integer DEFAULT true NOT NULL;
