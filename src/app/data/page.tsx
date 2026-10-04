@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { listBackups } from "@/lib/db/maintenance";
 import { DataManager } from "./data-manager";
+import { PageHelpMenu } from "@/components/help/page-help-menu";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Data & backups · Pantry" };
@@ -21,6 +22,9 @@ export default function DataPage() {
           <CardDescription>
             Export, back up, and restore your Pantry database. Everything stays on this machine.
           </CardDescription>
+          <CardAction>
+            <PageHelpMenu topicId="data-backups" />
+          </CardAction>
         </CardHeader>
         <CardContent>
           <DataManager backups={backups} />

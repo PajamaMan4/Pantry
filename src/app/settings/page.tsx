@@ -3,11 +3,12 @@ import Link from "next/link";
 import { DownloadIcon } from "lucide-react";
 import { getSettings, resolveAnthropicApiKey } from "@/lib/db/settings";
 import { listLocations } from "@/lib/db/locations";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 import { SettingsForm } from "./settings-form";
 import { LocationManager } from "./location-manager";
 import { ApiKeyForm } from "./api-key-form";
+import { PageHelpMenu } from "@/components/help/page-help-menu";
 
 // Reads the DB on every request — never statically prerendered.
 export const dynamic = "force-dynamic";
@@ -29,6 +30,9 @@ export default function SettingsPage() {
           <CardDescription>
             Units, pricing, and rounding preferences for the whole app.
           </CardDescription>
+          <CardAction>
+            <PageHelpMenu topicId="settings" />
+          </CardAction>
         </CardHeader>
         <CardContent>
           <SettingsForm initial={settings} />

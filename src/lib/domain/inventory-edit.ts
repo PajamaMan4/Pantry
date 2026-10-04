@@ -22,6 +22,7 @@ export type InventoryEditSeed = {
   id: number;
   ingredientId: number;
   ingredientName: string;
+  category: string | null;
   quantity: number;
   unit: string;
   locationId: number | null;
@@ -34,6 +35,8 @@ export type ExistingLine = {
   id: number;
   ingredientId: number;
   ingredientName: string;
+  /** The ingredient's category at load time, for grouping — never edited here. */
+  category: string | null;
   original: { quantity: number; unit: string; locationId: number | null };
   amount: string; // string: comes straight from <input type="number">
   unit: string;
@@ -47,6 +50,8 @@ export type NewLine = {
   key: string; // nanoid()
   ingredientId: number | null; // null until the picker resolves one
   ingredientName: string;
+  /** The picked ingredient's category, for grouping — null until one is picked. */
+  category: string | null;
   amount: string;
   unit: string;
   locationId: number | null;
@@ -65,6 +70,7 @@ export function seedToLine(seed: InventoryEditSeed): ExistingLine {
     id: seed.id,
     ingredientId: seed.ingredientId,
     ingredientName: seed.ingredientName,
+    category: seed.category,
     original: { quantity: Number(amount), unit: seed.unit, locationId: seed.locationId },
     amount,
     unit: seed.unit,
@@ -74,7 +80,7 @@ export function seedToLine(seed: InventoryEditSeed): ExistingLine {
 }
 
 export function newLine(locationId: number | null, key: string): NewLine {
-  return { kind: "new", key, ingredientId: null, ingredientName: "", amount: "", unit: "", locationId };
+  return { kind: "new", key, ingredientId: null, ingredientName: "", category: null, amount: "", unit: "", locationId };
 }
 
 export function isBlankNewLine(l: NewLine): boolean {

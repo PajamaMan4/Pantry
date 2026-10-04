@@ -7,6 +7,7 @@ import type { IngredientOption } from "@/components/ingredient-combobox";
 import type { LocationOption } from "@/components/location-combobox";
 import type { InventoryEditSeed } from "@/lib/domain/inventory-edit";
 import { InventoryEditor } from "./inventory-editor";
+import { PageHelpMenu } from "@/components/help/page-help-menu";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Edit inventory · Pantry" };
@@ -17,6 +18,7 @@ export default function InventoryEditPage() {
     id: r.item.id,
     ingredientId: r.ingredient.id,
     ingredientName: r.ingredient.name,
+    category: r.ingredient.category,
     quantity: r.item.quantity,
     unit: r.item.unit,
     locationId: r.item.locationId,
@@ -26,13 +28,17 @@ export default function InventoryEditPage() {
     id: i.id,
     name: i.name,
     defaultUnit: i.defaultUnit,
+    category: i.category,
   }));
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-8">
       {/* No "← Ingredients" link here on purpose: it's a silent data-loss path
           that bypasses the discard-changes dialog. Cancel is the only exit. */}
-      <h1 className="mb-6 text-2xl font-semibold tracking-tight">Edit inventory</h1>
+      <div className="mb-6 flex items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold tracking-tight">Edit inventory</h1>
+        <PageHelpMenu topicId="inventory-edit" />
+      </div>
       <InventoryEditor
         seeds={seeds}
         locations={locations}

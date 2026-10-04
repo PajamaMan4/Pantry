@@ -3,6 +3,7 @@ import { listIngredientsWithAliases } from "@/lib/db/ingredients";
 import { listTags } from "@/lib/db/tags";
 import { listRecipeGroups } from "@/lib/db/recipe-groups";
 import { RecipeForm } from "../recipe-form";
+import { PageHelpMenu } from "@/components/help/page-help-menu";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "New recipe · Pantry" };
@@ -14,7 +15,10 @@ export default function NewRecipePage() {
 
   return (
     <div className="mx-auto w-full max-w-2xl px-4 py-8">
-      <h1 className="mb-6 text-2xl font-semibold tracking-tight">New recipe</h1>
+      <div className="mb-6 flex items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold tracking-tight">New recipe</h1>
+        <PageHelpMenu topicId="recipe-new" />
+      </div>
       <RecipeForm
         ingredientOptions={ingredients.map((i) => ({
           id: i.id,

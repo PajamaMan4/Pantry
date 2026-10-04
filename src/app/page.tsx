@@ -10,8 +10,10 @@ import { listInventory } from "@/lib/db/inventory";
 import { getRecommendations } from "@/lib/db/recommend";
 import { expiryStatus } from "@/lib/domain/expiry";
 import { RecipeCard } from "@/components/recipe-card";
+import { PageHelpMenu } from "@/components/help/page-help-menu";
 import { listRecipes } from "@/lib/db/recipes";
 import { getSettings } from "@/lib/db/settings";
+import { BarcodeScanButton } from "@/app/scan/barcode-scan-dialog";
 
 // Reads the DB, so render per-request.
 export const dynamic = "force-dynamic";
@@ -36,11 +38,14 @@ export default function Home() {
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-10">
-      <header className="mb-8">
-        <h1 className="text-3xl font-semibold tracking-tight">Pantry</h1>
-        <p className="mt-1 text-muted-foreground">
-          Your personal cooking &amp; kitchen-management app. Local-first, single-user.
-        </p>
+      <header className="mb-8 flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight">Pantry</h1>
+          <p className="mt-1 text-muted-foreground">
+            Your personal cooking &amp; kitchen-management app. Local-first, single-user.
+          </p>
+        </div>
+        <PageHelpMenu topicId="home" />
       </header>
 
       {expiringItems.length > 0 && (
@@ -129,6 +134,7 @@ export default function Home() {
         <QuickLink href="/recipes/new" title="Add a recipe" desc="Ingredients, steps, tags." cta="New recipe →" />
         <QuickLink href="/ingredients" title="Ingredients" desc="Stock, expiry & prices." cta="View ingredients →" />
         <QuickLink href="/settings" title="Settings" desc="Units, pricing, rounding." cta="Open settings →" />
+        <BarcodeScanButton />
       </section>
 
       <section className="mt-10 border-t pt-4">

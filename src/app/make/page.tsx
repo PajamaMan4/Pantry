@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AddMissingButton } from "./add-missing-button";
+import { PageHelpMenu } from "@/components/help/page-help-menu";
 import { getRecommendations } from "@/lib/db/recommend";
 import { getSettings } from "@/lib/db/settings";
 import { formatMoney } from "@/lib/domain/format";
@@ -35,11 +36,16 @@ export default async function MakePage({
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-8">
-      <h1 className="mb-1 text-2xl font-semibold tracking-tight">What can I make?</h1>
-      <p className="mb-4 text-sm text-muted-foreground">
-        Suggestions from what&apos;s in your inventory. Staples are assumed on hand; optional
-        ingredients don&apos;t count against a recipe.
-      </p>
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div>
+          <h1 className="mb-1 text-2xl font-semibold tracking-tight">What can I make?</h1>
+          <p className="text-sm text-muted-foreground">
+            Suggestions from what&apos;s in your inventory. Staples are assumed on hand; optional
+            ingredients don&apos;t count against a recipe.
+          </p>
+        </div>
+        <PageHelpMenu topicId="make" />
+      </div>
 
       <div className="mb-6 flex items-center gap-1 rounded-md border p-0.5 text-xs w-fit">
         {SORTS.map((s) => (

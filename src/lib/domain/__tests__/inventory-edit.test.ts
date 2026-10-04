@@ -18,6 +18,7 @@ function seed(p: Partial<InventoryEditSeed> & { id: number }): InventoryEditSeed
   return {
     ingredientId: p.id,
     ingredientName: `ing-${p.id}`,
+    category: null,
     quantity: 1,
     unit: "cup",
     locationId: null,

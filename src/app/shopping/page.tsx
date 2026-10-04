@@ -10,6 +10,7 @@ import { ShoppingAddForm } from "./shopping-add-form";
 import { ShoppingItemRow, type SerialShoppingItem } from "./shopping-item-row";
 import { ShoppingBar } from "./shopping-bar";
 import { ImportInventoryDialog } from "./import-inventory-dialog";
+import { PageHelpMenu } from "@/components/help/page-help-menu";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Shopping list · Pantry" };
@@ -54,7 +55,10 @@ export default function ShoppingPage() {
             your inventory.
           </p>
         </div>
-        <ImportInventoryDialog />
+        <div className="flex shrink-0 items-center gap-2">
+          <ImportInventoryDialog />
+          <PageHelpMenu topicId="shopping" />
+        </div>
       </div>
 
       <div className="mb-4">

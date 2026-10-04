@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { MoreHorizontalIcon, PencilIcon, DownloadIcon, TrashIcon, RulerIcon } from "lucide-react";
+import { CircleHelpIcon, MoreHorizontalIcon, PencilIcon, DownloadIcon, TrashIcon, RulerIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -26,6 +26,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { HelpDialog } from "@/components/help/help-dialog";
 import { deleteRecipeAction } from "./actions";
 import { SYSTEMS, useRecipeView } from "./recipe-view-context";
 import type { DisplaySystem } from "@/lib/domain/scaling";
@@ -35,6 +36,7 @@ export function RecipeActionsMenu({ recipeId }: { recipeId: number }) {
   const { system, setSystem } = useRecipeView();
   const [deleteOpen, setDeleteOpen] = React.useState(false);
   const [deletePending, startDeleteTransition] = React.useTransition();
+  const [helpOpen, setHelpOpen] = React.useState(false);
 
   function handleExport() {
     const a = document.createElement("a");
@@ -81,8 +83,14 @@ export function RecipeActionsMenu({ recipeId }: { recipeId: number }) {
           <DropdownMenuItem variant="destructive" onClick={() => setDeleteOpen(true)}>
             <TrashIcon className="size-4" /> Delete
           </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => setHelpOpen(true)}>
+            <CircleHelpIcon className="size-4" /> Help
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <HelpDialog topicId="recipe-detail" open={helpOpen} onOpenChange={setHelpOpen} />
 
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>

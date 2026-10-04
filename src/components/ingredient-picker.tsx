@@ -11,6 +11,7 @@ export type PickedIngredient = {
   defaultUnit: string | null;
   defaultLocationId?: number | null;
   defaultLocationName?: string | null;
+  category?: string | null;
 };
 
 /**
@@ -46,6 +47,7 @@ export function IngredientPicker({
           defaultUnit: opt.defaultUnit,
           defaultLocationId: opt.defaultLocationId,
           defaultLocationName: opt.defaultLocationName,
+          category: opt.category,
         })
       }
       onCreate={async (name) => {

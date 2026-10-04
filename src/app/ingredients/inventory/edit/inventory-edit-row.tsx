@@ -23,6 +23,7 @@ export type LinePatch = Partial<{
   deleted: boolean;
   ingredientId: number | null;
   ingredientName: string;
+  category: string | null;
 }>;
 
 const selectClass = "h-8 rounded-md border border-input bg-transparent px-2 text-sm";

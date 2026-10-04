@@ -10,6 +10,7 @@ import {
 import { resolveAnthropicApiKey } from "@/lib/db/settings";
 import { ImportForm } from "./import-form";
 import { PantryFileImport } from "./pantry-file-import";
+import { PageHelpMenu } from "@/components/help/page-help-menu";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Import recipe · Pantry" };
@@ -19,9 +20,12 @@ export default function ImportRecipePage() {
 
   return (
     <div className="mx-auto w-full max-w-2xl px-4 py-8">
-      <Link href="/recipes" className="text-sm text-muted-foreground hover:text-foreground">
-        ← All recipes
-      </Link>
+      <div className="flex items-start justify-between gap-3">
+        <Link href="/recipes" className="text-sm text-muted-foreground hover:text-foreground">
+          ← All recipes
+        </Link>
+        <PageHelpMenu topicId="recipe-import" />
+      </div>
 
       <div className="mt-3 space-y-4">
         <Card>

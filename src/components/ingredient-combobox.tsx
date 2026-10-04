@@ -10,6 +10,7 @@ export type IngredientOption = {
   defaultUnit: string | null;
   defaultLocationId?: number | null;
   defaultLocationName?: string | null;
+  category?: string | null;
   aliases?: string[];
 };
 

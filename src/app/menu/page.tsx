@@ -4,6 +4,7 @@ import { CheckCircle2Icon, XCircleIcon } from "lucide-react";
 import { MenuRecipeRow } from "./menu-recipe-row";
 import { AddMissingForMenuButton } from "@/components/add-missing-for-menu-button";
 import { ListGroupingToggle } from "@/components/list-grouping-toggle";
+import { PageHelpMenu } from "@/components/help/page-help-menu";
 import { Badge } from "@/components/ui/badge";
 import { listRecipes } from "@/lib/db/recipes";
 import { getMenuIngredientSummary } from "@/lib/db/menu";
@@ -52,12 +53,15 @@ export default async function MenuPage() {
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-8">
-      <div className="mb-6">
-        <Link href="/recipes" className="text-sm text-muted-foreground hover:text-foreground">
-          ← All recipes
-        </Link>
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight">Menu</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Recipes you plan to make soon.</p>
+      <div className="mb-6 flex items-start justify-between gap-3">
+        <div>
+          <Link href="/recipes" className="text-sm text-muted-foreground hover:text-foreground">
+            ← All recipes
+          </Link>
+          <h1 className="mt-2 text-2xl font-semibold tracking-tight">Menu</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Recipes you plan to make soon.</p>
+        </div>
+        <PageHelpMenu topicId="menu" />
       </div>
 
       {recipes.length === 0 ? (

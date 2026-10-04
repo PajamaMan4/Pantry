@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
+  CircleHelpIcon,
   MoreHorizontalIcon,
   PackageMinusIcon,
   PackagePlusIcon,
@@ -23,12 +25,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { UNIT_SYSTEM_OPTIONS } from "@/components/unit-system-toggle";
+import { HelpDialog } from "@/components/help/help-dialog";
 import type { DisplaySystem } from "@/lib/domain/scaling";
 
 export function IngredientsActionsMenu({ system }: { system: DisplaySystem }) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
+  const [helpOpen, setHelpOpen] = useState(false);
 
   /** Display units live in the `units` query param so the server render picks them up. */
   function setSystem(value: DisplaySystem) {
@@ -38,47 +42,55 @@ export function IngredientsActionsMenu({ system }: { system: DisplaySystem }) {
   }
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <Button variant="outline" size="sm" aria-label="More actions">
-            <MoreHorizontalIcon className="size-4" />
-          </Button>
-        }
-      />
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => router.push("/ingredients/new")}>
-          <PlusIcon className="size-4" /> New ingredient
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => router.push("/ingredients/inventory/add")}>
-          <PackagePlusIcon className="size-4" /> Add inventory
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => router.push("/ingredients/inventory/remove")}>
-          <PackageMinusIcon className="size-4" /> Remove inventory
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => router.push("/ingredients/inventory/edit")}>
-          <PencilIcon className="size-4" /> Inventory Edit
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuSub>
-          <DropdownMenuSubTrigger>
-            <RulerIcon className="size-4" /> Units
-          </DropdownMenuSubTrigger>
-          <DropdownMenuSubContent>
-            <DropdownMenuRadioGroup
-              value={system}
-              onValueChange={(v) => setSystem(v as DisplaySystem)}
-            >
-              {UNIT_SYSTEM_OPTIONS.map((o) => (
-                <DropdownMenuRadioItem key={o.value} value={o.value}>
-                  {o.label}
-                </DropdownMenuRadioItem>
-              ))}
-            </DropdownMenuRadioGroup>
-          </DropdownMenuSubContent>
-        </DropdownMenuSub>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <Button variant="outline" size="sm" aria-label="More actions">
+              <MoreHorizontalIcon className="size-4" />
+            </Button>
+          }
+        />
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={() => router.push("/ingredients/new")}>
+            <PlusIcon className="size-4" /> New ingredient
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => router.push("/ingredients/inventory/add")}>
+            <PackagePlusIcon className="size-4" /> Add inventory
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => router.push("/ingredients/inventory/remove")}>
+            <PackageMinusIcon className="size-4" /> Remove inventory
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => router.push("/ingredients/inventory/edit")}>
+            <PencilIcon className="size-4" /> Inventory Edit
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              <RulerIcon className="size-4" /> Units
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent>
+              <DropdownMenuRadioGroup
+                value={system}
+                onValueChange={(v) => setSystem(v as DisplaySystem)}
+              >
+                {UNIT_SYSTEM_OPTIONS.map((o) => (
+                  <DropdownMenuRadioItem key={o.value} value={o.value}>
+                    {o.label}
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => setHelpOpen(true)}>
+            <CircleHelpIcon className="size-4" /> Help
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <HelpDialog topicId="ingredients" open={helpOpen} onOpenChange={setHelpOpen} />
+    </>
   );
 }

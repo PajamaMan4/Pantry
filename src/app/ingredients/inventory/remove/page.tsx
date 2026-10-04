@@ -5,6 +5,7 @@ import { getSettings } from "@/lib/db/settings";
 import { displayQuantity } from "@/lib/domain/scaling";
 import type { IngredientOption } from "@/components/ingredient-combobox";
 import { RemoveInventoryForm, type InStockIngredient } from "./remove-inventory-form";
+import { PageHelpMenu } from "@/components/help/page-help-menu";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Remove inventory · Pantry" };
@@ -68,9 +69,12 @@ export default function RemoveInventoryPage() {
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-8">
-      <Link href="/ingredients" className="text-sm text-muted-foreground hover:text-foreground">
-        ← Ingredients
-      </Link>
+      <div className="flex items-start justify-between gap-3">
+        <Link href="/ingredients" className="text-sm text-muted-foreground hover:text-foreground">
+          ← Ingredients
+        </Link>
+        <PageHelpMenu topicId="inventory-remove" />
+      </div>
       <h1 className="mt-3 mb-1 text-2xl font-semibold tracking-tight">Remove inventory</h1>
       <p className="mb-6 text-sm text-muted-foreground">
         Draw down stock you&apos;ve used up. Pick an in-stock ingredient, choose which stock entry to

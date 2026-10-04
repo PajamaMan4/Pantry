@@ -3,9 +3,11 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { nanoid } from "nanoid";
-import { PlusIcon } from "lucide-react";
+import { ChevronDownIcon, PlusIcon } from "lucide-react";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { FormActions } from "@/components/ui/form-actions";
 import {
   AlertDialog,
@@ -32,6 +34,7 @@ import {
   type InventoryEditSeed,
 } from "@/lib/domain/inventory-edit";
 import { unitLabel } from "@/lib/domain/format";
+import { groupByCategory } from "@/lib/domain/category-groups";
 import { saveInventoryEditsAction } from "@/app/ingredients/actions";
 import { buildTargets, LocationDropTray } from "@/app/ingredients/location-drop-tray";
 import { LocationTabs, type EditTab } from "./location-tabs";
@@ -116,7 +119,7 @@ export function InventoryEditor({
 
   function onPick(
     key: string,
-    picked: { id: number | null; name: string; defaultUnit: string | null },
+    picked: { id: number | null; name: string; defaultUnit: string | null; category?: string | null },
   ) {
     // Only ever called for a NewLine (existing lines render plain text, not the picker).
     const current = lines.find((l): l is Extract<DraftLine, { kind: "new" }> => l.key === key && l.kind === "new");
@@ -124,6 +127,7 @@ export function InventoryEditor({
       ingredientId: picked.id,
       ingredientName: picked.name,
       unit: current?.unit || picked.defaultUnit || "",
+      category: picked.category ?? null,
     });
     if (picked.id != null && !knownIngredientIds.has(picked.id)) {
       knownIngredientIds.add(picked.id);
@@ -169,28 +173,51 @@ export function InventoryEditor({
       >
         <InventoryEditRowHeader />
 
-        <div className="space-y-2">
-          {visibleLines.length === 0 && (
-            <p className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-              Nothing here yet.
-            </p>
-          )}
-          {visibleLines.map((line) => (
-            <InventoryEditRow
-              key={line.key}
-              line={line}
-              invalid={line.key === invalidKey}
-              merging={mergingKeys.has(line.key)}
-              allIngredients={allIngredients}
-              onPatch={(patch) => patchLine(line.key, patch)}
-              onRemove={() => removeLine(line)}
-              onRestore={() => restoreLine(line.key)}
-              onPick={(picked) => onPick(line.key, picked)}
-              onMove={() => setHeldKey(line.key)}
-              showLocation={showLocations}
-            />
-          ))}
-        </div>
+        {visibleLines.length === 0 ? (
+          <p className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+            Nothing here yet.
+          </p>
+        ) : (
+          <div className="space-y-6">
+            {groupByCategory(visibleLines, (l) => l.category).map((g) => (
+              <Collapsible key={g.name} defaultOpen={false} render={<section />}>
+                <CollapsibleTrigger
+                  render={
+                    <button
+                      type="button"
+                      className="group mb-2 flex w-full items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                    />
+                  }
+                >
+                  <ChevronDownIcon className="size-4 transition-transform group-data-[panel-open]:rotate-180" />
+                  <span>{g.name}</span>
+                  <Badge variant="secondary" className="ml-1">
+                    {g.items.length}
+                  </Badge>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="space-y-2">
+                    {g.items.map((line) => (
+                      <InventoryEditRow
+                        key={line.key}
+                        line={line}
+                        invalid={line.key === invalidKey}
+                        merging={mergingKeys.has(line.key)}
+                        allIngredients={allIngredients}
+                        onPatch={(patch) => patchLine(line.key, patch)}
+                        onRemove={() => removeLine(line)}
+                        onRestore={() => restoreLine(line.key)}
+                        onPick={(picked) => onPick(line.key, picked)}
+                        onMove={() => setHeldKey(line.key)}
+                        showLocation={showLocations}
+                      />
+                    ))}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            ))}
+          </div>
+        )}
 
         <Button type="button" variant="outline" size="sm" onClick={addLine}>
           <PlusIcon className="size-4" /> Add line

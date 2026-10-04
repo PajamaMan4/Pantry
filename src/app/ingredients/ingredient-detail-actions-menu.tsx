@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { MergeIcon, MoreHorizontalIcon, Trash2Icon } from "lucide-react";
+import { CircleHelpIcon, MergeIcon, MoreHorizontalIcon, Trash2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { MergeIngredientDialog } from "./merge-ingredient-dialog";
 import { DeleteIngredientDialog } from "./delete-ingredient-dialog";
+import { HelpDialog } from "@/components/help/help-dialog";
 
 export function IngredientDetailActionsMenu({
   ingredientId,
@@ -26,6 +27,7 @@ export function IngredientDetailActionsMenu({
 }) {
   const [mergeOpen, setMergeOpen] = React.useState(false);
   const [deleteOpen, setDeleteOpen] = React.useState(false);
+  const [helpOpen, setHelpOpen] = React.useState(false);
 
   return (
     <>
@@ -45,8 +47,14 @@ export function IngredientDetailActionsMenu({
           <DropdownMenuItem variant="destructive" onClick={() => setDeleteOpen(true)}>
             <Trash2Icon className="size-4" /> Delete ingredient
           </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => setHelpOpen(true)}>
+            <CircleHelpIcon className="size-4" /> Help
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <HelpDialog topicId="ingredient-detail" open={helpOpen} onOpenChange={setHelpOpen} />
 
       <MergeIngredientDialog
         open={mergeOpen}

@@ -9,6 +9,7 @@ import { scaleFactor, displayQuantity, renderStep, type DisplaySystem } from "@/
 import { formatNumber } from "@/lib/domain/format";
 import type { RoundingMode } from "@/lib/domain/quantity";
 import { groupRowsBySection } from "@/lib/domain/sections";
+import { PageHelpMenu } from "@/components/help/page-help-menu";
 import type { ScalerIngredient, ScalerStep } from "../../recipe-scaler";
 
 const SYSTEMS: { value: DisplaySystem; label: string }[] = [
@@ -94,9 +95,12 @@ export function CookMode({
           <div className="truncate text-sm text-muted-foreground">Cooking</div>
           <div className="truncate text-lg font-medium">{recipeName}</div>
         </div>
-        <Link href={`/recipes/${recipeId}`} className="text-sm text-muted-foreground hover:text-foreground">
-          <span className="inline-flex items-center gap-1"><XIcon className="size-4" /> Exit</span>
-        </Link>
+        <div className="flex shrink-0 items-center gap-3">
+          <Link href={`/recipes/${recipeId}`} className="text-sm text-muted-foreground hover:text-foreground">
+            <span className="inline-flex items-center gap-1"><XIcon className="size-4" /> Exit</span>
+          </Link>
+          <PageHelpMenu topicId="recipe-cook" />
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-3 py-3">
