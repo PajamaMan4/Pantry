@@ -84,7 +84,7 @@ export function InventoryEditRow({
           <Label className="text-xs md:hidden">Ingredient</Label>
           {line.kind === "existing" ? (
             <div className="flex h-8 items-center text-sm">
-              <span className={cn(deleted && "line-through")}>{line.ingredientName}</span>
+              <span className={cn("capitalize", deleted && "line-through")}>{line.ingredientName}</span>
             </div>
           ) : (
             <IngredientPicker

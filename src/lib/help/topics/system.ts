@@ -10,7 +10,7 @@ export const systemTopics: Record<"settings" | "data-backups", HelpTopic> = {
     detail: [
       {
         kind: "p",
-        text: "This is also where you manage storage locations and save the Anthropic API key that enables AI recipe import.",
+        text: "This is also where you manage storage locations, rename, merge, or delete recipe tags and ingredient categories (merging a misspelled tag into the right one retags its recipes), and save the Anthropic API key that enables AI recipe import.",
       },
     ],
     href: "/settings",

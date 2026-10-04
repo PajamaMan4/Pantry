@@ -240,7 +240,7 @@ function AlphabeticalView({
           return (
             <li key={ing.id} className="flex items-center justify-between gap-3 py-2.5">
               <div className="min-w-0">
-                <Link href={`/ingredients/${ing.id}`} className="font-medium hover:underline">
+                <Link href={`/ingredients/${ing.id}`} className="font-medium capitalize hover:underline">
                   {ing.name}
                 </Link>
                 <div className="text-sm text-muted-foreground">

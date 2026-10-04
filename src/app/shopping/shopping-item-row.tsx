@@ -55,7 +55,7 @@ export function ShoppingItemRow({ item, currency }: { item: SerialShoppingItem; 
       <Checkbox checked={checked} onCheckedChange={(v) => toggle(v === true)} aria-label={`Bought ${item.name}`} />
       <span className={cn("min-w-32 flex-1 text-sm", checked && "text-muted-foreground line-through")}>
         {item.ingredientId ? (
-          <a href={`/ingredients/${item.ingredientId}`} className="hover:underline">
+          <a href={`/ingredients/${item.ingredientId}`} className="capitalize hover:underline">
             {item.name}
           </a>
         ) : (

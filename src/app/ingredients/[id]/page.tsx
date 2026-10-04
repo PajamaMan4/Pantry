@@ -96,7 +96,7 @@ export default async function IngredientDetailPage({
 
       <div className="mt-3 flex items-start justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
-          <h1 className="text-2xl font-semibold tracking-tight">{ingredient.name}</h1>
+          <h1 className="text-2xl font-semibold capitalize tracking-tight">{ingredient.name}</h1>
           {ingredient.isStaple && <Badge variant="outline">staple</Badge>}
         </div>
         <IngredientDetailActionsMenu

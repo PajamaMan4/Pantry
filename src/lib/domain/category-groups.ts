@@ -10,6 +10,27 @@ function titleCase(s: string): string {
   return s.replace(/\S+/g, (word) => word[0].toUpperCase() + word.slice(1));
 }
 
+export type CategoryTally = { name: string; count: number };
+
+/**
+ * Count how many rows use each distinct category, case-insensitively (stored
+ * values are free text, so "Dairy" and "dairy " are one category). Blank/null
+ * rows are skipped. The display name is the first-seen trimmed casing; the
+ * result is sorted alphabetically.
+ */
+export function tallyCategories(rows: (string | null)[]): CategoryTally[] {
+  const tally = new Map<string, CategoryTally>(); // lowercase -> entry
+  for (const row of rows) {
+    const raw = row?.trim();
+    if (!raw) continue;
+    const key = raw.toLowerCase();
+    const entry = tally.get(key);
+    if (entry) entry.count += 1;
+    else tally.set(key, { name: raw, count: 1 });
+  }
+  return [...tally.values()].sort((a, b) => a.name.localeCompare(b.name));
+}
+
 /**
  * Bucket items by their ingredient category, case-insensitively (stored
  * values are free text and never normalized, so "Dairy" and "dairy" must

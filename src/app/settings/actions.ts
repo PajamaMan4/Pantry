@@ -11,6 +11,9 @@ import {
   setListGrouping,
 } from "@/lib/db/settings";
 import { createLocation, renameLocation, deleteLocation } from "@/lib/db/locations";
+import { tagNameSchema, categoryNameSchema } from "@/lib/validation/taxonomy";
+import { findTagByName, renameTag, mergeTag, deleteTag } from "@/lib/db/tags";
+import { listCategories, renameCategory, deleteCategory } from "@/lib/db/ingredients";
 
 export type SaveSettingsResult =
   | { ok: true; savedAt: number }
@@ -51,6 +54,80 @@ export async function deleteLocationAction(id: number): Promise<{ ok: true }> {
   deleteLocation(id);
   revalidateLocations();
   return { ok: true };
+}
+
+export type TaxonomyActionResult = { ok: true; count?: number } | { ok: false; error: string };
+
+const sameName = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
+
+function revalidateTags(): void {
+  revalidatePath("/settings");
+  revalidatePath("/");
+  revalidatePath("/recipes");
+  revalidatePath("/recipes/new");
+  revalidatePath("/recipes/[id]", "page");
+  revalidatePath("/recipes/[id]/edit", "page");
+}
+
+function revalidateCategories(): void {
+  revalidatePath("/settings");
+  revalidatePath("/ingredients");
+  revalidatePath("/ingredients/new");
+  revalidatePath("/ingredients/[id]", "page");
+  revalidatePath("/ingredients/inventory/edit");
+  revalidatePath("/shopping");
+  revalidatePath("/menu");
+}
+
+export async function renameTagAction(id: number, input: unknown): Promise<TaxonomyActionResult> {
+  const parsed = tagNameSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid name" };
+  const clash = findTagByName(parsed.data.name);
+  if (clash && clash.id !== id) {
+    return { ok: false, error: `“${clash.name}” already exists. Use Merge to combine them.` };
+  }
+  renameTag(id, parsed.data.name);
+  revalidateTags();
+  return { ok: true };
+}
+
+export async function mergeTagAction(sourceId: number, targetId: number): Promise<TaxonomyActionResult> {
+  if (sourceId === targetId) return { ok: false, error: "Pick a different tag to merge into." };
+  const count = mergeTag(sourceId, targetId);
+  revalidateTags();
+  return { ok: true, count };
+}
+
+export async function deleteTagAction(id: number): Promise<TaxonomyActionResult> {
+  deleteTag(id);
+  revalidateTags();
+  return { ok: true };
+}
+
+export async function renameCategoryAction(from: string, input: unknown): Promise<TaxonomyActionResult> {
+  const parsed = categoryNameSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid name" };
+  // Renaming onto a *different* existing category is a merge, so make that explicit.
+  const clash = listCategories().find((c) => sameName(c, parsed.data.name) && !sameName(c, from));
+  if (clash) return { ok: false, error: `“${clash}” already exists. Use Merge to combine them.` };
+  const count = renameCategory(from, parsed.data.name);
+  revalidateCategories();
+  return { ok: true, count };
+}
+
+export async function mergeCategoryAction(from: string, to: string): Promise<TaxonomyActionResult> {
+  if (sameName(from, to)) return { ok: false, error: "Pick a different category to merge into." };
+  const target = listCategories().find((c) => sameName(c, to));
+  if (!target) return { ok: false, error: "That category no longer exists." };
+  const count = renameCategory(from, target);
+  revalidateCategories();
+  return { ok: true, count };
+}
+
+export async function deleteCategoryAction(name: string): Promise<TaxonomyActionResult> {
+  const count = deleteCategory(name);
+  revalidateCategories();
+  return { ok: true, count };
 }
 
 // Shared by /shopping and /menu — both lists group by default storage

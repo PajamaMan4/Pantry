@@ -92,7 +92,7 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ i
       {tags.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-1.5">
           {tags.map((t) => (
-            <Badge key={t.id} variant="secondary">
+            <Badge key={t.id} variant="secondary" className="capitalize">
               {t.name}
             </Badge>
           ))}

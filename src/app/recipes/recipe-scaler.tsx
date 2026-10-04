@@ -293,7 +293,7 @@ export function RecipeScaler({
                     const sub = subs.get(ing.id);
                     return (
                       <li key={ing.id} className="flex flex-wrap items-center gap-2 text-sm">
-                        <span className={cn("font-medium", sub && "text-muted-foreground line-through")}>
+                        <span className={cn("font-medium capitalize", sub && "text-muted-foreground line-through")}>
                           {ing.name}
                         </span>
                         <ArrowRightIcon className="size-3.5 shrink-0 text-muted-foreground" />
@@ -388,7 +388,7 @@ export function RecipeScaler({
                             <span aria-label="Not in stock" title="Not in stock">❌</span>
                           )
                         )}
-                        <Link href={`/ingredients/${ing.ingredientId}`} className="font-medium hover:underline">
+                        <Link href={`/ingredients/${ing.ingredientId}`} className="font-medium capitalize hover:underline">
                           {ing.name}
                         </Link>
                         {qty && <span className="tabular-nums text-foreground">{qty}</span>}
@@ -397,7 +397,7 @@ export function RecipeScaler({
                             <Badge variant="secondary" className="text-[10px]">
                               swap
                             </Badge>
-                            <span className="text-xs text-muted-foreground line-through">{original.name}</span>
+                            <span className="text-xs capitalize text-muted-foreground line-through">{original.name}</span>
                           </>
                         )}
                         {ing.prep && <span className="text-muted-foreground">— {ing.prep}</span>}

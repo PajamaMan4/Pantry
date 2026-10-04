@@ -35,7 +35,7 @@ export function TagInput({ value, suggestions = [], onChange }: Props) {
       {value.length > 0 && (
         <div className="mb-2 flex flex-wrap gap-1.5">
           {value.map((tag) => (
-            <Badge key={tag} variant="secondary" className="gap-1">
+            <Badge key={tag} variant="secondary" className="gap-1 capitalize">
               {tag}
               <button
                 type="button"

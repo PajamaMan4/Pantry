@@ -114,6 +114,7 @@ export function IngredientCombobox({
   return (
     <div ref={wrapRef} className="relative">
       <Input
+        className="capitalize"
         value={query}
         placeholder={placeholder}
         autoComplete="off"
@@ -152,7 +153,7 @@ export function IngredientCombobox({
                     i === active && "bg-muted",
                   )}
                 >
-                  <span>{opt.name}</span>
+                  <span className="capitalize">{opt.name}</span>
                   <span className="text-xs text-muted-foreground">
                     {matchedAlias ? `also "${matchedAlias}"` : (opt.defaultUnit ?? "")}
                   </span>

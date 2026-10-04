@@ -76,6 +76,7 @@ export function CategoryCombobox({
   return (
     <div ref={wrapRef} className="relative">
       <Input
+        className="capitalize"
         value={query}
         placeholder={placeholder}
         autoComplete="off"
@@ -102,7 +103,7 @@ export function CategoryCombobox({
                 onMouseEnter={() => setActive(i)}
                 onClick={() => choose(opt)}
                 className={cn(
-                  "w-full rounded-sm px-2 py-1.5 text-left",
+                  "w-full rounded-sm px-2 py-1.5 text-left capitalize",
                   i === active && "bg-muted",
                 )}
               >

@@ -54,10 +54,10 @@ export function CookButton({
   const factor = baseServings > 0 && made > 0 ? made / baseServings : 1;
   const plan = React.useMemo(() => planCook(ingredients, stockMap, factor), [ingredients, stockMap, factor]);
 
-  function doUndo(cookLogId: number) {
+  function doUndo(cookLogId: number, prevMenu: { menuServings: number | null } | null) {
     startTransition(async () => {
-      await undoCookAction(cookLogId, recipeId);
-      toast.success("Cook undone — inventory restored");
+      await undoCookAction(cookLogId, recipeId, prevMenu);
+      toast.success(prevMenu ? "Cook undone — inventory restored, back on Menu" : "Cook undone — inventory restored");
     });
   }
 
@@ -70,7 +70,7 @@ export function CookButton({
       }
       setOpen(false);
       toast.success(`Logged · ${res.deducted} item${res.deducted === 1 ? "" : "s"} deducted`, {
-        action: { label: "Undo", onClick: () => doUndo(res.cookLogId) },
+        action: { label: "Undo", onClick: () => doUndo(res.cookLogId, res.prevMenu) },
         duration: 8000,
       });
     });
@@ -113,7 +113,7 @@ export function CookButton({
             <ul className="divide-y text-sm">
               {shown.map((line) => (
                 <li key={line.ingredientId} className="flex items-center justify-between gap-2 px-3 py-2">
-                  <span className="font-medium">{line.name}</span>
+                  <span className="font-medium capitalize">{line.name}</span>
                   <PreviewStatus line={line} />
                 </li>
               ))}

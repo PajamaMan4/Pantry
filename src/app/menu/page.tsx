@@ -28,7 +28,7 @@ function MenuIngredientLineItem({ line }: { line: MenuIngredientLine }) {
         ) : (
           <XCircleIcon className="size-4 shrink-0 text-red-600 dark:text-red-400" aria-label="Not enough in stock" />
         )}
-        <Link href={`/ingredients/${line.ingredientId}`} className="hover:underline">
+        <Link href={`/ingredients/${line.ingredientId}`} className="capitalize hover:underline">
           {line.name}
         </Link>
       </span>

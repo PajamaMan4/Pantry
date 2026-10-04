@@ -150,7 +150,7 @@ export function MergeIngredientDialog({
                           >
                             {selected && <CheckIcon className="size-3" />}
                           </span>
-                          <span>{opt.name}</span>
+                          <span className="capitalize">{opt.name}</span>
                         </button>
                       </li>
                     );
@@ -162,7 +162,7 @@ export function MergeIngredientDialog({
             {selectedItems.length > 0 && (
               <div className="flex flex-wrap gap-1">
                 {selectedItems.map((o) => (
-                  <Badge key={o.id} variant="secondary" className="gap-1 pr-1">
+                  <Badge key={o.id} variant="secondary" className="gap-1 pr-1 capitalize">
                     {o.name}
                     <button
                       type="button"

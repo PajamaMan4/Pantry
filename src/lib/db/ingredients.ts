@@ -17,6 +17,7 @@ import { listInventoryForIngredient } from "./inventory";
 import { listPriceEntries } from "./prices";
 import { recordTombstone, recordTombstones } from "./tombstones";
 import { repointStepIngredient } from "../domain/merge";
+import { tallyCategories, type CategoryTally } from "../domain/category-groups";
 
 export function listIngredients(): Ingredient[] {
   return db.select().from(ingredients).orderBy(asc(ingredients.name)).all();
@@ -43,19 +44,42 @@ export function listIngredientsWithAliases(): IngredientWithAliases[] {
  * typo-preventing typeahead, not an enum.
  */
 export function listCategories(): string[] {
+  return listCategoriesWithCounts().map((c) => c.name);
+}
+
+/** Distinct categories (case-insensitive) with the number of ingredients using each. */
+export function listCategoriesWithCounts(): CategoryTally[] {
   const rows = db
-    .selectDistinct({ category: ingredients.category })
+    .select({ category: ingredients.category })
     .from(ingredients)
     .where(isNotNull(ingredients.category))
     .all();
-  const seen = new Map<string, string>(); // lowercase -> first-seen original casing
-  for (const r of rows) {
-    const raw = r.category?.trim();
-    if (!raw) continue;
-    const key = raw.toLowerCase();
-    if (!seen.has(key)) seen.set(key, raw);
-  }
-  return [...seen.values()].sort((a, b) => a.localeCompare(b));
+  return tallyCategories(rows.map((r) => r.category));
+}
+
+const categoryMatches = (name: string) =>
+  sql`lower(trim(${ingredients.category})) = lower(trim(${name}))`;
+
+/**
+ * Point every ingredient in category `from` (case-insensitive) at `to`. Backs both
+ * rename and merge: categories are free text, so merging into an existing
+ * category is the same update. Returns how many ingredients changed.
+ */
+export function renameCategory(from: string, to: string): number {
+  return db
+    .update(ingredients)
+    .set({ category: to.trim(), updatedAt: new Date() })
+    .where(categoryMatches(from))
+    .run().changes;
+}
+
+/** Clear the category on every ingredient in it; they fall back to "Uncategorized". */
+export function deleteCategory(name: string): number {
+  return db
+    .update(ingredients)
+    .set({ category: null, updatedAt: new Date() })
+    .where(categoryMatches(name))
+    .run().changes;
 }
 
 export function searchIngredients(query: string, limit = 12): Ingredient[] {

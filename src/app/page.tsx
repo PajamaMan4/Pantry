@@ -58,7 +58,7 @@ export default function Home() {
           <CardContent className="divide-y py-0">
             {expiringItems.slice(0, 6).map(({ row }) => (
               <div key={row.item.id} className="flex items-center justify-between gap-2 py-2 text-sm">
-                <Link href={`/ingredients/${row.ingredient.id}`} className="font-medium hover:underline">
+                <Link href={`/ingredients/${row.ingredient.id}`} className="font-medium capitalize hover:underline">
                   {row.ingredient.name}
                 </Link>
                 <ExpiryBadge expiry={row.item.expiryDate} now={now} />

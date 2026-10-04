@@ -3,10 +3,13 @@ import Link from "next/link";
 import { DownloadIcon } from "lucide-react";
 import { getSettings, resolveAnthropicApiKey } from "@/lib/db/settings";
 import { listLocations } from "@/lib/db/locations";
+import { listTagsWithCounts } from "@/lib/db/tags";
+import { listCategoriesWithCounts } from "@/lib/db/ingredients";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 import { SettingsForm } from "./settings-form";
 import { LocationManager } from "./location-manager";
+import { TaxonomyManager } from "./taxonomy-manager";
 import { ApiKeyForm } from "./api-key-form";
 import { PageHelpMenu } from "@/components/help/page-help-menu";
 
@@ -20,6 +23,8 @@ export const metadata: Metadata = {
 export default function SettingsPage() {
   const settings = getSettings();
   const locations = listLocations().map((l) => ({ id: l.id, name: l.name }));
+  const tagItems = listTagsWithCounts().map((t) => ({ key: String(t.id), name: t.name, count: t.count }));
+  const categoryItems = listCategoriesWithCounts().map((c) => ({ key: c.name, name: c.name, count: c.count }));
   const hasApiKey = resolveAnthropicApiKey() != null;
 
   return (
@@ -57,16 +62,44 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
+      {settings.showLocations && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Storage locations</CardTitle>
+            <CardDescription>
+              Where inventory is stored. Rename or remove locations; removing one keeps the stock and
+              moves it to “Unsorted”. Hidden throughout the app while “Show storage locations” is off.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <LocationManager locations={locations} />
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
-          <CardTitle>Storage locations</CardTitle>
+          <CardTitle>Recipe tags</CardTitle>
           <CardDescription>
-            Where inventory is stored. Rename or remove locations; removing one keeps the stock and
-            moves it to “Unsorted”. Hidden throughout the app while “Show storage locations” is off.
+            Fix typos and tidy up tags. Rename one, delete it, or merge it into another — every recipe
+            with the merged tag is retagged automatically.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <LocationManager locations={locations} />
+          <TaxonomyManager kind="tag" items={tagItems} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Ingredient categories</CardTitle>
+          <CardDescription>
+            Rename, delete, or merge ingredient categories. Deleting one leaves its ingredients
+            “Uncategorized”.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <TaxonomyManager kind="category" items={categoryItems} />
         </CardContent>
       </Card>
 

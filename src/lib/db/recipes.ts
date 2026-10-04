@@ -460,6 +460,16 @@ export function setMenuServings(id: number, servings: number | null): void {
     .run();
 }
 
+export type MenuState = { isOnMenu: boolean; menuServings: number | null };
+
+export function getMenuState(id: number): MenuState | undefined {
+  return db
+    .select({ isOnMenu: recipes.isOnMenu, menuServings: recipes.menuServings })
+    .from(recipes)
+    .where(eq(recipes.id, id))
+    .get();
+}
+
 export function setRating(id: number, rating: number | null): void {
   db.update(recipes)
     .set({ rating, updatedAt: new Date() })

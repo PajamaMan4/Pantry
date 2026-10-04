@@ -1,8 +1,31 @@
 import { describe, expect, it } from "vitest";
-import { groupByCategory, UNCATEGORIZED_LABEL } from "@/lib/domain/category-groups";
+import { groupByCategory, tallyCategories, UNCATEGORIZED_LABEL } from "@/lib/domain/category-groups";
 
 type Item = { id: number; category: string | null };
 const item = (id: number, category: string | null): Item => ({ id, category });
+
+describe("tallyCategories", () => {
+  it("returns nothing for an empty list", () => {
+    expect(tallyCategories([])).toEqual([]);
+  });
+
+  it("skips null and blank categories", () => {
+    expect(tallyCategories([null, "  ", "dairy"])).toEqual([{ name: "dairy", count: 1 }]);
+  });
+
+  it("merges case/whitespace variants, keeping the first-seen casing", () => {
+    const tally = tallyCategories(["Dairy", "dairy ", "DAIRY", "meat"]);
+    expect(tally).toEqual([
+      { name: "Dairy", count: 3 },
+      { name: "meat", count: 1 },
+    ]);
+  });
+
+  it("sorts alphabetically", () => {
+    const names = tallyCategories(["produce", "dairy", "meat"]).map((t) => t.name);
+    expect(names).toEqual(["dairy", "meat", "produce"]);
+  });
+});
 
 describe("groupByCategory", () => {
   it("returns no groups for an empty list", () => {

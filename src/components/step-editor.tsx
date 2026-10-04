@@ -132,7 +132,7 @@ export function StepEditor({
                 >
                   <option value="">(no ingredient)</option>
                   {ingredientChoices.map((c) => (
-                    <option key={c.id} value={c.id}>
+                    <option key={c.id} value={c.id} className="capitalize">
                       {c.name}
                     </option>
                   ))}

@@ -165,7 +165,7 @@ export function RecipeFilters({
             const tag = tags.find((t) => t.id === id);
             if (!tag) return null;
             return (
-              <Badge key={id} variant="secondary" className="gap-1 pr-1 text-xs">
+              <Badge key={id} variant="secondary" className="gap-1 pr-1 text-xs capitalize">
                 {tag.name}
                 <button
                   type="button"
@@ -205,7 +205,7 @@ export function RecipeFilters({
                   <button
                     type="button"
                     onClick={() => addTag(t.id)}
-                    className="w-full rounded-sm px-2 py-1.5 text-left hover:bg-muted"
+                    className="w-full rounded-sm px-2 py-1.5 text-left capitalize hover:bg-muted"
                   >
                     {t.name}
                   </button>
@@ -234,7 +234,7 @@ export function RecipeFilters({
             const ingredient = ingredients.find((i) => i.id === id);
             if (!ingredient) return null;
             return (
-              <Badge key={id} variant="secondary" className="gap-1 pr-1 text-xs">
+              <Badge key={id} variant="secondary" className="gap-1 pr-1 text-xs capitalize">
                 {ingredient.name}
                 <button
                   type="button"
@@ -274,7 +274,7 @@ export function RecipeFilters({
                   <button
                     type="button"
                     onClick={() => addIngredient(i.id)}
-                    className="w-full rounded-sm px-2 py-1.5 text-left hover:bg-muted"
+                    className="w-full rounded-sm px-2 py-1.5 text-left capitalize hover:bg-muted"
                   >
                     {i.name}
                   </button>

@@ -151,7 +151,7 @@ export function CookMode({
                   );
                   return (
                     <li key={ing.id}>
-                      <span className="font-medium">{ing.name}</span>
+                      <span className="font-medium capitalize">{ing.name}</span>
                       {qty && <span className="tabular-nums"> {qty}</span>}
                       {ing.prep && <span className="text-muted-foreground"> — {ing.prep}</span>}
                     </li>

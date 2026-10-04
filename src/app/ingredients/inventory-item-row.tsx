@@ -83,7 +83,7 @@ export function InventoryItemRow({
       >
         <div className="min-w-0">
           {name && href && (
-            <Link href={href} className="font-medium hover:underline">
+            <Link href={href} className="font-medium capitalize hover:underline">
               {name}
             </Link>
           )}

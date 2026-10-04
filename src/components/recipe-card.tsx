@@ -70,7 +70,7 @@ export function RecipeCard({
         </div>
 
         {tags.length > 0 && (
-          <p className="mt-3 truncate text-sm text-muted-foreground">
+          <p className="mt-3 truncate text-sm capitalize text-muted-foreground">
             {tags.map((t) => t.name).join(", ")}
           </p>
         )}
