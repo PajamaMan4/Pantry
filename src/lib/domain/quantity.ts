@@ -69,8 +69,9 @@ export function formatQuantity(
   if (q.amount == null) return q.raw ?? ""; // "to taste"
   const fmt = (n: number) =>
     system === "imperial" ? toFriendlyFraction(n, rounding) : toMetricNumber(n, q.unit, rounding);
+  // amountMax is deliberately ignored: ranges are disabled, only the lower bound
+  // is shown. The field stays in stored data and recipe files for compatibility.
   const main = fmt(q.amount);
-  const range = q.amountMax != null ? `–${fmt(q.amountMax)}` : "";
   const label = q.unit ? (UNITS[q.unit]?.label ?? q.unit) : "";
-  return `${main}${range}${label ? ` ${label}` : ""}`.trim();
+  return `${main}${label ? ` ${label}` : ""}`.trim();
 }

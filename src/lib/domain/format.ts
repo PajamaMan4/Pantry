@@ -49,7 +49,8 @@ export function pricePerDisplayUnit(
 
 /**
  * Render a stored quantity as text for the ingredient list (Phase 1, display
- * only): "2 cup", "0.5 tsp", "2–3 cloves", or the raw descriptor ("to taste").
+ * only): "2 cup", "0.5 tsp", or the raw descriptor ("to taste"). amountMax is
+ * deliberately ignored: ranges are disabled, only the lower bound is shown.
  */
 export function formatQuantityText(q: {
   amount: number | null;
@@ -59,9 +60,8 @@ export function formatQuantityText(q: {
 }): string {
   if (q.amount == null) return q.raw ?? "";
   const main = formatNumber(q.amount);
-  const range = q.amountMax != null ? `–${formatNumber(q.amountMax)}` : "";
   const label = unitLabel(q.unit);
-  return `${main}${range}${label ? ` ${label}` : ""}`.trim();
+  return `${main}${label ? ` ${label}` : ""}`.trim();
 }
 
 /** Total time is derived, never stored (§3.1). */

@@ -37,8 +37,8 @@ describe("formatQuantity", () => {
     expect(formatQuantity({ amount: 1.5, unit: "l" }, "metric")).toBe("1.5 L");
   });
 
-  it("formats ranges (both ends)", () => {
-    expect(formatQuantity({ amount: 2, amountMax: 3, unit: null }, "imperial")).toBe("2–3");
+  it("ignores amountMax and shows only the lower bound", () => {
+    expect(formatQuantity({ amount: 2, amountMax: 3, unit: null }, "imperial")).toBe("2");
   });
 
   it("returns the raw descriptor when amount is null", () => {

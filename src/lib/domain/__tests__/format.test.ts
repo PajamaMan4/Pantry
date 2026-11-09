@@ -23,8 +23,8 @@ describe("formatQuantityText", () => {
     expect(formatQuantityText({ amount: 0.5, unit: "tsp" })).toBe("0.5 tsp");
   });
 
-  it("formats ranges", () => {
-    expect(formatQuantityText({ amount: 2, amountMax: 3, unit: null })).toBe("2–3");
+  it("ignores amountMax and shows only the lower bound", () => {
+    expect(formatQuantityText({ amount: 2, amountMax: 3, unit: null })).toBe("2");
   });
 
   it("falls back to the raw descriptor when amount is null", () => {
