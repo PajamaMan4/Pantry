@@ -17,14 +17,10 @@ import { getSettings } from "@/lib/db/settings";
 import { listLocations } from "@/lib/db/locations";
 import { priceSummary } from "@/lib/domain/cost";
 import { formatMoney, pricePerDisplayUnit, formatQuantityText } from "@/lib/domain/format";
-import { displayQuantity, type DisplaySystem } from "@/lib/domain/scaling";
+import { displayQuantity, toDisplaySystem } from "@/lib/domain/scaling";
 import type { RoundingMode } from "@/lib/domain/quantity";
 
 export const dynamic = "force-dynamic";
-
-function resolveSystem(units: string | undefined, fallback: "metric" | "imperial"): DisplaySystem {
-  return units === "original" || units === "imperial" || units === "metric" ? units : fallback;
-}
 
 export default async function IngredientDetailPage({
   params,
@@ -51,9 +47,9 @@ export default async function IngredientDetailPage({
   };
   const now = new Date();
   const nowMs = now.getTime();
-  const system = resolveSystem(
+  const system = toDisplaySystem(
     Array.isArray(sp.units) ? sp.units[0] : sp.units,
-    settings.unitSystem === "metric" ? "metric" : "imperial",
+    toDisplaySystem(settings.unitSystem),
   );
   const rounding: RoundingMode = settings.roundingMode === "exact" ? "exact" : "cooking";
 

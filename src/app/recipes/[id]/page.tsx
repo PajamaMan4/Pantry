@@ -19,6 +19,7 @@ import { getCookData, cookStats, listCookLogsForRecipe } from "@/lib/db/cook";
 import { recipeCostFor } from "@/lib/db/recipe-cost";
 import { formatMinutes, totalTimeMin, formatNumber, formatMoney } from "@/lib/domain/format";
 import { recipeImageSrc } from "@/lib/domain/recipe-image";
+import { toDisplaySystem } from "@/lib/domain/scaling";
 
 export const dynamic = "force-dynamic";
 
@@ -121,7 +122,7 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ i
   );
 
   return (
-    <RecipeViewProvider defaultSystem={settings.unitSystem === "metric" ? "metric" : "imperial"}>
+    <RecipeViewProvider defaultSystem={toDisplaySystem(settings.unitSystem)}>
       {showBanner ? (
         // A CSS background-image, not an absolutely-positioned <img>: the earlier
         // <img absolute inset-0 size-full> approach relies on resolving a

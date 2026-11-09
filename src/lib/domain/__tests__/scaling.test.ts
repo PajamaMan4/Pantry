@@ -5,7 +5,21 @@ import {
   displayQuantity,
   renderStep,
   maybeFallbackScale,
+  toDisplaySystem,
 } from "@/lib/domain/scaling";
+
+describe("toDisplaySystem", () => {
+  it("keeps all three valid systems, including as-written", () => {
+    expect(toDisplaySystem("original")).toBe("original");
+    expect(toDisplaySystem("imperial")).toBe("imperial");
+    expect(toDisplaySystem("metric")).toBe("metric");
+  });
+
+  it("uses the fallback for missing or unknown values", () => {
+    expect(toDisplaySystem(undefined)).toBe("imperial");
+    expect(toDisplaySystem("bogus", "original")).toBe("original");
+  });
+});
 
 describe("scaleFactor / scaleIngredientAmount", () => {
   it("computes the factor and guards divide-by-zero", () => {

@@ -20,8 +20,8 @@ import { groupByLocation } from "@/lib/domain/location-groups";
 import { groupByCategory } from "@/lib/domain/category-groups";
 import { priceSummary, type PriceSummary } from "@/lib/domain/cost";
 import { paginate, parsePageParam, resolvePageSize } from "@/lib/domain/pagination";
-import { displayQuantity, type DisplaySystem } from "@/lib/domain/scaling";
-import { UNITS } from "@/lib/domain/units";
+import { displayQuantity, toDisplaySystem, type DisplaySystem } from "@/lib/domain/scaling";
+import { aggregateStock } from "@/lib/domain/stock-total";
 import type { RoundingMode } from "@/lib/domain/quantity";
 import { formatMoney, pricePerDisplayUnit } from "@/lib/domain/format";
 
@@ -31,45 +31,6 @@ export const metadata: Metadata = { title: "Ingredients · Pantry" };
 // Ceiling on how many *matches* a dictionary search considers, not a page size:
 // pagination walks within this, so a search can never reach match 501.
 const SEARCH_LIMIT = 500;
-
-function resolveSystem(units: string | undefined, fallback: "metric" | "imperial"): DisplaySystem {
-  return units === "original" || units === "imperial" || units === "metric" ? units : fallback;
-}
-
-function aggregateStock(
-  items: InventoryRow[],
-  system: DisplaySystem,
-  rounding: RoundingMode,
-  density?: number | null,
-): string | null {
-  if (items.length === 0) return null;
-
-  // Sum convertible units (volume/mass/count) in their category's base unit so
-  // e.g. 1 lb + 16 oz displays as a single "3 lb" instead of "1 lb + 16 oz".
-  // Approximate units (pinch, etc.) and unitless amounts aren't convertible, so
-  // they're kept in their own per-unit groups.
-  const byCategory = new Map<string, number>();
-  const byUnit = new Map<string, number>();
-  for (const r of items) {
-    const def = r.item.unit ? UNITS[r.item.unit] : undefined;
-    if (!def || def.approximate) {
-      const key = r.item.unit ?? "";
-      byUnit.set(key, (byUnit.get(key) ?? 0) + r.item.quantity);
-      continue;
-    }
-    byCategory.set(def.category, (byCategory.get(def.category) ?? 0) + r.item.quantity * def.toBase);
-  }
-
-  const parts: string[] = [...byCategory.entries()].map(([category, baseAmount]) => {
-    const unit = category === "volume" ? "ml" : category === "mass" ? "g" : "each";
-    return displayQuantity({ amount: baseAmount, amountMax: null, unit, raw: null }, { factor: 1, system, rounding, density: density ?? undefined });
-  });
-  for (const [unit, qty] of byUnit) {
-    parts.push(displayQuantity({ amount: qty, amountMax: null, unit: unit || null, raw: null }, { factor: 1, system, rounding }));
-  }
-
-  return parts.join(" + ");
-}
 
 function priceText(summary: PriceSummary, currency: string, system: DisplaySystem): string {
   if (summary.count === 0 || summary.average == null) return "no price data";
@@ -105,7 +66,7 @@ export default async function IngredientsPage({
   const settings = getSettings();
   const showLocations = settings.showLocations;
   const view = settings.inventoryView === "location" ? "location" : "alphabetical";
-  const system = resolveSystem(str("units"), settings.unitSystem === "metric" ? "metric" : "imperial");
+  const system = toDisplaySystem(str("units"), toDisplaySystem(settings.unitSystem));
   const rounding: RoundingMode = settings.roundingMode === "exact" ? "exact" : "cooking";
   const now = new Date();
   const nowMs = now.getTime();
@@ -236,7 +197,7 @@ function AlphabeticalView({
         {ingredients.map((ing) => {
           const items = invByIng.get(ing.id) ?? [];
           const summary = priceSummary(priceMap.get(ing.id) ?? [], { defaultUnit: ing.defaultUnit, density: ing.density, gramsPerEach: ing.gramsPerEach }, windowMonths, now);
-          const stock = aggregateStock(items, system, rounding, ing.density);
+          const stock = aggregateStock(items.map((r) => r.item), system, rounding, ing.density);
           return (
             <li key={ing.id} className="flex items-center justify-between gap-3 py-2.5">
               <div className="min-w-0">

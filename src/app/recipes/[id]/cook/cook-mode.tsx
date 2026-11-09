@@ -30,7 +30,7 @@ export function CookMode({
   recipeId: number;
   recipeName: string;
   baseServings: number;
-  defaultSystem: "imperial" | "metric";
+  defaultSystem: DisplaySystem;
   rounding: RoundingMode;
   ingredients: ScalerIngredient[];
   steps: ScalerStep[];

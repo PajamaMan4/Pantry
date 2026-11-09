@@ -6,6 +6,14 @@ import { formatQuantity, toFriendlyFraction, type RoundingMode } from "./quantit
 
 export type DisplaySystem = UnitSystem | "original";
 
+/** Narrow a stored setting or `units` query param; anything unrecognized becomes `fallback`. */
+export function toDisplaySystem(
+  value: string | null | undefined,
+  fallback: DisplaySystem = "imperial",
+): DisplaySystem {
+  return value === "original" || value === "imperial" || value === "metric" ? value : fallback;
+}
+
 export interface DisplayOptions {
   factor: number;
   system: DisplaySystem;

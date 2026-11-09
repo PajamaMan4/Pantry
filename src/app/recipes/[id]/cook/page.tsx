@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFoundWithReason, notFoundInvalidId } from "@/lib/not-found";
 import { getRecipeDetail } from "@/lib/db/recipes";
 import { getSettings } from "@/lib/db/settings";
+import { toDisplaySystem } from "@/lib/domain/scaling";
 import { CookMode } from "./cook-mode";
 
 export const dynamic = "force-dynamic";
@@ -24,7 +25,7 @@ export default async function CookPage({ params }: { params: Promise<{ id: strin
         recipeId={recipe.id}
         recipeName={recipe.name}
         baseServings={recipe.baseServings}
-        defaultSystem={settings.unitSystem === "metric" ? "metric" : "imperial"}
+        defaultSystem={toDisplaySystem(settings.unitSystem)}
         rounding={settings.roundingMode === "exact" ? "exact" : "cooking"}
         ingredients={ingredients.map((ri) => ({
           id: ri.id,

@@ -16,6 +16,12 @@ describe("settingsUpdateSchema — showRecipeImages", () => {
     showLocations: "1",
   };
 
+  it("accepts as-written as a unit system", () => {
+    const r = settingsUpdateSchema.safeParse({ ...base, unitSystem: "original", showRecipeImages: "1" });
+    expect(r.success).toBe(true);
+    if (r.success) expect(r.data.unitSystem).toBe("original");
+  });
+
   it("coerces the Switch's on-value to true", () => {
     const r = settingsUpdateSchema.safeParse({ ...base, showRecipeImages: "1" });
     expect(r.success).toBe(true);

@@ -237,7 +237,7 @@ export const cookLogLines = sqliteTable("cook_log_lines", {
 
 export const settings = sqliteTable("settings", {
   id: integer("id").primaryKey().default(1), // single row
-  unitSystem: text("unit_system").notNull().default("imperial"), // 'metric' | 'imperial'
+  unitSystem: text("unit_system").notNull().default("imperial"), // 'original' (as written) | 'metric' | 'imperial'
   priceMode: text("price_mode").notNull().default("average"), // 'current' | 'average'
   averageWindowMonths: integer("average_window_months").notNull().default(6), // 3-6
   currency: text("currency").notNull().default("USD"),

@@ -16,7 +16,11 @@ import { Switch } from "@/components/ui/switch";
 import type { Settings } from "@/lib/db/schema";
 import { PAGE_SIZE_OPTIONS } from "@/lib/domain/pagination";
 
-const UNIT_SYSTEMS = { imperial: "Imperial (cups, oz, °F)", metric: "Metric (ml, g, °C)" };
+const UNIT_SYSTEMS = {
+  original: "As written (no conversion)",
+  imperial: "Imperial (cups, oz, °F)",
+  metric: "Metric (ml, g, °C)",
+};
 const PRICE_MODES = { average: "Average over window", current: "Most recent price" };
 const ROUNDING_MODES = { cooking: "Cooking (friendly values)", exact: "Exact (precise factors)" };
 const WINDOWS = { "3": "3 months", "4": "4 months", "5": "5 months", "6": "6 months" };
